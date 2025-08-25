@@ -63,14 +63,19 @@ class AutoclickerApp:
     def setup_window(self):
         """Configure main window properties"""
         self.root.title("Windows Autoclicker")
-        self.root.geometry("500x650")
-        self.root.resizable(False, False)
+        self.root.geometry("550x700")
+        self.root.resizable(True, True)
+        self.root.minsize(450, 600)  # Minimum size to prevent content cutoff
 
         # Set window icon if available
         try:
             self.root.iconbitmap("autoclicker.ico")
         except:
             pass
+
+        # Configure root grid for responsive layout
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
         # Center window on screen
         self.center_window()
@@ -90,14 +95,36 @@ class AutoclickerApp:
 
     def create_gui(self):
         """Create the main GUI interface"""
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Create scrollable canvas for responsive design
+        self.canvas = tk.Canvas(self.root, highlightthickness=0)
+        self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # Add scrollbars
+        v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
+        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        h_scrollbar = ttk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
+        self.canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+        # Create main frame inside canvas
+        main_frame = ttk.Frame(self.canvas, padding="20")
+        self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
+
+        # Configure grid weights for responsive layout
+        main_frame.grid_rowconfigure(5, weight=1)  # Disclaimer section can expand
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+
+        # Bind canvas resize event
+        main_frame.bind('<Configure>', self.on_frame_configure)
+        self.canvas.bind('<Configure>', self.on_canvas_configure)
 
         # Title
         title_label = ttk.Label(main_frame, text="Windows Autoclicker",
                                font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky=(tk.W, tk.E))
 
         # Coordinate section
         self.create_coordinate_section(main_frame)
@@ -114,52 +141,93 @@ class AutoclickerApp:
         # Disclaimer
         self.create_disclaimer_section(main_frame)
 
+    def on_frame_configure(self, event):
+        """Handle frame resize"""
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def on_canvas_configure(self, event):
+        """Handle canvas resize"""
+        self.canvas.itemconfig(self.canvas_frame, width=event.width)
+        self.update_scrollbar_visibility()
+
+    def update_scrollbar_visibility(self):
+        """Update scrollbar visibility based on content size"""
+        # Get the bounding box of all items in the canvas
+        bbox = self.canvas.bbox("all")
+        if bbox:
+            content_width = bbox[2] - bbox[0]
+            content_height = bbox[3] - bbox[1]
+
+            # Get canvas dimensions
+            canvas_width = self.canvas.winfo_width()
+            canvas_height = self.canvas.winfo_height()
+
+            # Show/hide scrollbars based on content size
+            if content_width > canvas_width:
+                self.canvas.grid_columnconfigure(1, minsize=20)  # Show vertical scrollbar
+            else:
+                self.canvas.grid_columnconfigure(1, minsize=0)   # Hide vertical scrollbar
+
+            if content_height > canvas_height:
+                self.canvas.grid_rowconfigure(1, minsize=20)     # Show horizontal scrollbar
+            else:
+                self.canvas.grid_rowconfigure(1, minsize=0)      # Hide horizontal scrollbar
+
     def create_coordinate_section(self, parent):
         """Create coordinate input section"""
         coord_frame = ttk.LabelFrame(parent, text="Target Coordinates", padding="10")
         coord_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
 
-        # X coordinate
-        ttk.Label(coord_frame, text="X:").grid(row=0, column=0, padx=(0, 5))
+        # Configure coordinate frame grid for responsiveness
+        coord_frame.grid_columnconfigure(1, weight=1)
+        coord_frame.grid_columnconfigure(3, weight=1)
+        coord_frame.grid_columnconfigure(6, weight=1)
+
+        # Row 1: X and Y coordinates
+        ttk.Label(coord_frame, text="X:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
         self.x_entry = ttk.Entry(coord_frame, width=8)
-        self.x_entry.grid(row=0, column=1, padx=(0, 15))
+        self.x_entry.grid(row=0, column=1, padx=(0, 15), sticky=(tk.W, tk.E))
         self.x_entry.insert(0, str(self.settings.get('x_coord', '100')))
 
-        # Y coordinate
-        ttk.Label(coord_frame, text="Y:").grid(row=0, column=2, padx=(0, 5))
+        ttk.Label(coord_frame, text="Y:").grid(row=0, column=2, padx=(0, 5), sticky=tk.W)
         self.y_entry = ttk.Entry(coord_frame, width=8)
-        self.y_entry.grid(row=0, column=3, padx=(0, 15))
+        self.y_entry.grid(row=0, column=3, padx=(0, 15), sticky=(tk.W, tk.E))
         self.y_entry.insert(0, str(self.settings.get('y_coord', '100')))
 
         # Pick coordinate button
         self.pick_btn = ttk.Button(coord_frame, text="Pick Location",
                                   command=self.start_coordinate_picker)
-        self.pick_btn.grid(row=0, column=4, padx=(10, 5))
+        self.pick_btn.grid(row=0, column=4, padx=(10, 5), sticky=tk.W)
 
-        # Presets
-        ttk.Label(coord_frame, text="Presets:").grid(row=0, column=5, padx=(10, 5))
+        # Row 2: Presets section
+        ttk.Label(coord_frame, text="Presets:").grid(row=1, column=0, padx=(0, 5), pady=(10, 0), sticky=tk.W)
         self.preset_var = tk.StringVar()
         self.preset_combo = ttk.Combobox(coord_frame, textvariable=self.preset_var,
-                                        width=15, state="readonly")
-        self.preset_combo.grid(row=0, column=6, padx=(0, 5))
+                                        width=20, state="readonly")
+        self.preset_combo.grid(row=1, column=1, columnspan=3, padx=(0, 10), pady=(10, 0), sticky=(tk.W, tk.E))
         self.preset_combo['values'] = list(self.settings.get('presets', {}).keys())
         self.preset_combo.bind('<<ComboboxSelected>>', self.load_preset)
 
         # Save preset button
-        self.save_preset_btn = ttk.Button(coord_frame, text="Save",
+        self.save_preset_btn = ttk.Button(coord_frame, text="Save Preset",
                                          command=self.save_preset)
-        self.save_preset_btn.grid(row=0, column=7)
+        self.save_preset_btn.grid(row=1, column=4, pady=(10, 0), sticky=tk.W)
 
     def create_click_settings_section(self, parent):
         """Create click settings section"""
         settings_frame = ttk.LabelFrame(parent, text="Click Settings", padding="10")
         settings_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
 
+        # Configure settings frame grid for responsiveness
+        settings_frame.grid_columnconfigure(1, weight=1)
+        settings_frame.grid_columnconfigure(2, weight=1)
+        settings_frame.grid_columnconfigure(3, weight=1)
+
         # Mouse button selection
         ttk.Label(settings_frame, text="Mouse Button:").grid(row=0, column=0, sticky=tk.W)
         self.button_var = tk.StringVar(value=self.settings.get('mouse_button', 'left'))
         button_frame = ttk.Frame(settings_frame)
-        button_frame.grid(row=0, column=1, columnspan=3, sticky=tk.W, padx=(10, 0))
+        button_frame.grid(row=0, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0))
 
         ttk.Radiobutton(button_frame, text="Left", variable=self.button_var,
                        value="left").pack(side=tk.LEFT, padx=(0, 10))
@@ -172,7 +240,7 @@ class AutoclickerApp:
         ttk.Label(settings_frame, text="Click Type:").grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
         self.click_type_var = tk.StringVar(value=self.settings.get('click_type', 'single'))
         click_type_frame = ttk.Frame(settings_frame)
-        click_type_frame.grid(row=1, column=1, columnspan=3, sticky=tk.W, padx=(10, 0), pady=(10, 0))
+        click_type_frame.grid(row=1, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
 
         ttk.Radiobutton(click_type_frame, text="Single", variable=self.click_type_var,
                        value="single").pack(side=tk.LEFT, padx=(0, 10))
@@ -182,7 +250,7 @@ class AutoclickerApp:
         # Interval settings
         ttk.Label(settings_frame, text="Interval:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
         interval_frame = ttk.Frame(settings_frame)
-        interval_frame.grid(row=2, column=1, columnspan=3, sticky=tk.W, padx=(10, 0), pady=(10, 0))
+        interval_frame.grid(row=2, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
 
         self.interval_entry = ttk.Entry(interval_frame, width=8)
         self.interval_entry.pack(side=tk.LEFT, padx=(0, 5))
@@ -202,7 +270,7 @@ class AutoclickerApp:
         # Burst mode
         ttk.Label(settings_frame, text="Burst Mode:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
         burst_frame = ttk.Frame(settings_frame)
-        burst_frame.grid(row=3, column=1, columnspan=3, sticky=tk.W, padx=(10, 0), pady=(10, 0))
+        burst_frame.grid(row=3, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
 
         ttk.Label(burst_frame, text="Clicks:").pack(side=tk.LEFT)
         self.burst_clicks_entry = ttk.Entry(burst_frame, width=5)
@@ -218,7 +286,7 @@ class AutoclickerApp:
         # Safety settings
         ttk.Label(settings_frame, text="Safety:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
         safety_frame = ttk.Frame(settings_frame)
-        safety_frame.grid(row=4, column=1, columnspan=3, sticky=tk.W, padx=(10, 0), pady=(10, 0))
+        safety_frame.grid(row=4, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
 
         ttk.Label(safety_frame, text="Max clicks:").pack(side=tk.LEFT)
         self.max_clicks_entry = ttk.Entry(safety_frame, width=8)
@@ -275,7 +343,7 @@ class AutoclickerApp:
 
     def create_disclaimer_section(self, parent):
         """Create disclaimer section"""
-        disclaimer_text = ("⚠️  USE RESPONSIBLY  ⚠️\n\n"
+        disclaimer_text = ("WARNING: USE RESPONSIBLY\n\n"
                           "This tool is for legitimate automation purposes only.\n"
                           "Ensure compliance with application terms of service,\n"
                           "website policies, and local laws. The author assumes\n"
@@ -283,8 +351,11 @@ class AutoclickerApp:
 
         disclaimer_label = ttk.Label(parent, text=disclaimer_text,
                                    background="#fff3cd", foreground="#856404",
-                                   padding="10", justify=tk.CENTER, relief="solid")
+                                   padding="10", justify=tk.CENTER, relief="solid", wraplength=400)
         disclaimer_label.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+
+        # Make the disclaimer section expand to fill available space
+        parent.grid_rowconfigure(5, weight=1)
 
     def setup_hotkeys(self):
         """Setup keyboard hotkeys"""
