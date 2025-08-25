@@ -1,6 +1,6 @@
 {
-  "x_coord": 1702,
-  "y_coord": 818,
+  "x_coord": 1705,
+  "y_coord": 856,
   "interval": 1000.0,
   "interval_unit": "ms",
   "variation": 0,
@@ -8,7 +8,7 @@
   "click_type": "single",
   "burst_clicks": 1,
   "burst_pause": 1000.0,
-  "max_clicks": 0,
+  "max_clicks": 2000,
   "auto_stop_minutes": 0,
   "presets": {}
 }
