@@ -1,0 +1,14 @@
+{
+  "x_coord": 1699,
+  "y_coord": 813,
+  "interval": 1000.0,
+  "interval_unit": "ms",
+  "variation": 0,
+  "mouse_button": "left",
+  "click_type": "single",
+  "burst_clicks": 1,
+  "burst_pause": 1000.0,
+  "max_clicks": 0,
+  "auto_stop_minutes": 0,
+  "presets": {}
+}

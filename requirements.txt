@@ -1,0 +1,23 @@
+# Windows Autoclicker Requirements
+# Core dependencies for the autoclicker application
+
+# Mouse and keyboard automation
+pyautogui>=0.9.53
+keyboard>=0.13.5
+mouse>=0.7.1
+
+# Windows-specific libraries
+pywin32>=227
+Pillow>=9.0.0  # For system tray icon and icon creation
+
+# System tray functionality
+pystray>=0.19.4
+
+# GUI Framework (tkinter comes with Python 3.8+)
+# No installation needed - built into Python
+
+# JSON handling (built-in with Python 3.6+)
+# No additional package needed
+
+# Threading and time (built-in)
+# No additional package needed
