@@ -93,14 +93,21 @@ class TestSettingsManager(unittest.TestCase):
         self.assertFalse(valid)
         self.assertIn("Invalid unit", error)
 
-        # Invalid range for ms
+        # Zero ms = no delay between bursts (max speed)
+        valid, error = self.manager.validate_interval(0, 'ms')
+        self.assertTrue(valid)
+        self.assertEqual(error, "")
+
         valid, error = self.manager.validate_interval(0.5, 'ms')
+        self.assertTrue(valid)
+
+        valid, error = self.manager.validate_interval(-1, 'ms')
         self.assertFalse(valid)
-        self.assertIn("between 1 and 60000", error)
+        self.assertIn("between 0 and 60000", error)
 
         valid, error = self.manager.validate_interval(70000, 'ms')
         self.assertFalse(valid)
-        self.assertIn("between 1 and 60000", error)
+        self.assertIn("between 0 and 60000", error)
 
         # Invalid range for seconds
         valid, error = self.manager.validate_interval(0.0005, 'seconds')
@@ -175,6 +182,13 @@ class TestSettingsManager(unittest.TestCase):
         self.assertFalse(valid)
         self.assertIn("cannot be greater than or equal to interval", error)
 
+        valid, error = self.manager.validate_variation(0, 0, 'ms')
+        self.assertTrue(valid)
+
+        valid, error = self.manager.validate_variation(50, 0, 'ms')
+        self.assertFalse(valid)
+        self.assertIn("positive interval", error)
+
         valid, error = self.manager.validate_variation("not_a_number", 1000, 'ms')
         self.assertFalse(valid)
         self.assertIn("must be an integer", error)
@@ -214,7 +228,7 @@ class TestSettingsManager(unittest.TestCase):
 
         # Test interval sanitization
         self.assertEqual(self.manager.sanitize_input('interval', 500), 500)
-        self.assertEqual(self.manager.sanitize_input('interval', 0), 1)
+        self.assertEqual(self.manager.sanitize_input('interval', 0), 0)
         self.assertEqual(self.manager.sanitize_input('interval', 70000), 60000)
 
         # Test mouse button sanitization

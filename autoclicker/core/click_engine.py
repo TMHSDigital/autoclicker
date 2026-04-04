@@ -16,6 +16,8 @@ from .exceptions import ClickEngineError, CoordinateError, SafetyError
 
 # Disable pyautogui failsafe for production use
 pyautogui.FAILSAFE = False
+# Default PAUSE is 0.1s between every PyAutoGUI call — caps CPS at ~5–10/s
+pyautogui.PAUSE = 0
 
 
 class ClickEngine:
@@ -45,6 +47,7 @@ class ClickEngine:
         self.queue_processor_thread: Optional[threading.Thread] = None
         self.max_queue_size = 1000
         self.enable_queuing = False
+        self._last_click_xy: Optional[tuple[int, int]] = None
 
     def start_clicking(self, x: int, y: int, interval: float, variation: int,
                       burst_clicks: int, burst_pause: float, max_clicks: int,
@@ -78,6 +81,7 @@ class ClickEngine:
         self.click_count = 0
         self.start_time = time.time()
         self._stop_event.clear()
+        self._last_click_xy = None
 
         # Start click thread
         self.click_thread = threading.Thread(
@@ -264,14 +268,13 @@ class ClickEngine:
             if not (0 <= x <= screen_width and 0 <= y <= screen_height):
                 raise CoordinateError(x, y, f"Coordinates ({x}, {y}) are outside screen bounds ({screen_width}x{screen_height})")
 
-            # Move to position with optimized timing
-            move_start = time.perf_counter()
-            pyautogui.moveTo(x, y, duration=0.01)
-            move_time = time.perf_counter() - move_start
+            # Instant move; skip if already at target (avoids moveTo overhead each click)
+            if self._last_click_xy != (x, y):
+                pyautogui.moveTo(x, y, duration=0)
+                self._last_click_xy = (x, y)
 
             # Perform click based on button and type
             try:
-                click_operation_start = time.perf_counter()
                 if mouse_button == 'left':
                     if click_type == 'double':
                         pyautogui.doubleClick()
@@ -283,8 +286,6 @@ class ClickEngine:
                     pyautogui.middleClick()
                 else:
                     raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")
-                click_operation_time = time.perf_counter() - click_operation_start
-
                 # Record performance metrics
                 if self.enable_performance_monitoring:
                     total_time = time.perf_counter() - click_start_time
@@ -317,15 +318,15 @@ class ClickEngine:
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
 
     def _wait_with_variation(self, interval: float, variation: int) -> None:
-        """Wait for the specified interval with random variation"""
+        """Wait for the specified interval with random variation (ms). Zero = no sleep."""
         if variation > 0:
             actual_interval = interval + random.randint(-variation, variation)
         else:
             actual_interval = interval
 
-        # Convert to seconds and ensure minimum
-        wait_time = max(actual_interval / 1000, 0.001)
-        time.sleep(wait_time)
+        wait_time = max(0.0, actual_interval / 1000)
+        if wait_time > 0:
+            time.sleep(wait_time)
 
     def get_status(self) -> dict:
         """Get current clicking status"""

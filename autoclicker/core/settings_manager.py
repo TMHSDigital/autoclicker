@@ -83,8 +83,8 @@ class SettingsManager:
                 raise ValidationError('interval_unit', unit, f"Invalid unit: {unit}. Must be 'ms' or 'seconds'")
 
             if unit == 'ms':
-                if not (1 <= interval <= 60000):
-                    raise ValidationError('interval', interval, f"Interval in milliseconds must be between 1 and 60000 (1ms to 1 minute)")
+                if not (0 <= interval <= 60000):
+                    raise ValidationError('interval', interval, "Interval in milliseconds must be between 0 and 60000 (0 = no delay between bursts)")
             elif unit == 'seconds':
                 if not (0.001 <= interval <= 60):
                     raise ValidationError('interval', interval, f"Interval in seconds must be between 0.001 and 60 (0.001s to 1 minute)")
@@ -121,8 +121,12 @@ class SettingsManager:
             if variation < 0:
                 raise ValidationError('variation', variation, "Variation cannot be negative")
 
-            # Convert interval to milliseconds for comparison
             interval_ms = interval if unit == 'ms' else interval * 1000
+
+            if interval_ms <= 0:
+                if variation > 0:
+                    raise ValidationError('variation', variation, "Set a positive interval before using random variation")
+                return True, ""
 
             if variation >= interval_ms:
                 raise ValidationError('variation', variation, f"Variation ({variation}ms) cannot be greater than or equal to interval ({interval_ms}ms)")
@@ -162,7 +166,7 @@ class SettingsManager:
             if key in ['x_coord', 'y_coord']:
                 return max(0, min(int(float(value)), 10000))  # Reasonable coordinate bounds
             elif key in ['interval']:
-                return max(1, min(float(value), 60000))  # 1ms to 1 minute
+                return max(0, min(float(value), 60000))  # 0 = max speed between bursts
             elif key in ['variation', 'burst_clicks', 'max_clicks', 'auto_stop_minutes']:
                 return max(0, int(float(value)))
             elif key in ['burst_pause']:
