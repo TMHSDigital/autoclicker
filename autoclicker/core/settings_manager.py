@@ -7,7 +7,7 @@ import json
 import os
 from typing import Dict, Any, Optional
 
-from .exceptions import ValidationError, SettingsError, create_user_friendly_error
+from .exceptions import ValidationError
 
 
 class SettingsManager:

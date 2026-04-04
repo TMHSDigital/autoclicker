@@ -3,10 +3,12 @@ Custom exceptions for the autoclicker application
 Provides structured error handling with specific exception types
 """
 
+from typing import Any, Optional
+
 
 class AutoclickerError(Exception):
     """Base exception for all autoclicker errors"""
-    def __init__(self, message: str, details: str = None):
+    def __init__(self, message: str, details: Optional[str] = None):
         self.message = message
         self.details = details or ""
         super().__init__(self.message)
@@ -14,7 +16,7 @@ class AutoclickerError(Exception):
 
 class ValidationError(AutoclickerError):
     """Raised when input validation fails"""
-    def __init__(self, field: str, value: any, reason: str):
+    def __init__(self, field: str, value: Any, reason: str):
         self.field = field
         self.value = value
         self.reason = reason
@@ -49,7 +51,7 @@ class SettingsError(AutoclickerError):
 
 class SafetyError(AutoclickerError):
     """Raised when safety limits are exceeded or violated"""
-    def __init__(self, limit_type: str, value: any, limit: any):
+    def __init__(self, limit_type: str, value: Any, limit: Any):
         self.limit_type = limit_type
         self.value = value
         self.limit = limit

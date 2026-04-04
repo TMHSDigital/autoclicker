@@ -4,4 +4,4 @@ A professional autoclicker with advanced automation capabilities and safety feat
 """
 
 __version__ = "1.1.0"
-__author__ = "Sonic AI Assistant"
+__author__ = "TM Hospitality Strategies"

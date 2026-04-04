@@ -4,15 +4,13 @@ Handles user interface and event coordination
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, simpledialog
+from tkinter import ttk, messagebox, simpledialog
 import threading
 import time
 import keyboard
 import pystray
 from PIL import Image
-import win32api
 import pyautogui
-from typing import Optional, Callable
 
 from ..core.settings_manager import SettingsManager
 from ..core.click_engine import ClickEngine
@@ -56,7 +54,7 @@ class AutoclickerApp:
         # Set window icon if available
         try:
             self.root.iconbitmap("autoclicker.ico")
-        except:
+        except Exception:
             pass
 
         # Configure root grid
@@ -239,22 +237,15 @@ class AutoclickerApp:
         self.auto_stop_entry.insert(0, str(self.settings.get('auto_stop_minutes', '0')))
         ttk.Label(safety_frame, text="minutes").pack(side=tk.LEFT)
 
-        # Performance settings section
-        ttk.Label(settings_frame, text="Performance:").grid(row=5, column=0, sticky=tk.W, pady=(15, 0))
-        performance_frame = ttk.Frame(settings_frame)
-        performance_frame.grid(row=5, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(15, 0))
-
-        # Performance monitoring toggle
-        self.performance_monitoring_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(performance_frame, text="Monitor Performance",
-                       variable=self.performance_monitoring_var,
-                       command=self._toggle_performance_monitoring).pack(side=tk.LEFT)
-
         # Click queuing toggle
+        ttk.Label(settings_frame, text="Advanced:").grid(row=5, column=0, sticky=tk.W, pady=(15, 0))
+        advanced_frame = ttk.Frame(settings_frame)
+        advanced_frame.grid(row=5, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(15, 0))
+
         self.click_queuing_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(performance_frame, text="Enable Queuing",
+        ttk.Checkbutton(advanced_frame, text="Enable Click Queuing",
                        variable=self.click_queuing_var,
-                       command=self._toggle_click_queuing).pack(side=tk.LEFT, padx=(10, 0))
+                       command=self._toggle_click_queuing).pack(side=tk.LEFT)
 
     def create_control_section(self, parent):
         """Create control buttons section"""
@@ -543,13 +534,6 @@ class AutoclickerApp:
         if self.click_engine.is_running:
             self._on_status_update()
             self._status_timer = self.root.after(1000, self._update_status_loop)
-
-    def _toggle_performance_monitoring(self):
-        """Toggle performance monitoring on/off"""
-        enabled = self.performance_monitoring_var.get()
-        # Note: Performance monitoring is always enabled in the current implementation
-        # This could be extended to allow disabling it entirely
-        pass
 
     def _toggle_click_queuing(self):
         """Toggle click queuing on/off"""

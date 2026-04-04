@@ -44,22 +44,19 @@ class CoordinatePicker:
             self.is_active = False
             return False
 
-    def stop_picking(self) -> None:
+    def stop_picking(self, cancelled: bool = True) -> None:
         """Stop coordinate picking mode"""
         if not self.is_active:
             return
 
         self.is_active = False
 
-        # Stop listening for mouse events
         try:
             mouse.unhook(self._on_mouse_click)
         except (ValueError, Exception):
-            # Handler might already be removed
             pass
 
-        # Call cancelled callback
-        if self.on_cancelled:
+        if cancelled and self.on_cancelled:
             self.on_cancelled()
 
     def _on_mouse_click(self) -> None:
@@ -68,13 +65,9 @@ class CoordinatePicker:
             return
 
         try:
-            # Get current mouse position
             x, y = mouse.get_position()
+            self.stop_picking(cancelled=False)
 
-            # Stop listening
-            self.stop_picking()
-
-            # Call selection callback
             if self.on_coordinate_selected:
                 self.on_coordinate_selected(x, y)
 

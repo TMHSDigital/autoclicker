@@ -34,7 +34,7 @@ def create_icon():
     try:
         # Try to use a system font
         font = ImageFont.truetype("arial.ttf", 48)
-    except:
+    except Exception:
         # Fall back to default font
         font = ImageFont.load_default()
 

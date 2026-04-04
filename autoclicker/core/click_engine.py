@@ -8,11 +8,11 @@ import random
 import threading
 import statistics
 from collections import deque
-from typing import Callable, Optional, Dict, List
+from typing import Callable, Optional, Dict
 
 import pyautogui
 
-from .exceptions import ClickEngineError, CoordinateError, SafetyError, create_user_friendly_error
+from .exceptions import ClickEngineError, CoordinateError, SafetyError
 
 # Disable pyautogui failsafe for production use
 pyautogui.FAILSAFE = False
@@ -38,8 +38,6 @@ class ClickEngine:
             'min_click_time': float('inf'),
             'max_click_time': 0.0,
             'total_click_time': 0.0,
-            'cpu_usage_samples': deque(maxlen=100),
-            'memory_usage_samples': deque(maxlen=100)
         }
 
         # Click queuing for high-frequency operations
@@ -126,8 +124,6 @@ class ClickEngine:
             'min_click_time': float('inf'),
             'max_click_time': 0.0,
             'total_click_time': 0.0,
-            'cpu_usage_samples': deque(maxlen=100),
-            'memory_usage_samples': deque(maxlen=100)
         }
 
     def enable_click_queuing(self, enable: bool = True, max_queue_size: int = 1000) -> None:

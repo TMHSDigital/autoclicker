@@ -1,14 +1,11 @@
 # Windows Autoclicker
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
+[![CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml/badge.svg)](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
 [![Windows](https://img.shields.io/badge/Windows-10+-0078D4.svg)](https://www.microsoft.com/windows/)
-[![License](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/TMHSDigital/autoclicker)
-[![Downloads](https://img.shields.io/badge/downloads-100+-blue.svg)](https://github.com/TMHSDigital/autoclicker/releases)
-[![Issues](https://img.shields.io/github/issues/TMHSDigital/autoclicker.svg)](https://github.com/TMHSDigital/autoclicker/issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/TMHSDigital/autoclicker.svg)](https://github.com/TMHSDigital/autoclicker/pulls)
+[![License](https://img.shields.io/badge/license-CC_BY--NC_4.0-green.svg)](LICENSE)
 
-A professional, high-performance autoclicker application for Windows with advanced automation capabilities, comprehensive safety features, and real-time performance monitoring.
+A configurable autoclicker for Windows with coordinate targeting, burst mode, preset management, and safety controls.
 
 ## Table of Contents
 
@@ -16,7 +13,6 @@ A professional, high-performance autoclicker application for Windows with advanc
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
-- [Performance Monitoring](#performance-monitoring)
 - [Configuration](#configuration)
 - [Safety & Compliance](#safety--compliance)
 - [Technical Details](#technical-details)
@@ -24,7 +20,6 @@ A professional, high-performance autoclicker application for Windows with advanc
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
-- [Support](#support)
 
 ## Features
 
@@ -42,22 +37,12 @@ A professional, high-performance autoclicker application for Windows with advanc
 - **Burst Mode Automation**: Multiple clicks with configurable pause intervals
 - **Safety Control Systems**: Maximum click limits and automatic time-based shutdown
 
-### Professional User Interface
-- **Clean Modern GUI**: Built with tkinter for native Windows integration
-- **Real-time Monitoring**: Live click counter, runtime display, and status indicators
-- **Performance Metrics**: Real-time display of clicks per second, success rate, and timing data
-- **System Tray Integration**: Minimize to tray for unobtrusive background operation
-- **Persistent Settings**: Automatic save/load of user preferences and configurations
-- **Performance Controls**: Toggle performance monitoring and click queuing
-- **Enhanced Validation**: Comprehensive input validation with user-friendly error messages
-
-### Performance Monitoring & Optimization
-- **Real-time Performance Metrics**: Monitor clicks per second, success rate, and average click time
-- **Advanced Timing Analysis**: Detailed statistics including min/max/median times and standard deviation
-- **Click Queuing System**: High-frequency click support with configurable queue management
-- **Performance Profiling**: Built-in performance monitoring with detailed operation timing
-- **Resource Optimization**: Efficient threading and memory management for sustained operation
-- **Success Rate Tracking**: Monitor operation success rates and error detection
+### User Interface
+- **Native GUI**: Built with tkinter for Windows integration
+- **Live Status**: Click counter, runtime display, and status indicators
+- **System Tray Integration**: Minimize to tray for background operation
+- **Persistent Settings**: Automatic save/load of user preferences
+- **Input Validation**: Comprehensive validation with user-friendly error messages
 
 ### Safety & Control Features
 - **Emergency Stop System**: Instant halt capability with dedicated hotkey
@@ -72,13 +57,13 @@ A professional, high-performance autoclicker application for Windows with advanc
 
 ### System Requirements
 - **Operating System**: Windows 10 or Windows 11 (64-bit recommended)
-- **Python Version**: Python 3.8 or higher
+- **Python Version**: Python 3.10 or higher
 - **System Memory**: 100 MB RAM minimum
 - **Disk Space**: 50 MB free space
 - **Display**: 1024x768 minimum resolution
 
 ### Prerequisites
-- Python 3.8+ ([Download from python.org](https://python.org/downloads/))
+- Python 3.10+ ([Download from python.org](https://python.org/downloads/))
 - Windows 10/11 with administrator privileges for full functionality
 
 ### Installation Steps
@@ -186,27 +171,6 @@ run_autoclicker.bat
 - **max_clicks**: Maximum clicks before auto-stop (0 = unlimited)
 - **auto_stop_minutes**: Auto-stop after X minutes (0 = disabled)
 
-### Performance Monitoring
-
-#### Real-time Performance Metrics
-The application provides comprehensive performance monitoring during operation:
-
-- **Clicks Per Second**: Real-time calculation of clicking speed
-- **Success Rate**: Percentage of successful clicks vs total attempts
-- **Average Click Time**: Mean time for each click operation
-- **Performance Display**: Metrics shown in the status panel during operation
-
-#### Performance Controls
-- **Monitor Performance**: Toggle performance monitoring on/off
-- **Enable Queuing**: Enable click queuing for high-frequency operations
-- **Queue Management**: Automatic queue management with configurable size limits
-
-#### Performance Tips
-- **Enable queuing** for operations requiring many clicks per second
-- **Monitor success rate** to detect clicking issues
-- **Use performance metrics** to optimize timing settings
-- **Disable monitoring** if performance overhead is unwanted
-
 ### Hotkey Reference
 | Hotkey | Function | Description |
 |--------|----------|-------------|
@@ -312,46 +276,29 @@ Do not use for:
 
 #### Application Structure
 ```
+autoclicker.py                      # Entry point
 autoclicker/
-├── core/
-│   ├── __init__.py
-│   ├── settings_manager.py     # Configuration handling & validation
-│   ├── click_engine.py         # Automation core with performance monitoring
-│   └── exceptions.py           # Custom exception hierarchy
-├── gui/
-│   ├── __init__.py
-│   └── main_window.py          # Enhanced GUI with performance controls
-├── utils/
-│   ├── __init__.py
-│   └── coordinate_picker.py    # Coordinate selection & presets
-├── main.py                     # Modular entry point
 ├── __init__.py
-└── autoclicker.py              # Backward-compatible wrapper
+├── main.py                         # App bootstrap
+├── core/
+│   ├── settings_manager.py         # Configuration & validation
+│   ├── click_engine.py             # Click automation & threading
+│   └── exceptions.py               # Custom exception hierarchy
+├── gui/
+│   └── main_window.py              # Tkinter GUI
+└── utils/
+    └── coordinate_picker.py        # Coordinate selection & presets
 ```
-
-#### Modular Architecture Benefits
-- **Separation of Concerns**: Clear boundaries between GUI, core logic, and utilities
-- **Enhanced Maintainability**: Focused modules with single responsibilities
-- **Improved Testability**: Isolated components for comprehensive testing
-- **Better Error Handling**: Structured exception hierarchy with user-friendly messages
-- **Performance Monitoring**: Built-in performance profiling and metrics collection
 
 #### Threading Model
 - **Main Thread**: GUI event handling and user interaction
-- **Click Thread**: Isolated automation execution with performance monitoring
-- **Queue Processor Thread**: Dedicated thread for high-frequency click queuing
-- **Monitor Thread**: Safety monitoring and emergency response
-- **Event Thread**: Hotkey and system event processing
+- **Click Thread**: Isolated automation execution
+- **Queue Processor Thread**: Optional thread for high-frequency click queuing
 
-### Performance Characteristics
-- **CPU Usage**: < 2% during normal operation, < 5% with performance monitoring
-- **Memory Footprint**: ~50MB resident memory
-- **Click Accuracy**: ±1 pixel at 60+ FPS
-- **Response Time**: < 10ms hotkey response
-- **Performance Monitoring**: Real-time metrics with minimal overhead
-- **Click Queuing**: Support for high-frequency operations up to 1000+ CPS
-- **Thread Safety**: Fully thread-safe operation with comprehensive error handling
-- **Success Rate Tracking**: Built-in operation reliability monitoring
+### Design Notes
+- Threaded click loop keeps the GUI responsive
+- Click queuing available for high-frequency operations
+- Daemon threads ensure clean exit on window close
 
 ## Testing
 
@@ -381,13 +328,6 @@ tests/
 └── test_coordinate_picker.py  # Coordinate and preset tests
 ```
 
-### Performance Testing
-The application includes built-in performance profiling to help optimize click operations:
-- Real-time click timing analysis
-- Success rate monitoring
-- Queue performance metrics
-- Memory usage tracking
-
 ## Troubleshooting
 
 ### Common Issues and Solutions
@@ -395,7 +335,7 @@ The application includes built-in performance profiling to help optimize click o
 #### Application Startup Problems
 **Issue**: Application fails to launch
 **Solutions**:
-- Verify Python 3.8+ installation
+- Verify Python 3.10+ installation
 - Run as administrator: `right-click > Run as administrator`
 - Install dependencies: `pip install -r requirements.txt`
 - Check Windows Event Viewer for error details
@@ -424,14 +364,6 @@ The application includes built-in performance profiling to help optimize click o
 - Restart Windows Explorer
 - Run with administrator privileges
 
-#### Performance Monitoring Issues
-**Issue**: Performance metrics not displaying
-**Solutions**:
-- Ensure "Monitor Performance" is enabled in the GUI
-- Check that the application is running (metrics only show during operation)
-- Restart the application if metrics become unresponsive
-- Disable performance monitoring if experiencing performance issues
-
 #### Input Validation Errors
 **Issue**: "Validation Error" messages when starting
 **Solutions**:
@@ -441,19 +373,11 @@ The application includes built-in performance profiling to help optimize click o
 - Check that variation is not larger than the interval
 - Use the coordinate picker to avoid manual entry errors
 
-### Debug Mode
-Enable verbose logging for troubleshooting:
-
-```bash
-python autoclicker.py --debug
-```
-
 ### Error Reporting
 For persistent issues:
-1. Enable debug mode and capture output
-2. Check Windows Event Viewer (eventvwr.msc)
-3. Create an issue with full error details
-4. Include system information and reproduction steps
+1. Check Windows Event Viewer (eventvwr.msc)
+2. Create an issue with full error details
+3. Include system information and reproduction steps
 
 ## Contributing
 
@@ -521,55 +445,9 @@ python -m pytest tests/test_coordinate_picker.py -v
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License** (CC BY-NC 4.0). See the [LICENSE](LICENSE) file for details.
 
-```
-MIT License
-
-Copyright (c) 2025 TMHSDigital
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-## Support
-
-### Documentation
-- [Installation Guide](docs/installation.md)
-- [User Manual](docs/user-manual.md)
-- [API Reference](docs/api-reference.md)
-- [Troubleshooting](docs/troubleshooting.md)
-
-### Community Support
-- [GitHub Issues](https://github.com/TMHSDigital/autoclicker/issues)
-- [GitHub Discussions](https://github.com/TMHSDigital/autoclicker/discussions)
-- [Pull Requests](https://github.com/TMHSDigital/autoclicker/pulls)
-
-### Professional Support
-For enterprise support, custom development, or consulting services:
-- Email: support@tmhsdigital.com
-- Website: https://tmhsdigital.com
-- LinkedIn: [TMHSDigital](https://linkedin.com/company/tmhsdigital)
-
-### Security
-Report security vulnerabilities to: security@tmhsdigital.com
-
-We follow responsible disclosure practices and will work with you to resolve any security issues.
+You are free to share and adapt this software for non-commercial purposes, with appropriate attribution. For commercial licensing inquiries, contact TM Hospitality Strategies.
 
 ---
 

@@ -24,7 +24,7 @@ def main():
             root.withdraw()
             messagebox.showerror("Error", f"Application failed to start: {e}")
             root.destroy()
-        except:
+        except Exception:
             pass
         sys.exit(1)
 
