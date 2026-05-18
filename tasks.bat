@@ -29,7 +29,7 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :coverage
-"%PY%" -m pytest --cov=autoclicker --cov-report=term --cov-report=html
+"%PY%" -m pytest --cov=autoclicker --cov-report=term --cov-report=html --cov-report=xml
 exit /b %ERRORLEVEL%
 
 :lint
