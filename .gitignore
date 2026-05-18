@@ -21,6 +21,7 @@ MANIFEST
 autoclicker_env/
 dev_env/
 .venv/
+.venv-lock/
 venv/
 env/
 

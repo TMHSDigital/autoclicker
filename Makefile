@@ -12,6 +12,11 @@ endif
 install:
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 	$(VENV_PYTHON) -m pip install --upgrade pip
+	@if [ -f requirements-lock.txt ]; then \
+		$(VENV_PYTHON) -m pip install -r requirements-lock.txt; \
+	else \
+		$(VENV_PYTHON) -m pip install -r requirements.txt; \
+	fi
 	$(VENV_PYTHON) -m pip install -e ".[dev,build]"
 
 test:
