@@ -386,44 +386,16 @@ For persistent issues:
 
 ## Contributing
 
-We welcome contributions from the community! Here's how to get involved:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup (`make install` or `tasks.bat install`), tests, lint, pre-commit, licensing (CC BY-NC 4.0), and the tag-based release flow.
 
-### Development Setup
+Quick start:
+
 ```bash
-# Fork and clone the repository
-git clone https://github.com/TMHSDigital/autoclicker.git
-cd autoclicker
-
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Set up development environment
-python -m venv dev_env
-dev_env\Scripts\activate
-pip install -r requirements.txt
-pip install -e .  # Install in development mode
+tasks.bat install
+tasks.bat check
 ```
 
-### Code Standards
-- Follow PEP 8 style guidelines
-- Add docstrings for all functions and classes
-- Write comprehensive unit tests
-- Update documentation for new features
-- Ensure cross-platform compatibility
-
-### Testing Requirements
-```bash
-# Run comprehensive test suite
-python run_tests.py
-
-# Run tests with coverage reporting
-python run_tests.py --coverage
-
-# Run specific test modules
-python -m pytest tests/test_settings_manager.py -v
-python -m pytest tests/test_exceptions.py -v
-python -m pytest tests/test_coordinate_picker.py -v
-```
+CI and maintainers use pinned dependencies in `requirements-lock.txt` (regenerate with `tasks.bat lock` on Python 3.11).
 
 ### Pull Request Process
 1. **Fork** the repository

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Main GUI window for the autoclicker application
 Handles user interface and event coordination

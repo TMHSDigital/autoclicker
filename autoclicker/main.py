@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Windows Autoclicker Application - Modular Entry Point
 A professional autoclicker with advanced automation capabilities and safety features.

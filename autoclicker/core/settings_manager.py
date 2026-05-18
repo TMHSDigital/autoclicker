@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Settings management for the autoclicker application
 Handles loading, saving, and validation of user settings

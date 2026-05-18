@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Custom exceptions for the autoclicker application
 Provides structured error handling with specific exception types

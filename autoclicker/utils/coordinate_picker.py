@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Coordinate picker utility
 Handles interactive coordinate selection with mouse events
