@@ -46,12 +46,26 @@ Smoke script output uses Unicode symbols (checkmark/cross emojis) in print strin
 
 ## 4. Discrepancies between documentation and code
 
-(To be populated in phase 6.)
+| Source | Claim | Observation |
+|--------|-------|---------------|
+| `README.md` Test Coverage | Lists Click Engine and GUI Integration tests | `tests/` only contains `test_settings_manager.py`, `test_exceptions.py`, `test_coordinate_picker.py` |
+| `README.md` (historical) | Implied `test_autoclicker.py` in test flow | Moved to `scripts/smoke_check.py`; not part of pytest |
+| `run_autoclicker.bat` line 13 | Python 3.8+ | `pyproject.toml` and README require Python 3.10+ |
+| `README.md` Contributing (pre-hardening) | Manual venv + `pip install -r requirements.txt` only | Replaced by pointer to `CONTRIBUTING.md` and `tasks.bat` / `make` targets |
 
 ## 5. Discrepancies between configuration files
 
-(To be populated during hardening.)
+| Item | Location A | Location B | Observation |
+|------|------------|------------|---------------|
+| License classifier | `pyproject.toml` `Other/Proprietary License` | `LICENSE` CC BY-NC 4.0 | `license = {text = "CC-BY-NC-4.0"}` added; classifier unchanged (no PyPI trove for CC-BY-NC) |
+| Runtime pins | `requirements.txt` (`>=`) | `requirements-lock.txt` (exact) | Lock generated locally on Python 3.13.3 (3.11 unavailable on capture machine); CI targets 3.11 |
+| Coverage source | `[tool.coverage.run] source = ["."]` | pytest `--cov=autoclicker` | Different scope between legacy coverage config and current runner |
+| Dev linters | Was flake8/black in CI | ruff in `pyproject.toml` | CI migrated in hardening pass |
 
 ## 6. Anything else worth remembering
 
-(To be populated throughout.)
+- `pyautogui.FAILSAFE = False` set in `autoclicker/core/click_engine.py` at import time.
+- Root `test_autoclicker.py` defined `test_*` functions returning `bool`; pytest would treat failures as passes if collected.
+- `autoclicker_settings.json` is gitignored; tests may emit "Could not load settings file" warnings when the file exists but is empty.
+- Public repo: do not commit secrets; `SECURITY.md` and `CONTRIBUTING.md` document email reporting and license constraints.
+- Git tag `pre-hardening-baseline` is local only (do not push unless intentional).
