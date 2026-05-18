@@ -21,6 +21,8 @@ A configurable autoclicker for Windows with coordinate targeting, burst mode, pr
 - [Contributing](#contributing)
 - [License](#license)
 
+---
+
 ## Features
 
 ### Core Functionality
