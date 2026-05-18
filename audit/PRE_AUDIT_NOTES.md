@@ -21,9 +21,16 @@ Smoke script output uses Unicode symbols (checkmark/cross emojis) in print strin
 
 ## 3. Discrepancies between test runners
 
-- `run_tests.py` uses unittest discovery on `tests/` only (31 tests reported).
-- `pytest` with `testpaths = [".", "tests"]` can collect root `test_autoclicker.py` functions named `test_*` (bool-returning, not assert-based); baseline pytest run aborted at collection before full comparison.
-- CI runs smoke script and pytest separately (`.github/workflows/ci.yml`).
+**Baseline (pre phase 2):**
+- `run_tests.py` used unittest discovery on `tests/` only (31 tests reported).
+- `pytest` with `testpaths = [".", "tests"]` could collect root `test_autoclicker.py` functions named `test_*` (bool-returning, not assert-based).
+- CI ran smoke script and pytest separately (`.github/workflows/ci.yml`).
+
+**After phase 2:**
+- `run_tests.py` delegates to `python -m pytest` with the same exit code.
+- Smoke script moved to `scripts/smoke_check.py` (not matched by `test_*.py`); check functions renamed `check_*`.
+- `testpaths = ["tests"]` only; `filterwarnings = ["error::DeprecationWarning"]` added.
+- Post-change: `run_tests.py` and `pytest` both exit 2 with the same collection error when `mouse` is missing (aligned).
 
 ## 4. Discrepancies between documentation and code
 

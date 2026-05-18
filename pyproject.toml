@@ -73,10 +73,8 @@ include = ["autoclicker*"]
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -v --tb=short"
-testpaths = [
-    ".",
-    "tests",
-]
+testpaths = ["tests"]
+filterwarnings = ["error::DeprecationWarning"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"

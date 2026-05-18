@@ -308,11 +308,14 @@ The application includes comprehensive unit tests for all core functionality.
 
 ### Running Tests
 ```bash
-# Run all tests
+# Run all unit tests (pytest)
 python run_tests.py
 
 # Run tests with coverage reporting
 python run_tests.py --coverage
+
+# Smoke check: dependencies and project layout (not part of pytest)
+python scripts/smoke_check.py
 ```
 
 ### Test Coverage
