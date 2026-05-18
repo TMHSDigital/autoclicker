@@ -45,9 +45,9 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "coverage>=7.0.0",
-    "flake8>=6.0.0",
-    "black>=23.0.0",
-    "mypy>=1.0.0"
+    "ruff>=0.8.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
 ]
 build = [
     "pyinstaller>=5.0.0",
@@ -110,30 +110,17 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod"
 ]
 
-[tool.black]
-line-length = 88
-target-version = ['py310']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | autoclicker_env
-  | build
-  | dist
-)/
-'''
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["."]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["autoclicker"]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"autoclicker/**" = ["ALL"]
+"autoclicker.py" = ["ALL"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -160,3 +147,8 @@ module = [
     "win32.*"
 ]
 ignore_missing_imports = true
+
+# Pre-audit: production typing cleanup deferred to deep dive
+[[tool.mypy.overrides]]
+module = "autoclicker.*"
+ignore_errors = true

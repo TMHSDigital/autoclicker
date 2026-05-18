@@ -4,7 +4,19 @@ Handoff document for the deep dive. Factual observations only.
 
 ## 1. Lint violations in autoclicker/
 
-(To be populated in phase 3.)
+Ruff (`select = E,F,W,I,UP,B,SIM,RUF`) before per-file ignores:
+
+| File | Rule | Line | Observation |
+|------|------|------|---------------|
+| `autoclicker/core/settings_manager.py` | F401 | 8 | Unused import `Optional` |
+| `autoclicker/core/settings_manager.py` | F541 | 90 | f-string without placeholders |
+| `autoclicker/core/settings_manager.py` | F841 | 195 | Local variable `sanitized` assigned but never used |
+| `autoclicker/gui/main_window.py` | F401 | 9 | Unused import `time` |
+| `autoclicker/utils/coordinate_picker.py` | F401 | 6 | Unused import `threading` |
+
+Mypy (37 errors in 4 files before `ignore_errors` override): `exceptions.py` (missing `reason` on subclasses), `settings_manager.py` (var-annotated), `click_engine.py` (typing on metrics deque), `main_window.py` (`sticky` tuple vs str stubs).
+
+Per-file `ALL` ignores added under `[tool.ruff.lint.per-file-ignores]` for `autoclicker/**` and `autoclicker.py`. Mypy `ignore_errors = true` for `autoclicker.*` until deep dive.
 
 ## 2. Test failures or skips in the baseline
 
