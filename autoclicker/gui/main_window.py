@@ -16,6 +16,7 @@ import pyautogui
 from ..core.settings_manager import SettingsManager
 from ..core.click_engine import ClickEngine
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
+from ..core.session_log import append_session_event
 from ..utils.coordinate_picker import CoordinatePicker, PresetManager
 
 
@@ -29,6 +30,7 @@ class AutoclickerApp:
         # Core components
         self.settings = SettingsManager()
         self.click_engine = ClickEngine()
+        self._apply_safety_from_settings()
         self.coordinate_picker = CoordinatePicker()
         self.preset_manager = PresetManager(self.settings)
 
@@ -248,6 +250,23 @@ class AutoclickerApp:
                        variable=self.click_queuing_var,
                        command=self._toggle_click_queuing).pack(side=tk.LEFT)
 
+        self.failsafe_var = tk.BooleanVar(value=self.settings.get("enable_failsafe", True))
+        ttk.Checkbutton(
+            advanced_frame,
+            text="PyAutoGUI Failsafe (corner abort)",
+            variable=self.failsafe_var,
+            command=self._on_failsafe_toggle,
+        ).pack(side=tk.LEFT, padx=(10, 0))
+
+        self.pause_unfocused_var = tk.BooleanVar(
+            value=self.settings.get("pause_when_unfocused", False)
+        )
+        ttk.Checkbutton(
+            advanced_frame,
+            text="Pause when window loses focus",
+            variable=self.pause_unfocused_var,
+        ).pack(side=tk.LEFT, padx=(10, 0))
+
     def create_control_section(self, parent):
         """Create control buttons section"""
         control_frame = ttk.Frame(parent)
@@ -308,6 +327,32 @@ class AutoclickerApp:
 
         parent.grid_rowconfigure(5, weight=1)
 
+    def _set_status_message(self, message: str) -> None:
+        """Show a status line in the GUI (replaces silent print for integration errors)."""
+        if hasattr(self, "status_var"):
+            self.status_var.set(message)
+
+    def _apply_safety_from_settings(self) -> None:
+        self.click_engine.configure_safety(
+            failsafe=bool(self.settings.get("enable_failsafe", True)),
+            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
+            pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
+            on_safety_stop=self._on_safety_stop,
+        )
+
+    def _on_failsafe_toggle(self) -> None:
+        self.click_engine.configure_safety(
+            failsafe=self.failsafe_var.get(),
+            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
+            pause_when_unfocused=self.pause_unfocused_var.get(),
+            on_safety_stop=self._on_safety_stop,
+        )
+
+    def _on_safety_stop(self, reason: str) -> None:
+        self._set_status_message(reason)
+        append_session_event("safety_stop", reason=reason, clicks=self.click_engine.click_count)
+        self.stop_clicking()
+
     def setup_hotkeys(self):
         """Setup keyboard hotkeys"""
         try:
@@ -315,7 +360,7 @@ class AutoclickerApp:
             keyboard.add_hotkey('f7', self.stop_clicking)
             keyboard.add_hotkey('esc', self.emergency_stop)
         except Exception as e:
-            print(f"Hotkey setup failed: {e}")
+            self._set_status_message(f"Hotkey setup failed: {e}")
 
     def setup_system_tray(self):
         """Setup system tray icon"""
@@ -335,7 +380,8 @@ class AutoclickerApp:
                 )
             )
         except Exception as e:
-            print(f"System tray setup failed: {e}")
+            self._set_status_message(f"System tray setup failed: {e}")
+            self.tray_icon = None
 
     def start_coordinate_picker(self):
         """Start coordinate picking mode"""
@@ -418,6 +464,9 @@ class AutoclickerApp:
             "burst_pause": self.burst_pause_entry.get(),
             "max_clicks": self.max_clicks_entry.get(),
             "auto_stop_minutes": self.auto_stop_entry.get(),
+            "enable_failsafe": self.failsafe_var.get(),
+            "pause_when_unfocused": self.pause_unfocused_var.get(),
+            "max_cps_ceiling": self.settings.get("max_cps_ceiling", 50),
         }
 
     def start_clicking(self):
@@ -461,6 +510,14 @@ class AutoclickerApp:
             # Update settings with sanitized values
             self.settings.update(sanitized)
 
+            self._apply_safety_from_settings()
+            self.click_engine.configure_safety(
+                failsafe=self.failsafe_var.get(),
+                max_cps=int(self.settings.get("max_cps_ceiling", 50)),
+                pause_when_unfocused=self.pause_unfocused_var.get(),
+                on_safety_stop=self._on_safety_stop,
+            )
+
             # Start clicking with validated settings
             if self.click_engine.start_clicking(
                 x=x, y=y, interval=interval_ms, variation=variation,
@@ -474,6 +531,13 @@ class AutoclickerApp:
                 self.stop_btn.config(state=tk.NORMAL)
                 self.status_var.set("Running...")
                 self.coord_var.set(f"Target: ({x}, {y})")
+                append_session_event(
+                    "start",
+                    x=x,
+                    y=y,
+                    interval_ms=interval_ms,
+                    button=sanitized["mouse_button"],
+                )
 
                 # Start status update timer
                 self._start_status_timer()
@@ -489,19 +553,33 @@ class AutoclickerApp:
 
     def stop_clicking(self):
         """Stop the autoclicking process"""
+        was_running = self.click_engine.is_running
         self.click_engine.stop_clicking()
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.status_var.set("Stopped")
         self._stop_status_timer()
+        if was_running:
+            append_session_event(
+                "stop",
+                reason="user_stop",
+                clicks=self.click_engine.click_count,
+            )
 
     def emergency_stop(self):
         """Emergency stop - immediate halt"""
+        was_running = self.click_engine.is_running
         self.click_engine.emergency_stop()
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.status_var.set("Emergency Stop")
         self._stop_status_timer()
+        if was_running:
+            append_session_event(
+                "stop",
+                reason="emergency",
+                clicks=self.click_engine.click_count,
+            )
 
     def _on_clicking_complete(self):
         """Handle clicking completion"""

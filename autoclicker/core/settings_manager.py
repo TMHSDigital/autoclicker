@@ -26,6 +26,9 @@ class SettingsManager:
         'burst_pause': 1000,
         'max_clicks': 0,
         'auto_stop_minutes': 0,
+        'enable_failsafe': True,
+        'max_cps_ceiling': 50,
+        'pause_when_unfocused': False,
         'presets': {}
     }
 

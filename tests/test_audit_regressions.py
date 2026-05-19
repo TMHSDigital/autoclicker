@@ -107,6 +107,11 @@ class TestQuitPersistence(unittest.TestCase):
         app.max_clicks_entry.get.return_value = "0"
         app.auto_stop_entry = MagicMock()
         app.auto_stop_entry.get.return_value = "0"
+        app.failsafe_var = MagicMock()
+        app.failsafe_var.get.return_value = True
+        app.pause_unfocused_var = MagicMock()
+        app.pause_unfocused_var.get.return_value = False
+        app.click_engine.configure_safety = MagicMock()
 
         with patch("autoclicker.gui.main_window.pyautogui.size", return_value=(1920, 1080)):
             app.quit_application()
