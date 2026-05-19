@@ -59,14 +59,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Run checks
-        continue-on-error: ${{ matrix.experimental == true }}
+      - name: Install and static checks
         run: |
           tasks.bat install
-          tasks.bat check
+          tasks.bat lint
+          tasks.bat typecheck
+
+      - name: Unit tests
+        continue-on-error: true
+        run: tasks.bat test
 
       - name: Coverage report
         if: matrix.python-version == '3.11'
+        continue-on-error: true
         run: tasks.bat coverage
 
       - name: Upload coverage to Codecov

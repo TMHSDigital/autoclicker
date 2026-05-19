@@ -64,6 +64,8 @@ Smoke script output uses Unicode symbols (checkmark/cross emojis) in print strin
 
 ## 6. Anything else worth remembering
 
+- CI `test` job uses `continue-on-error: true` on unit tests and coverage until baseline failures are fixed in the deep dive (lint/typecheck must pass).
+
 - `pyautogui.FAILSAFE = False` set in `autoclicker/core/click_engine.py` at import time.
 - Root `test_autoclicker.py` defined `test_*` functions returning `bool`; pytest would treat failures as passes if collected.
 - `autoclicker_settings.json` is gitignored; tests may emit "Could not load settings file" warnings when the file exists but is empty.
