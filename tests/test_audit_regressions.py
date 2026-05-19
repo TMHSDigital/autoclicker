@@ -1,6 +1,6 @@
 """
 Regression tests for audit findings (phase 1).
-Each test should fail until the corresponding fix lands in phase 2.
+Verify fixes from phase 2 correctness pass.
 """
 
 import unittest
@@ -16,27 +16,27 @@ class TestClickEngineQueueBugs(unittest.TestCase):
     """C1, C2: queue mode counter and processor behavior."""
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_mode_increments_count_without_executing_clicks(self, mock_pyautogui):
+    def test_queue_mode_does_not_increment_count_without_executing(self, mock_pyautogui):
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_queuing(True)
+        engine.enable_queuing = True
         engine.is_running = True
 
         engine._perform_burst(100, 100, 3, 0.01, "left", "single")
 
-        self.assertEqual(engine.click_count, 3)
+        self.assertEqual(engine.click_count, 0)
         mock_pyautogui.click.assert_not_called()
         self.assertEqual(len(engine.click_queue), 3)
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_processor_does_not_execute_clicks(self, mock_pyautogui):
+    def test_queue_processor_executes_clicks(self, mock_pyautogui):
+        mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_queuing(True)
-        engine.click_queue.append((50, 50, "left", "single"))
+        engine.enable_queuing = True
 
-        engine._perform_click(50, 50, "left", "single")
+        engine._perform_click(50, 50, "left", "single", from_queue=True)
 
-        mock_pyautogui.click.assert_not_called()
-        self.assertGreaterEqual(len(engine.click_queue), 1)
+        mock_pyautogui.click.assert_called_once()
+        self.assertEqual(engine.click_count, 1)
 
 
 class TestCoordinatePickerHooks(unittest.TestCase):
@@ -49,17 +49,21 @@ class TestCoordinatePickerHooks(unittest.TestCase):
         with (
             patch("mouse.on_button", return_value=mock_hook) as mock_on_button,
             patch("mouse.unhook") as mock_unhook,
+            patch("keyboard.add_hotkey", return_value=MagicMock()),
         ):
             picker.start_picking(lambda x, y: None)
             mock_on_button.assert_called_once()
             picker.stop_picking(cancelled=True)
             mock_unhook.assert_called_once_with(mock_hook)
 
-    def test_no_keyboard_cancel_handler_registered(self):
+    def test_keyboard_cancel_handler_registered_on_start(self):
         picker = CoordinatePicker()
-        with patch("mouse.on_button", return_value=MagicMock()):
+        with (
+            patch("mouse.on_button", return_value=MagicMock()),
+            patch("keyboard.add_hotkey", return_value=MagicMock()) as mock_hotkey,
+        ):
             picker.start_picking(lambda x, y: None, on_cancelled=lambda: None)
-        self.assertTrue(hasattr(picker, "_keyboard_hook") and picker._keyboard_hook is not None)
+        mock_hotkey.assert_called_once_with("esc", picker._on_cancel_hotkey)
 
 
 class TestQuitPersistence(unittest.TestCase):
@@ -71,8 +75,13 @@ class TestQuitPersistence(unittest.TestCase):
         app = AutoclickerApp.__new__(AutoclickerApp)
         app.click_engine = MagicMock()
         app.click_engine.is_running = False
+        app.stop_clicking = MagicMock()
         app.coordinate_picker = MagicMock()
         app.settings = MagicMock()
+        app.settings.validate_all_settings.return_value = {
+            "valid": True,
+            "sanitized_settings": {"x_coord": 321, "y_coord": 654},
+        }
         app.root = MagicMock()
         app.tray_icon = None
 
@@ -80,8 +89,27 @@ class TestQuitPersistence(unittest.TestCase):
         app.x_entry.get.return_value = "321"
         app.y_entry = MagicMock()
         app.y_entry.get.return_value = "654"
+        app.interval_entry = MagicMock()
+        app.interval_entry.get.return_value = "1000"
+        app.interval_unit_var = MagicMock()
+        app.interval_unit_var.get.return_value = "ms"
+        app.variation_entry = MagicMock()
+        app.variation_entry.get.return_value = "0"
+        app.button_var = MagicMock()
+        app.button_var.get.return_value = "left"
+        app.click_type_var = MagicMock()
+        app.click_type_var.get.return_value = "single"
+        app.burst_clicks_entry = MagicMock()
+        app.burst_clicks_entry.get.return_value = "1"
+        app.burst_pause_entry = MagicMock()
+        app.burst_pause_entry.get.return_value = "1000"
+        app.max_clicks_entry = MagicMock()
+        app.max_clicks_entry.get.return_value = "0"
+        app.auto_stop_entry = MagicMock()
+        app.auto_stop_entry.get.return_value = "0"
 
-        app.quit_application()
+        with patch("autoclicker.gui.main_window.pyautogui.size", return_value=(1920, 1080)):
+            app.quit_application()
 
         app.settings.update.assert_called_once()
         saved = app.settings.update.call_args[0][0]

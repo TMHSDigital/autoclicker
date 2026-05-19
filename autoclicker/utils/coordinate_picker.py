@@ -4,9 +4,10 @@ Coordinate picker utility
 Handles interactive coordinate selection with mouse events
 """
 
-import threading
+from typing import Any, Callable, Optional, Tuple
+
+import keyboard
 import mouse
-from typing import Optional, Callable, Tuple
 
 
 class CoordinatePicker:
@@ -16,9 +17,14 @@ class CoordinatePicker:
         self.is_active = False
         self.on_coordinate_selected: Optional[Callable[[int, int], None]] = None
         self.on_cancelled: Optional[Callable] = None
+        self._mouse_hook: Any = None
+        self._keyboard_hook: Any = None
 
-    def start_picking(self, on_selected: Callable[[int, int], None],
-                     on_cancelled: Optional[Callable] = None) -> bool:
+    def start_picking(
+        self,
+        on_selected: Callable[[int, int], None],
+        on_cancelled: Optional[Callable] = None,
+    ) -> bool:
         """
         Start coordinate picking mode
 
@@ -36,13 +42,16 @@ class CoordinatePicker:
         self.on_coordinate_selected = on_selected
         self.on_cancelled = on_cancelled
 
-        # Start listening for mouse events
         try:
-            mouse.on_button(self._on_mouse_click, buttons=('left',), types=('down',))
+            self._mouse_hook = mouse.on_button(
+                self._on_mouse_click, buttons=("left",), types=("down",)
+            )
+            self._keyboard_hook = keyboard.add_hotkey("esc", self._on_cancel_hotkey)
             return True
         except Exception as e:
             print(f"Failed to start coordinate picker: {e}")
             self.is_active = False
+            self._clear_hooks()
             return False
 
     def stop_picking(self, cancelled: bool = True) -> None:
@@ -51,14 +60,31 @@ class CoordinatePicker:
             return
 
         self.is_active = False
-
-        try:
-            mouse.unhook(self._on_mouse_click)
-        except (ValueError, Exception):
-            pass
+        self._clear_hooks()
 
         if cancelled and self.on_cancelled:
             self.on_cancelled()
+
+    def _clear_hooks(self) -> None:
+        """Remove mouse and keyboard hooks."""
+        if self._mouse_hook is not None:
+            try:
+                mouse.unhook(self._mouse_hook)
+            except (ValueError, Exception):
+                pass
+            self._mouse_hook = None
+
+        if self._keyboard_hook is not None:
+            try:
+                keyboard.remove_hotkey(self._keyboard_hook)
+            except (ValueError, Exception):
+                pass
+            self._keyboard_hook = None
+
+    def _on_cancel_hotkey(self) -> None:
+        """Cancel picking via ESC."""
+        if self.is_active:
+            self.stop_picking(cancelled=True)
 
     def _on_mouse_click(self) -> None:
         """Handle mouse click for coordinate selection"""
@@ -90,9 +116,9 @@ class PresetManager:
     def save_preset(self, name: str, x: int, y: int) -> bool:
         """Save coordinates as a preset"""
         try:
-            presets = self.settings.get('presets', {})
-            presets[name] = {'x': x, 'y': y}
-            self.settings.set('presets', presets)
+            presets = self.settings.get("presets", {})
+            presets[name] = {"x": x, "y": y}
+            self.settings.set("presets", presets)
             return True
         except Exception as e:
             print(f"Failed to save preset: {e}")
@@ -101,10 +127,10 @@ class PresetManager:
     def load_preset(self, name: str) -> Optional[Tuple[int, int]]:
         """Load coordinates from a preset"""
         try:
-            presets = self.settings.get('presets', {})
+            presets = self.settings.get("presets", {})
             if name in presets:
                 preset = presets[name]
-                return preset['x'], preset['y']
+                return preset["x"], preset["y"]
             return None
         except Exception as e:
             print(f"Failed to load preset: {e}")
@@ -112,16 +138,16 @@ class PresetManager:
 
     def get_preset_names(self) -> list:
         """Get list of available preset names"""
-        presets = self.settings.get('presets', {})
+        presets = self.settings.get("presets", {})
         return list(presets.keys())
 
     def delete_preset(self, name: str) -> bool:
         """Delete a preset"""
         try:
-            presets = self.settings.get('presets', {})
+            presets = self.settings.get("presets", {})
             if name in presets:
                 del presets[name]
-                self.settings.set('presets', presets)
+                self.settings.set("presets", presets)
                 return True
             return False
         except Exception as e:

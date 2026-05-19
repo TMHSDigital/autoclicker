@@ -94,9 +94,19 @@ class SettingsManager:
         except ValidationError as e:
             return False, e.reason
 
+    def _parse_int(self, value: Any, field: str) -> int:
+        """Parse a value as int or raise ValidationError."""
+        try:
+            if isinstance(value, str):
+                value = value.strip()
+            return int(float(value))
+        except (ValueError, TypeError):
+            raise ValidationError(field, value, "Must be a number")
+
     def validate_clicks(self, clicks: int) -> tuple[bool, str]:
         """Validate click count settings with detailed error message"""
         try:
+            clicks = self._parse_int(clicks, "max_clicks")
             if clicks < 0:
                 raise ValidationError('max_clicks', clicks, "Click count cannot be negative")
             if clicks > 1000000:  # Reasonable upper limit to prevent system overload
@@ -108,6 +118,7 @@ class SettingsManager:
     def validate_minutes(self, minutes: int) -> tuple[bool, str]:
         """Validate time settings with detailed error message"""
         try:
+            minutes = self._parse_int(minutes, "auto_stop_minutes")
             if minutes < 0:
                 raise ValidationError('auto_stop_minutes', minutes, "Minutes cannot be negative")
             if minutes > 1440:  # 24 hours max
@@ -119,6 +130,7 @@ class SettingsManager:
     def validate_variation(self, variation: int, interval: float, unit: str) -> tuple[bool, str]:
         """Validate random variation settings"""
         try:
+            variation = self._parse_int(variation, "variation")
             if variation < 0:
                 raise ValidationError('variation', variation, "Variation cannot be negative")
 
@@ -193,7 +205,12 @@ class SettingsManager:
     def validate_all_settings(self, settings: Dict[str, Any], screen_width: int = 1920, screen_height: int = 1080) -> Dict[str, Any]:
         """Validate all settings and return sanitized versions with error messages"""
         errors = {}
-        sanitized = {}
+
+        raw_unit = settings.get("interval_unit", "ms")
+        if raw_unit is not None and str(raw_unit).strip() not in ("ms", "seconds"):
+            errors["interval"] = (
+                f"Invalid unit: {raw_unit}. Must be 'ms' or 'seconds'"
+            )
 
         # First, sanitize all values to handle string inputs from UI
         sanitized_settings = {}

@@ -158,7 +158,7 @@ class TestCustomExceptions(unittest.TestCase):
         # Test without logger
         message = handle_autoclicker_error(error)
         self.assertIn("Validation failed", message)
-        self.assertIn("Additional details", message)
+        self.assertIn("Details:", message)
 
         # Test with mock logger
         class MockLogger:

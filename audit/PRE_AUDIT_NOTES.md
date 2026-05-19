@@ -24,21 +24,9 @@ Per-file `ALL` ignores added under `[tool.ruff.lint.per-file-ignores]` for `auto
 
 Captured 2026-05-18 on Windows, Python 3.13.3 (see `audit/baseline_env.txt`). With deps installed post-hardening: **28 passed, 15 failed** (`audit/post_hardening_check.txt`).
 
-### After phase 1 audit (current)
+### After phase 2 correctness (current)
 
-**22 failed, 28 passed** (50 tests). Added 7 failing repro tests in `tests/test_audit_regressions.py` (see [AUDIT.md](../AUDIT.md)).
-
-| New failure | Reason |
-|-------------|--------|
-| `test_queue_mode_increments_count_without_executing_clicks` | Queue mode inflates `click_count` without pyautogui clicks (C1) |
-| `test_queue_processor_does_not_execute_clicks` | Queued clicks never executed (C2) |
-| `test_stop_picking_unhooks_by_handle_not_callback` | `mouse.unhook` passed callback not handle (C7) |
-| `test_no_keyboard_cancel_handler_registered` | No ESC cancel hook on picker (C8) |
-| `test_quit_application_persists_ui_values_not_empty_update` | `quit_application` calls `update({})` (C9) |
-| `test_invalid_interval_unit_reported_in_validate_all` | Bad unit sanitized before validation (C11) |
-| `test_coordinate_error_user_message` | `create_user_friendly_error` uses missing `.reason` (C10) |
-
-The original **15 failures** remain unchanged (exceptions API, settings validation TypeError/tuple misuse).
+**50 passed, 0 failed** (50 tests). Phase 1 repro tests in `tests/test_audit_regressions.py` now assert fixed behavior. Original 15 baseline failures resolved (exceptions `.reason`/`details`, settings coercion, coordinate tuple tests, queue `from_queue`, picker hooks/ESC, quit persist, interval_unit validation).
 
 ## 3. Discrepancies between test runners
 
