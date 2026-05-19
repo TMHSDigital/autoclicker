@@ -51,7 +51,7 @@ A configurable autoclicker for Windows with coordinate targeting, burst mode, pr
 - **Enhanced Input Validation**: Comprehensive validation with intelligent sanitization
 - **Structured Error Handling**: Custom exception hierarchy with user-friendly error messages
 - **Screen Bounds Validation**: Prevents clicks outside display boundaries
-- **Activity Logging**: Comprehensive logging of all click operations
+- **Session logging**: Append-only log under `%APPDATA%/WindowsAutoclicker/sessions.log` (start/stop/safety events)
 - **Resource Management**: Low CPU usage with optimized threading
 - **Error Recovery**: Graceful handling of system interruptions and validation failures
 
@@ -258,16 +258,14 @@ Do not use for:
 - **Resource Limits**: Configurable click and time limits
 - **Status Monitoring**: Real-time operation visibility
 
-#### Activity Logging
-- Comprehensive click operation logging
-- Timestamp recording for all actions
-- Error and exception tracking
-- Performance metrics collection
+#### Session log
+- Append-only log in `%APPDATA%/WindowsAutoclicker/sessions.log`
+- Records start, stop reason, click count, and coordinates (no secrets)
 
 ## Technical Details
 
 ### Dependencies
-- **pyautogui** (0.9.53+): Cross-platform GUI automation
+- **pyautogui** (0.9.53+): GUI automation (Windows target)
 - **keyboard** (0.13.5+): Global hotkey support
 - **mouse** (0.7.1+): Advanced mouse event handling
 - **pywin32** (227+): Windows API integration
@@ -278,19 +276,17 @@ Do not use for:
 
 #### Application Structure
 ```
-autoclicker.py                      # Entry point
+autoclicker.py
 autoclicker/
-├── __init__.py
-├── main.py                         # App bootstrap
-├── core/
-│   ├── settings_manager.py         # Configuration & validation
-│   ├── click_engine.py             # Click automation & threading
-│   └── exceptions.py               # Custom exception hierarchy
-├── gui/
-│   └── main_window.py              # Tkinter GUI
+├── main.py
+├── app/                  # controller, hotkeys, tray
+├── gui/                  # main_window + sections/
+├── core/                 # engine, settings, safety, session_log
 └── utils/
-    └── coordinate_picker.py        # Coordinate selection & presets
+    └── coordinate_picker.py
 ```
+
+Settings file: `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once). See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 #### Threading Model
 - **Main Thread**: GUI event handling and user interaction
@@ -318,20 +314,11 @@ python run_tests.py --coverage
 python scripts/smoke_check.py
 ```
 
-### Test Coverage
-- **Settings Manager**: Validation, sanitization, and persistence testing
-- **Click Engine**: Performance monitoring, queuing, and error handling
-- **Exception Handling**: Custom exceptions and user-friendly error messages
-- **Coordinate Picker**: Coordinate selection and preset management
-- **GUI Integration**: User interface interaction and validation
-
-### Test Structure
-```
-tests/
-├── test_settings_manager.py   # Configuration and validation tests
-├── test_exceptions.py         # Exception handling tests
-└── test_coordinate_picker.py  # Coordinate and preset tests
-```
+### Test modules
+- `test_settings_manager.py`, `test_settings_migration.py`
+- `test_click_engine.py` (mocked pyautogui; coverage gate on click engine)
+- `test_exceptions.py`, `test_safety.py`, `test_audit_regressions.py`
+- `test_coordinate_picker.py`
 
 ## Troubleshooting
 
