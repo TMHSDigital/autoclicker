@@ -1,0 +1,22 @@
+=== python test_autoclicker.py ===
+Started: 2026-05-18T19:52:43.8359682-04:00
+≡ƒº¬ Autoclicker Test Suite
+========================================
+Testing imports...
+Γ£ô tkinter available
+Γ£ù pyautogui import failed: No module named 'pyautogui'
+
+Testing mouse functionality...
+Γ£ù Mouse functionality test failed: No module named 'mouse'
+
+Testing file structure...
+Γ£ô autoclicker.py exists
+Γ£ô requirements.txt exists
+Γ£ô README.md exists
+Γ£ô autoclicker.ico exists
+Γ£ô run_autoclicker.bat exists
+
+========================================
+Γ¥î Some tests failed. Please check the errors above.
+EXIT_CODE: 1
+Ended: 2026-05-18T19:52:43.9791736-04:00

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Windows Autoclicker - Modular Implementation
 A professional autoclicker with advanced automation capabilities and safety features.

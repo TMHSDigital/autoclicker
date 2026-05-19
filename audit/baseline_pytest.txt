@@ -1,0 +1,32 @@
+=== python -m pytest ===
+Started: 2026-05-18T19:52:49.9394141-04:00
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.4.1, pluggy-1.6.0 -- C:\Python313\python.exe
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: E:\autoclicker
+configfile: pyproject.toml
+testpaths: ., tests
+plugins: anyio-4.9.0, hypothesis-6.148.8, asyncio-1.0.0, cov-7.0.0, mock-3.15.1, respx-0.20.2, typeguard-4.4.4
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 30 items / 1 error
+
+=================================== ERRORS ====================================
+______________ ERROR collecting tests/test_coordinate_picker.py _______________
+ImportError while importing test module 'E:\autoclicker\tests\test_coordinate_picker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_coordinate_picker.py:11: in <module>
+    from autoclicker.utils.coordinate_picker import CoordinatePicker, PresetManager
+autoclicker\utils\coordinate_picker.py:7: in <module>
+    import mouse
+E   ModuleNotFoundError: No module named 'mouse'
+=========================== short test summary info ===========================
+ERROR tests/test_coordinate_picker.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 0.38s ===============================
+EXIT_CODE: 2
+Ended: 2026-05-18T19:52:51.1395150-04:00

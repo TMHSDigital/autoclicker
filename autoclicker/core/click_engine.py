@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: CC-BY-NC-4.0
 """
 Click engine for the autoclicker
 Handles mouse clicking operations with safety checks

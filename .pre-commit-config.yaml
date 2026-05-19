@@ -1,0 +1,33 @@
+# Opt-in: pre-commit install (see CONTRIBUTING.md)
+minimum_pre_commit_version: "3.0.0"
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 2c9f875913ee60ca25ce70243dc24d5b6415598c # v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 73413df07b4ab0bf103ca1ae73c7cec5c0ace593 # v0.9.2
+    hooks:
+      - id: ruff
+        args: [--fix]
+        exclude: ^(autoclicker/|create_icon\.py)
+      - id: ruff-format
+        exclude: ^(autoclicker/|create_icon\.py|autoclicker\.py)
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: bbc3dc1f890007061f18f17e2334f216ea9e5df7 # v1.14.1
+    hooks:
+      - id: mypy
+        files: ^autoclicker/
+        additional_dependencies: []
+        args: [--config-file=pyproject.toml]
