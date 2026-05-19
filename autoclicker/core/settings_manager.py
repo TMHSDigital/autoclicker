@@ -9,6 +9,7 @@ import os
 from typing import Dict, Any, Optional
 
 from .exceptions import ValidationError
+from .settings_paths import LEGACY_FILENAME, resolve_settings_file
 
 
 class SettingsManager:
@@ -32,8 +33,13 @@ class SettingsManager:
         'presets': {}
     }
 
-    def __init__(self, settings_file: str = 'autoclicker_settings.json'):
-        self.settings_file = settings_file
+    def __init__(self, settings_file: str | None = None):
+        if settings_file is None:
+            self.settings_file = resolve_settings_file()
+        elif settings_file == LEGACY_FILENAME:
+            self.settings_file = resolve_settings_file()
+        else:
+            self.settings_file = settings_file
         self._settings = self._load_settings()
 
     def _load_settings(self) -> Dict[str, Any]:
