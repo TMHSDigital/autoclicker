@@ -25,6 +25,9 @@ dev_env/
 venv/
 env/
 
+# Legacy migration marker (created beside CWD settings file)
+.migrated
+
 # Testing / coverage
 .coverage
 .coverage.*
