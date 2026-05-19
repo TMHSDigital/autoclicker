@@ -120,8 +120,8 @@ src = ["."]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
-"autoclicker/**" = ["ALL"]
-"autoclicker.py" = ["ALL"]
+"autoclicker/**" = ["E501", "SIM102", "SIM105", "SIM108", "RUF003", "RUF012", "B904"]
+"autoclicker.py" = ["E501"]
 "tests/**" = ["SIM115", "E501"]
 "create_icon.py" = ["E501"]
 
@@ -141,6 +141,18 @@ warn_unreachable = true
 strict_equality = true
 
 [[tool.mypy.overrides]]
+module = "autoclicker.gui.*"
+disable_error_code = ["attr-defined", "arg-type"]
+
+[[tool.mypy.overrides]]
+module = "autoclicker.core.click_engine"
+disable_error_code = ["operator", "assignment", "call-overload", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "autoclicker.core.safety"
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
 module = [
     "pyautogui.*",
     "keyboard.*",
@@ -150,8 +162,3 @@ module = [
     "win32.*"
 ]
 ignore_missing_imports = true
-
-# Pre-audit: production typing cleanup deferred to deep dive
-[[tool.mypy.overrides]]
-module = "autoclicker.*"
-ignore_errors = true

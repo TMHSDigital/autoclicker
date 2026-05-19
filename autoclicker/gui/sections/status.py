@@ -19,21 +19,13 @@ def build_status_section(app, parent: ttk.Frame) -> None:
     app.status_label.pack(anchor=tk.W)
 
     app.click_count_var = tk.StringVar(value="Clicks: 0")
-    ttk.Label(status_frame, textvariable=app.click_count_var).pack(
-        anchor=tk.W, pady=(5, 0)
-    )
+    ttk.Label(status_frame, textvariable=app.click_count_var).pack(anchor=tk.W, pady=(5, 0))
 
     app.runtime_var = tk.StringVar(value="Runtime: 0:00:00")
-    ttk.Label(status_frame, textvariable=app.runtime_var).pack(
-        anchor=tk.W, pady=(2, 0)
-    )
+    ttk.Label(status_frame, textvariable=app.runtime_var).pack(anchor=tk.W, pady=(2, 0))
 
     app.coord_var = tk.StringVar(value="Target: (100, 100)")
-    ttk.Label(status_frame, textvariable=app.coord_var).pack(
-        anchor=tk.W, pady=(2, 0)
-    )
+    ttk.Label(status_frame, textvariable=app.coord_var).pack(anchor=tk.W, pady=(2, 0))
 
     app.performance_var = tk.StringVar(value="Performance: --")
-    ttk.Label(status_frame, textvariable=app.performance_var).pack(
-        anchor=tk.W, pady=(2, 0)
-    )
+    ttk.Label(status_frame, textvariable=app.performance_var).pack(anchor=tk.W, pady=(2, 0))

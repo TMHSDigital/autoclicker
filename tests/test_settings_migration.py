@@ -64,6 +64,11 @@ class TestSettingsMigration(unittest.TestCase):
                 self.assertEqual(mgr.get("x_coord"), 1)
 
     def test_no_legacy_uses_defaults(self):
-        with tempfile.TemporaryDirectory() as appdata, patch.dict(os.environ, {"APPDATA": appdata}):
+        with (
+            tempfile.TemporaryDirectory() as appdata,
+            tempfile.TemporaryDirectory() as cwd,
+            patch.dict(os.environ, {"APPDATA": appdata}),
+            patch("autoclicker.core.settings_paths.Path.cwd", return_value=Path(cwd)),
+        ):
             mgr = SettingsManager()
             self.assertEqual(mgr.get("x_coord"), 100)

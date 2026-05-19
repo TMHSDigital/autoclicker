@@ -9,10 +9,10 @@ from .status import build_status_section
 from .title import build_title_section
 
 __all__ = [
-    "build_title_section",
-    "build_coordinate_section",
     "build_click_settings_section",
     "build_control_section",
-    "build_status_section",
+    "build_coordinate_section",
     "build_disclaimer_section",
+    "build_status_section",
+    "build_title_section",
 ]

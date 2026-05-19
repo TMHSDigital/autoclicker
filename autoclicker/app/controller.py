@@ -3,13 +3,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 import pyautogui
 
 from ..core.click_engine import ClickEngine
-from ..core.exceptions import AutoclickerError
 from ..core.session_log import append_session_event
 from ..core.settings_manager import SettingsManager
 from ..utils.coordinate_picker import CoordinatePicker, PresetManager

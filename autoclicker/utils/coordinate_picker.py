@@ -4,7 +4,8 @@ Coordinate picker utility
 Handles interactive coordinate selection with mouse events
 """
 
-from typing import Any, Callable, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import keyboard
 import mouse
@@ -15,15 +16,15 @@ class CoordinatePicker:
 
     def __init__(self):
         self.is_active = False
-        self.on_coordinate_selected: Optional[Callable[[int, int], None]] = None
-        self.on_cancelled: Optional[Callable] = None
+        self.on_coordinate_selected: Callable[[int, int], None] | None = None
+        self.on_cancelled: Callable | None = None
         self._mouse_hook: Any = None
         self._keyboard_hook: Any = None
 
     def start_picking(
         self,
         on_selected: Callable[[int, int], None],
-        on_cancelled: Optional[Callable] = None,
+        on_cancelled: Callable | None = None,
     ) -> bool:
         """
         Start coordinate picking mode
@@ -124,7 +125,7 @@ class PresetManager:
             print(f"Failed to save preset: {e}")
             return False
 
-    def load_preset(self, name: str) -> Optional[Tuple[int, int]]:
+    def load_preset(self, name: str) -> tuple[int, int] | None:
         """Load coordinates from a preset"""
         try:
             presets = self.settings.get("presets", {})

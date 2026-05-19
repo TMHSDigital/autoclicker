@@ -4,13 +4,13 @@ Custom exceptions for the autoclicker application
 Provides structured error handling with specific exception types
 """
 
-from typing import Any, Optional
+from typing import Any
 
 
 class AutoclickerError(Exception):
     """Base exception for all autoclicker errors"""
 
-    def __init__(self, message: str, details: Optional[str] = None):
+    def __init__(self, message: str, details: str | None = None):
         self.message = message
         self.details = details
         super().__init__(self.message)
@@ -149,4 +149,4 @@ def create_user_friendly_error(error: Exception) -> str:
         return "Permission denied. Please run with appropriate permissions."
     if isinstance(error, OSError):
         return "System error occurred. Please check your system configuration."
-    return f"An unexpected error occurred: {str(error)}"
+    return f"An unexpected error occurred: {error!s}"

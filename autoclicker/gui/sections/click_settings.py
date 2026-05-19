@@ -21,19 +21,17 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     button_frame = ttk.Frame(settings_frame)
     button_frame.grid(row=0, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0))
 
-    ttk.Radiobutton(
-        button_frame, text="Left", variable=app.button_var, value="left"
-    ).pack(side=tk.LEFT, padx=(0, 10))
-    ttk.Radiobutton(
-        button_frame, text="Right", variable=app.button_var, value="right"
-    ).pack(side=tk.LEFT, padx=(0, 10))
-    ttk.Radiobutton(
-        button_frame, text="Middle", variable=app.button_var, value="middle"
-    ).pack(side=tk.LEFT)
-
-    ttk.Label(settings_frame, text="Click Type:").grid(
-        row=1, column=0, sticky=tk.W, pady=(10, 0)
+    ttk.Radiobutton(button_frame, text="Left", variable=app.button_var, value="left").pack(
+        side=tk.LEFT, padx=(0, 10)
     )
+    ttk.Radiobutton(button_frame, text="Right", variable=app.button_var, value="right").pack(
+        side=tk.LEFT, padx=(0, 10)
+    )
+    ttk.Radiobutton(button_frame, text="Middle", variable=app.button_var, value="middle").pack(
+        side=tk.LEFT
+    )
+
+    ttk.Label(settings_frame, text="Click Type:").grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
     app.click_type_var = tk.StringVar(value=settings.get("click_type", "single"))
     click_type_frame = ttk.Frame(settings_frame)
     click_type_frame.grid(
@@ -47,9 +45,7 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
         click_type_frame, text="Double", variable=app.click_type_var, value="double"
     ).pack(side=tk.LEFT)
 
-    ttk.Label(settings_frame, text="Interval:").grid(
-        row=2, column=0, sticky=tk.W, pady=(10, 0)
-    )
+    ttk.Label(settings_frame, text="Interval:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
     interval_frame = ttk.Frame(settings_frame)
     interval_frame.grid(
         row=2, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0)
@@ -74,13 +70,9 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.variation_entry.insert(0, str(settings.get("variation", "0")))
     ttk.Label(interval_frame, text="ms").pack(side=tk.LEFT)
 
-    ttk.Label(settings_frame, text="Burst Mode:").grid(
-        row=3, column=0, sticky=tk.W, pady=(10, 0)
-    )
+    ttk.Label(settings_frame, text="Burst Mode:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
     burst_frame = ttk.Frame(settings_frame)
-    burst_frame.grid(
-        row=3, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0)
-    )
+    burst_frame.grid(row=3, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
 
     ttk.Label(burst_frame, text="Clicks:").pack(side=tk.LEFT)
     app.burst_clicks_entry = ttk.Entry(burst_frame, width=5)
@@ -93,9 +85,7 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.burst_pause_entry.insert(0, str(settings.get("burst_pause", "1000")))
     ttk.Label(burst_frame, text="ms").pack(side=tk.LEFT)
 
-    ttk.Label(settings_frame, text="Safety:").grid(
-        row=4, column=0, sticky=tk.W, pady=(10, 0)
-    )
+    ttk.Label(settings_frame, text="Safety:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
     safety_frame = ttk.Frame(settings_frame)
     safety_frame.grid(
         row=4, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0)
@@ -112,9 +102,7 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.auto_stop_entry.insert(0, str(settings.get("auto_stop_minutes", "0")))
     ttk.Label(safety_frame, text="minutes").pack(side=tk.LEFT)
 
-    ttk.Label(settings_frame, text="Advanced:").grid(
-        row=5, column=0, sticky=tk.W, pady=(15, 0)
-    )
+    ttk.Label(settings_frame, text="Advanced:").grid(row=5, column=0, sticky=tk.W, pady=(15, 0))
     advanced_frame = ttk.Frame(settings_frame)
     advanced_frame.grid(
         row=5, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(15, 0)
@@ -136,9 +124,7 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
         command=app._on_failsafe_toggle,
     ).pack(side=tk.LEFT, padx=(10, 0))
 
-    app.pause_unfocused_var = tk.BooleanVar(
-        value=settings.get("pause_when_unfocused", False)
-    )
+    app.pause_unfocused_var = tk.BooleanVar(value=settings.get("pause_when_unfocused", False))
     ttk.Checkbutton(
         advanced_frame,
         text="Pause when window loses focus",

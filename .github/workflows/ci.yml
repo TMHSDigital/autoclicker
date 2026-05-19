@@ -66,12 +66,10 @@ jobs:
           tasks.bat typecheck
 
       - name: Unit tests
-        continue-on-error: true
         run: tasks.bat test
 
       - name: Coverage report
         if: matrix.python-version == '3.11'
-        continue-on-error: true
         run: tasks.bat coverage
 
       - name: Upload coverage to Codecov
@@ -81,7 +79,6 @@ jobs:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-        continue-on-error: true
 
   build:
     runs-on: windows-latest

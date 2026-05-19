@@ -54,9 +54,7 @@ class AutoclickerApp:
         )
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.controller.coordinate_picker.on_coordinate_selected = (
-            self._on_coordinates_selected
-        )
+        self.controller.coordinate_picker.on_coordinate_selected = self._on_coordinates_selected
 
     def setup_window(self) -> None:
         """Configure main window properties."""
@@ -96,24 +94,16 @@ class AutoclickerApp:
         self.canvas = tk.Canvas(self.root, highlightthickness=0)
         self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        v_scrollbar = ttk.Scrollbar(
-            self.root, orient=tk.VERTICAL, command=self.canvas.yview
-        )
+        v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
         v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        h_scrollbar = ttk.Scrollbar(
-            self.root, orient=tk.HORIZONTAL, command=self.canvas.xview
-        )
+        h_scrollbar = ttk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
 
-        self.canvas.configure(
-            yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set
-        )
+        self.canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
 
         main_frame = ttk.Frame(self.canvas, padding="20")
-        self.canvas_frame = self.canvas.create_window(
-            (0, 0), window=main_frame, anchor="nw"
-        )
+        self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
 
         main_frame.grid_rowconfigure(5, weight=1)
         main_frame.grid_columnconfigure(0, weight=1)
@@ -149,9 +139,7 @@ class AutoclickerApp:
     def start_coordinate_picker(self) -> None:
         """Start coordinate picking mode."""
         if self.click_engine.is_running:
-            messagebox.showwarning(
-                "Warning", "Stop clicking before picking coordinates."
-            )
+            messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
             return
 
         if self.coordinate_picker.is_picking():
@@ -250,8 +238,7 @@ class AutoclickerApp:
 
             if result.validation_errors is not None:
                 error_messages = [
-                    f"{field.title()}: {error}"
-                    for field, error in result.validation_errors.items()
+                    f"{field.title()}: {error}" for field, error in result.validation_errors.items()
                 ]
                 messagebox.showerror("Validation Error", "\n".join(error_messages))
                 return
@@ -305,8 +292,7 @@ class AutoclickerApp:
         if "performance" in status:
             perf = status["performance"]
             perf_text = (
-                f"Performance: {perf['clicks_per_second']} cps, "
-                f"{perf['success_rate']:.1f}% success"
+                f"Performance: {perf['clicks_per_second']} cps, {perf['success_rate']:.1f}% success"
             )
             self.performance_var.set(perf_text)
         else:
@@ -383,9 +369,7 @@ class AutoclickerApp:
         """Run the application."""
         try:
             if hasattr(self, "tray_icon") and self.tray_icon:
-                tray_thread = threading.Thread(
-                    target=self.tray_icon.run, daemon=True
-                )
+                tray_thread = threading.Thread(target=self.tray_icon.run, daemon=True)
                 tray_thread.start()
 
             self.root.mainloop()

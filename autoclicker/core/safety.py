@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import pyautogui
 
 
@@ -13,7 +11,7 @@ def apply_failsafe(enabled: bool) -> None:
     pyautogui.FAILSAFE = enabled
 
 
-def get_foreground_window_handle() -> Optional[int]:
+def get_foreground_window_handle() -> int | None:
     """Return Win32 foreground HWND or None if unavailable."""
     try:
         import win32gui
@@ -23,7 +21,7 @@ def get_foreground_window_handle() -> Optional[int]:
         return None
 
 
-def is_foreground_window(hwnd: Optional[int]) -> bool:
+def is_foreground_window(hwnd: int | None) -> bool:
     """True if hwnd is still foreground, or check skipped when hwnd is None."""
     if hwnd is None:
         return True
