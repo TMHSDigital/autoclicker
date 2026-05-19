@@ -237,14 +237,21 @@ class TestClickEngineQueuing(unittest.TestCase):
         self.assertGreaterEqual(engine.click_count, 1)
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_full_executes_directly(self, mock_pyautogui):
+    def test_queue_full_counts_as_dropped(self, mock_pyautogui):
+        """Queue saturation must be observable, not silently bypassed.
+
+        Old behavior fell through and clicked directly on overflow, which
+        doubled the effective rate exactly when the user was already over
+        capacity. New contract: drop the click and increment the counter.
+        """
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.enable_queuing = True
         engine.max_queue_size = 1
         engine.click_queue.append((1, 1, "left", "single"))
         engine._perform_click(2, 2, "left", "single")
-        mock_pyautogui.click.assert_called_once()
+        mock_pyautogui.click.assert_not_called()
+        self.assertEqual(engine.dropped_click_count, 1)
 
 
 class TestMainImport(unittest.TestCase):

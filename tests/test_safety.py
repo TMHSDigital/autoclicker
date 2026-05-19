@@ -21,20 +21,25 @@ class TestFailsafe(unittest.TestCase):
 
 
 class TestRunawayGuard(unittest.TestCase):
+    """Sliding-window guard: trips on recent rate, not lifetime average."""
+
     def test_runaway_triggers_when_cps_exceeds_ceiling(self):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.max_cps_ceiling = 10
         engine.start_time = 1.0
-        engine.click_count = 100
+        # 100 click timestamps within the last 1s
         with patch("autoclicker.core.click_engine.time.time", return_value=2.0):
+            for i in range(100):
+                engine._recent_click_ts.append(1.0 + i * 0.005)
             self.assertTrue(engine._check_runaway_cps())
 
     def test_runaway_not_triggered_when_below_ceiling(self):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.max_cps_ceiling = 50
         engine.start_time = 1.0
-        engine.click_count = 10
         with patch("autoclicker.core.click_engine.time.time", return_value=2.0):
+            for i in range(10):
+                engine._recent_click_ts.append(1.0 + i * 0.1)
             self.assertFalse(engine._check_runaway_cps())
 
 
