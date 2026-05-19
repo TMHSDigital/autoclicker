@@ -5,8 +5,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Whitelist real project deps; ignore noise from audit/baseline_pip_freeze.txt
-    # which is a historical snapshot of an unrelated environment.
+    # Whitelist real project deps. The historical env snapshot under
+    # audit/ has been renamed to *.snapshot so dependabot stops scanning it.
     allow:
       - dependency-name: "pyautogui"
       - dependency-name: "keyboard"
