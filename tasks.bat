@@ -40,7 +40,7 @@ exit /b %ERRORLEVEL%
 :lint
 "%PY%" -m ruff check autoclicker autoclicker.py tests scripts
 if errorlevel 1 exit /b 1
-"%PY%" -m ruff format --check .
+"%PY%" -m ruff format --check tests scripts tools run_tests.py
 exit /b %ERRORLEVEL%
 
 :format

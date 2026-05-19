@@ -7,16 +7,16 @@ import unittest
 
 from autoclicker.core.exceptions import (
     AutoclickerError,
-    ValidationError,
-    CoordinateError,
     ClickEngineError,
-    SettingsError,
-    SafetyError,
+    CoordinateError,
+    DependencyError,
     HotkeyError,
     PresetError,
-    DependencyError,
+    SafetyError,
+    SettingsError,
+    ValidationError,
     create_user_friendly_error,
-    handle_autoclicker_error
+    handle_autoclicker_error,
 )
 
 
@@ -84,7 +84,9 @@ class TestCustomExceptions(unittest.TestCase):
         self.assertEqual(error.preset_name, "MyPreset")
         self.assertEqual(error.operation, "save")
         self.assertEqual(error.reason, "File not writable")
-        self.assertEqual(error.message, "Preset error for 'MyPreset' during save: File not writable")
+        self.assertEqual(
+            error.message, "Preset error for 'MyPreset' during save: File not writable"
+        )
 
     def test_dependency_error(self):
         """Test DependencyError creation"""
@@ -109,7 +111,9 @@ class TestCustomExceptions(unittest.TestCase):
         """Test user-friendly error messages for SafetyError"""
         error = SafetyError("click_limit", 1001, 1000)
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Safety limit reached: Safety limit exceeded for click_limit: 1001 > 1000")
+        self.assertEqual(
+            message, "Safety limit reached: Safety limit exceeded for click_limit: 1001 > 1000"
+        )
 
     def test_create_user_friendly_error_dependency_error(self):
         """Test user-friendly error messages for DependencyError"""
@@ -171,7 +175,7 @@ class TestCustomExceptions(unittest.TestCase):
         self.assertEqual(len(logger.logged_messages), 1)
         logged_message, logged_extra = logger.logged_messages[0]
         self.assertIn("Validation failed", logged_message)
-        self.assertIn('error_type', logged_extra)
+        self.assertIn("error_type", logged_extra)
 
     def test_exception_inheritance(self):
         """Test that all exceptions inherit from AutoclickerError"""
@@ -183,7 +187,7 @@ class TestCustomExceptions(unittest.TestCase):
             SafetyError("type", 0, 1),
             HotkeyError("key", "reason"),
             PresetError("name", "operation", "reason"),
-            DependencyError("dep", "reason")
+            DependencyError("dep", "reason"),
         ]
 
         for exception in exceptions:
@@ -191,5 +195,5 @@ class TestCustomExceptions(unittest.TestCase):
             self.assertIsInstance(exception, Exception)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

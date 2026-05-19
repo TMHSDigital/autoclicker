@@ -3,13 +3,13 @@ Unit tests for coordinate picker and preset manager
 Tests coordinate selection and preset functionality
 """
 
-import unittest
-from unittest.mock import patch, MagicMock
-import tempfile
 import os
+import tempfile
+import unittest
+from unittest.mock import MagicMock, patch
 
-from autoclicker.utils.coordinate_picker import CoordinatePicker, PresetManager
 from autoclicker.core.settings_manager import SettingsManager
+from autoclicker.utils.coordinate_picker import CoordinatePicker, PresetManager
 
 
 class TestCoordinatePicker(unittest.TestCase):
@@ -29,6 +29,7 @@ class TestCoordinatePicker(unittest.TestCase):
 
     def test_start_picking_success(self):
         """Test successful start of coordinate picking"""
+
         def on_selected(x, y):
             self.callback_called = True
             self.callback_coords = (x, y)
@@ -101,9 +102,9 @@ class TestPresetManager(unittest.TestCase):
         self.assertTrue(result)
 
         # Check that preset was saved in settings
-        presets = self.settings.get('presets', {})
+        presets = self.settings.get("presets", {})
         self.assertIn("TestPreset", presets)
-        self.assertEqual(presets["TestPreset"], {'x': 100, 'y': 200})
+        self.assertEqual(presets["TestPreset"], {"x": 100, "y": 200})
 
     def test_load_preset_success(self):
         """Test successful preset loading"""
@@ -181,7 +182,7 @@ class TestCoordinatePickerIntegration(unittest.TestCase):
         if os.path.exists(self.settings_file):
             os.unlink(self.settings_file)
 
-    @patch('autoclicker.utils.coordinate_picker.mouse')
+    @patch("autoclicker.utils.coordinate_picker.mouse")
     def test_full_coordinate_workflow(self, mock_mouse):
         """Test full coordinate picking workflow"""
         # Mock mouse module
@@ -214,5 +215,5 @@ class TestCoordinatePickerIntegration(unittest.TestCase):
         mock_mouse.unhook.assert_called_once()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
