@@ -201,6 +201,17 @@ class TestClickEnginePerformance(unittest.TestCase):
         self.assertEqual(engine.performance_metrics["click_success_count"], 0)
 
     @patch("autoclicker.core.click_engine.pyautogui")
+    def test_welford_timing_stats(self, mock_pyautogui):
+        mock_pyautogui.size.return_value = (1920, 1080)
+        engine = ClickEngine(enable_performance_monitoring=True)
+        for _ in range(5):
+            engine._perform_click(1, 1, "left", "single")
+        metrics = engine.get_performance_metrics()
+        self.assertEqual(metrics["_timing_count"], 5)
+        self.assertGreater(metrics["average_click_time"], 0)
+        self.assertIn("click_time_std_dev", metrics)
+
+    @patch("autoclicker.core.click_engine.pyautogui")
     def test_status_includes_performance_when_enabled(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=True)
