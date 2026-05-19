@@ -7,7 +7,6 @@ Handles mouse clicking operations with safety checks
 import time
 import random
 import threading
-import statistics
 from collections import deque
 from typing import Callable, Optional, Dict
 
@@ -34,13 +33,17 @@ class ClickEngine:
         # Performance monitoring
         self.enable_performance_monitoring = enable_performance_monitoring
         self.performance_metrics = {
-            'click_timings': deque(maxlen=1000),  # Store last 1000 click timings
+            'click_timings': deque(maxlen=1000),  # Recent samples for debugging
             'click_success_count': 0,
             'click_error_count': 0,
             'average_click_time': 0.0,
             'min_click_time': float('inf'),
             'max_click_time': 0.0,
             'total_click_time': 0.0,
+            # Welford running stats (avoid O(n) statistics.* on every status read)
+            '_timing_count': 0,
+            '_timing_mean': 0.0,
+            '_timing_m2': 0.0,
         }
 
         # Click queuing for high-frequency operations
@@ -107,10 +110,15 @@ class ClickEngine:
         else:
             metrics['success_rate'] = 0.0
 
-        if metrics['click_timings']:
-            metrics['average_click_time'] = statistics.mean(metrics['click_timings'])
-            metrics['median_click_time'] = statistics.median(metrics['click_timings'])
-            metrics['click_time_std_dev'] = statistics.stdev(metrics['click_timings']) if len(metrics['click_timings']) > 1 else 0.0
+        count = metrics.get('_timing_count', 0)
+        if count > 0:
+            mean = metrics['_timing_mean']
+            metrics['average_click_time'] = mean
+            metrics['median_click_time'] = mean  # Approximation; exact median needs the deque
+            if count > 1:
+                metrics['click_time_std_dev'] = (metrics['_timing_m2'] / (count - 1)) ** 0.5
+            else:
+                metrics['click_time_std_dev'] = 0.0
 
         # Calculate clicks per second if running
         if self.start_time > 0 and self.click_count > 0:
@@ -129,6 +137,9 @@ class ClickEngine:
             'min_click_time': float('inf'),
             'max_click_time': 0.0,
             'total_click_time': 0.0,
+            '_timing_count': 0,
+            '_timing_mean': 0.0,
+            '_timing_m2': 0.0,
         }
 
     def enable_click_queuing(self, enable: bool = True, max_queue_size: int = 1000) -> None:
@@ -300,6 +311,7 @@ class ClickEngine:
                 if self.enable_performance_monitoring:
                     total_time = time.perf_counter() - click_start_time
                     self.performance_metrics['click_timings'].append(total_time)
+                    self._record_timing_sample(total_time)
                     self.performance_metrics['click_success_count'] += 1
                     self.performance_metrics['total_click_time'] += total_time
                     self.performance_metrics['min_click_time'] = min(self.performance_metrics['min_click_time'], total_time)
@@ -330,6 +342,18 @@ class ClickEngine:
                 self.performance_metrics['click_error_count'] += 1
             # Wrap unexpected errors
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
+
+    def _record_timing_sample(self, sample: float) -> None:
+        """Update Welford running mean/variance for click timings."""
+        metrics = self.performance_metrics
+        count = metrics['_timing_count'] + 1
+        delta = sample - metrics['_timing_mean']
+        mean = metrics['_timing_mean'] + delta / count
+        delta2 = sample - mean
+        m2 = metrics['_timing_m2'] + delta * delta2
+        metrics['_timing_count'] = count
+        metrics['_timing_mean'] = mean
+        metrics['_timing_m2'] = m2
 
     def _wait_with_variation(self, interval: float, variation: int) -> None:
         """Wait for the specified interval with random variation (ms). Zero = no sleep."""
