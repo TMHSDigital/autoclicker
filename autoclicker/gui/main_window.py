@@ -1,392 +1,157 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """
-Main GUI window for the autoclicker application
-Handles user interface and event coordination
+Main GUI window for the autoclicker application.
+Handles user interface and event coordination.
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
 import threading
-import time
-import keyboard
-import pystray
-from PIL import Image
+import tkinter as tk
+from tkinter import messagebox, simpledialog, ttk
+
 import pyautogui
 
-from ..core.settings_manager import SettingsManager
-from ..core.click_engine import ClickEngine
+from ..app.controller import AutoclickerController
+from ..app.hotkeys import setup_hotkeys
+from ..app.tray import create_tray_icon
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
-from ..core.session_log import append_session_event
-from ..utils.coordinate_picker import CoordinatePicker, PresetManager
+from .sections import (
+    build_click_settings_section,
+    build_control_section,
+    build_coordinate_section,
+    build_disclaimer_section,
+    build_status_section,
+    build_title_section,
+)
 
 
 class AutoclickerApp:
-    """Main autoclicker application class with modular design"""
+    """Main autoclicker application class with modular design."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.root = tk.Tk()
+        self.controller = AutoclickerController()
+        self.settings = self.controller.settings
+        self.click_engine = self.controller.click_engine
+        self.coordinate_picker = self.controller.coordinate_picker
+        self.preset_manager = self.controller.preset_manager
+        self.controller.apply_safety_from_settings(on_safety_stop=self._on_safety_stop)
+
         self.setup_window()
-
-        # Core components
-        self.settings = SettingsManager()
-        self.click_engine = ClickEngine()
-        self._apply_safety_from_settings()
-        self.coordinate_picker = CoordinatePicker()
-        self.preset_manager = PresetManager(self.settings)
-
-        # GUI components
         self.create_gui()
 
-        # Setup system integration
-        self.setup_hotkeys()
-        self.setup_system_tray()
+        setup_hotkeys(
+            start=self.start_clicking,
+            stop=self.stop_clicking,
+            emergency=self.emergency_stop,
+            on_error=self._set_status_message,
+        )
+        self.tray_icon = create_tray_icon(
+            show_window=self.show_window,
+            start=self.start_clicking,
+            stop=self.stop_clicking,
+            quit_app=self.quit_application,
+            on_error=self._set_status_message,
+        )
 
-        # Bind close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.controller.coordinate_picker.on_coordinate_selected = (
+            self._on_coordinates_selected
+        )
 
-        # Coordinate picker callback
-        self.coordinate_picker.on_coordinate_selected = self._on_coordinates_selected
-
-    def setup_window(self):
-        """Configure main window properties"""
+    def setup_window(self) -> None:
+        """Configure main window properties."""
         self.root.title("Windows Autoclicker")
         self.root.geometry("550x700")
         self.root.resizable(True, True)
         self.root.minsize(450, 600)
 
-        # Set window icon if available
         try:
             self.root.iconbitmap("autoclicker.ico")
         except Exception:
             pass
 
-        # Configure root grid
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
-        # Center window
         self.center_window()
 
-        # Set theme
         style = ttk.Style()
-        style.theme_use('vista' if hasattr(style, 'theme_names') and 'vista' in style.theme_names() else 'default')
+        style.theme_use(
+            "vista"
+            if hasattr(style, "theme_names") and "vista" in style.theme_names()
+            else "default"
+        )
 
-    def center_window(self):
-        """Center the window on screen"""
+    def center_window(self) -> None:
+        """Center the window on screen."""
         self.root.update_idletasks()
         width = self.root.winfo_width()
         height = self.root.winfo_height()
         x = (self.root.winfo_screenwidth() // 2) - (width // 2)
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f'{width}x{height}+{x}+{y}')
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
 
-    def create_gui(self):
-        """Create the main GUI interface"""
-        # Create scrollable canvas
+    def create_gui(self) -> None:
+        """Create the main GUI interface."""
         self.canvas = tk.Canvas(self.root, highlightthickness=0)
         self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        # Add scrollbars
-        v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
+        v_scrollbar = ttk.Scrollbar(
+            self.root, orient=tk.VERTICAL, command=self.canvas.yview
+        )
         v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        h_scrollbar = ttk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        h_scrollbar = ttk.Scrollbar(
+            self.root, orient=tk.HORIZONTAL, command=self.canvas.xview
+        )
         h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
 
-        self.canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        self.canvas.configure(
+            yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set
+        )
 
-        # Create main frame
         main_frame = ttk.Frame(self.canvas, padding="20")
-        self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
+        self.canvas_frame = self.canvas.create_window(
+            (0, 0), window=main_frame, anchor="nw"
+        )
 
-        # Configure grid weights
         main_frame.grid_rowconfigure(5, weight=1)
         main_frame.grid_columnconfigure(0, weight=1)
         main_frame.grid_columnconfigure(1, weight=1)
 
-        # Bind resize events
-        main_frame.bind('<Configure>', self.on_frame_configure)
-        self.canvas.bind('<Configure>', self.on_canvas_configure)
+        main_frame.bind("<Configure>", self.on_frame_configure)
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
 
-        # Create sections
-        self.create_title_section(main_frame)
-        self.create_coordinate_section(main_frame)
-        self.create_click_settings_section(main_frame)
-        self.create_control_section(main_frame)
-        self.create_status_section(main_frame)
-        self.create_disclaimer_section(main_frame)
-
-    def create_title_section(self, parent):
-        """Create title section"""
-        title_label = ttk.Label(parent, text="Windows Autoclicker",
-                               font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky=(tk.W, tk.E))
-
-    def create_coordinate_section(self, parent):
-        """Create coordinate input section"""
-        coord_frame = ttk.LabelFrame(parent, text="Target Coordinates", padding="10")
-        coord_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-
-        coord_frame.grid_columnconfigure(1, weight=1)
-        coord_frame.grid_columnconfigure(3, weight=1)
-        coord_frame.grid_columnconfigure(6, weight=1)
-
-        # X and Y coordinates
-        ttk.Label(coord_frame, text="X:").grid(row=0, column=0, padx=(0, 5), sticky=tk.W)
-        self.x_entry = ttk.Entry(coord_frame, width=8)
-        self.x_entry.grid(row=0, column=1, padx=(0, 15), sticky=(tk.W, tk.E))
-        self.x_entry.insert(0, str(self.settings.get('x_coord', '100')))
-
-        ttk.Label(coord_frame, text="Y:").grid(row=0, column=2, padx=(0, 5), sticky=tk.W)
-        self.y_entry = ttk.Entry(coord_frame, width=8)
-        self.y_entry.grid(row=0, column=3, padx=(0, 15), sticky=(tk.W, tk.E))
-        self.y_entry.insert(0, str(self.settings.get('y_coord', '100')))
-
-        # Pick coordinate button
-        self.pick_btn = ttk.Button(coord_frame, text="Pick Location",
-                                  command=self.start_coordinate_picker)
-        self.pick_btn.grid(row=0, column=4, padx=(10, 5), sticky=tk.W)
-
-        # Presets section
-        ttk.Label(coord_frame, text="Presets:").grid(row=1, column=0, padx=(0, 5), pady=(10, 0), sticky=tk.W)
-        self.preset_var = tk.StringVar()
-        self.preset_combo = ttk.Combobox(coord_frame, textvariable=self.preset_var,
-                                        width=20, state="readonly")
-        self.preset_combo.grid(row=1, column=1, columnspan=3, padx=(0, 10), pady=(10, 0), sticky=(tk.W, tk.E))
-        self.update_preset_list()
-        self.preset_combo.bind('<<ComboboxSelected>>', self.load_preset)
-
-        # Save preset button
-        self.save_preset_btn = ttk.Button(coord_frame, text="Save Preset",
-                                         command=self.save_preset)
-        self.save_preset_btn.grid(row=1, column=4, pady=(10, 0), sticky=tk.W)
-
-    def create_click_settings_section(self, parent):
-        """Create click settings section"""
-        settings_frame = ttk.LabelFrame(parent, text="Click Settings", padding="10")
-        settings_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-
-        settings_frame.grid_columnconfigure(1, weight=1)
-        settings_frame.grid_columnconfigure(2, weight=1)
-        settings_frame.grid_columnconfigure(3, weight=1)
-
-        # Mouse button selection
-        ttk.Label(settings_frame, text="Mouse Button:").grid(row=0, column=0, sticky=tk.W)
-        self.button_var = tk.StringVar(value=self.settings.get('mouse_button', 'left'))
-        button_frame = ttk.Frame(settings_frame)
-        button_frame.grid(row=0, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0))
-
-        ttk.Radiobutton(button_frame, text="Left", variable=self.button_var, value="left").pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Radiobutton(button_frame, text="Right", variable=self.button_var, value="right").pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Radiobutton(button_frame, text="Middle", variable=self.button_var, value="middle").pack(side=tk.LEFT)
-
-        # Click type
-        ttk.Label(settings_frame, text="Click Type:").grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
-        self.click_type_var = tk.StringVar(value=self.settings.get('click_type', 'single'))
-        click_type_frame = ttk.Frame(settings_frame)
-        click_type_frame.grid(row=1, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-
-        ttk.Radiobutton(click_type_frame, text="Single", variable=self.click_type_var, value="single").pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Radiobutton(click_type_frame, text="Double", variable=self.click_type_var, value="double").pack(side=tk.LEFT)
-
-        # Interval settings
-        ttk.Label(settings_frame, text="Interval:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
-        interval_frame = ttk.Frame(settings_frame)
-        interval_frame.grid(row=2, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-
-        self.interval_entry = ttk.Entry(interval_frame, width=8)
-        self.interval_entry.pack(side=tk.LEFT, padx=(0, 5))
-        self.interval_entry.insert(0, str(self.settings.get('interval', '1000')))
-
-        self.interval_unit_var = tk.StringVar(value=self.settings.get('interval_unit', 'ms'))
-        ttk.Combobox(interval_frame, textvariable=self.interval_unit_var,
-                    values=['ms', 'seconds'], width=8, state="readonly").pack(side=tk.LEFT, padx=(0, 10))
-
-        ttk.Label(interval_frame, text="±").pack(side=tk.LEFT)
-        self.variation_entry = ttk.Entry(interval_frame, width=6)
-        self.variation_entry.pack(side=tk.LEFT)
-        self.variation_entry.insert(0, str(self.settings.get('variation', '0')))
-        ttk.Label(interval_frame, text="ms").pack(side=tk.LEFT)
-
-        # Burst mode
-        ttk.Label(settings_frame, text="Burst Mode:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
-        burst_frame = ttk.Frame(settings_frame)
-        burst_frame.grid(row=3, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-
-        ttk.Label(burst_frame, text="Clicks:").pack(side=tk.LEFT)
-        self.burst_clicks_entry = ttk.Entry(burst_frame, width=5)
-        self.burst_clicks_entry.pack(side=tk.LEFT, padx=(0, 10))
-        self.burst_clicks_entry.insert(0, str(self.settings.get('burst_clicks', '1')))
-
-        ttk.Label(burst_frame, text="Pause:").pack(side=tk.LEFT, padx=(10, 0))
-        self.burst_pause_entry = ttk.Entry(burst_frame, width=5)
-        self.burst_pause_entry.pack(side=tk.LEFT, padx=(0, 5))
-        self.burst_pause_entry.insert(0, str(self.settings.get('burst_pause', '1000')))
-        ttk.Label(burst_frame, text="ms").pack(side=tk.LEFT)
-
-        # Safety settings
-        ttk.Label(settings_frame, text="Safety:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
-        safety_frame = ttk.Frame(settings_frame)
-        safety_frame.grid(row=4, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-
-        ttk.Label(safety_frame, text="Max clicks:").pack(side=tk.LEFT)
-        self.max_clicks_entry = ttk.Entry(safety_frame, width=8)
-        self.max_clicks_entry.pack(side=tk.LEFT, padx=(0, 15))
-        self.max_clicks_entry.insert(0, str(self.settings.get('max_clicks', '0')))
-
-        ttk.Label(safety_frame, text="Auto-stop after:").pack(side=tk.LEFT, padx=(10, 0))
-        self.auto_stop_entry = ttk.Entry(safety_frame, width=5)
-        self.auto_stop_entry.pack(side=tk.LEFT, padx=(0, 5))
-        self.auto_stop_entry.insert(0, str(self.settings.get('auto_stop_minutes', '0')))
-        ttk.Label(safety_frame, text="minutes").pack(side=tk.LEFT)
-
-        # Click queuing toggle
-        ttk.Label(settings_frame, text="Advanced:").grid(row=5, column=0, sticky=tk.W, pady=(15, 0))
-        advanced_frame = ttk.Frame(settings_frame)
-        advanced_frame.grid(row=5, column=1, columnspan=3, sticky=(tk.W, tk.E), padx=(10, 0), pady=(15, 0))
-
-        self.click_queuing_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(advanced_frame, text="Enable Click Queuing",
-                       variable=self.click_queuing_var,
-                       command=self._toggle_click_queuing).pack(side=tk.LEFT)
-
-        self.failsafe_var = tk.BooleanVar(value=self.settings.get("enable_failsafe", True))
-        ttk.Checkbutton(
-            advanced_frame,
-            text="PyAutoGUI Failsafe (corner abort)",
-            variable=self.failsafe_var,
-            command=self._on_failsafe_toggle,
-        ).pack(side=tk.LEFT, padx=(10, 0))
-
-        self.pause_unfocused_var = tk.BooleanVar(
-            value=self.settings.get("pause_when_unfocused", False)
-        )
-        ttk.Checkbutton(
-            advanced_frame,
-            text="Pause when window loses focus",
-            variable=self.pause_unfocused_var,
-        ).pack(side=tk.LEFT, padx=(10, 0))
-
-    def create_control_section(self, parent):
-        """Create control buttons section"""
-        control_frame = ttk.Frame(parent)
-        control_frame.grid(row=3, column=0, columnspan=2, pady=(0, 15))
-
-        # Start/Stop buttons
-        self.start_btn = ttk.Button(control_frame, text="Start (F6)", command=self.start_clicking, width=15)
-        self.start_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        self.stop_btn = ttk.Button(control_frame, text="Stop (F7)", command=self.stop_clicking,
-                                  state=tk.DISABLED, width=15)
-        self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
-
-        # Emergency stop
-        self.emergency_btn = ttk.Button(control_frame, text="Emergency Stop (ESC)",
-                                       command=self.emergency_stop, width=20)
-        self.emergency_btn.pack(side=tk.LEFT)
-
-    def create_status_section(self, parent):
-        """Create status display section"""
-        status_frame = ttk.LabelFrame(parent, text="Status", padding="10")
-        status_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-
-        # Status indicator
-        self.status_var = tk.StringVar(value="Stopped")
-        self.status_label = ttk.Label(status_frame, textvariable=self.status_var,
-                                     font=("Arial", 12, "bold"))
-        self.status_label.pack(anchor=tk.W)
-
-        # Click counter
-        self.click_count_var = tk.StringVar(value="Clicks: 0")
-        ttk.Label(status_frame, textvariable=self.click_count_var).pack(anchor=tk.W, pady=(5, 0))
-
-        # Runtime
-        self.runtime_var = tk.StringVar(value="Runtime: 0:00:00")
-        ttk.Label(status_frame, textvariable=self.runtime_var).pack(anchor=tk.W, pady=(2, 0))
-
-        # Current coordinates
-        self.coord_var = tk.StringVar(value="Target: (100, 100)")
-        ttk.Label(status_frame, textvariable=self.coord_var).pack(anchor=tk.W, pady=(2, 0))
-
-        # Performance metrics
-        self.performance_var = tk.StringVar(value="Performance: --")
-        ttk.Label(status_frame, textvariable=self.performance_var).pack(anchor=tk.W, pady=(2, 0))
-
-    def create_disclaimer_section(self, parent):
-        """Create disclaimer section"""
-        disclaimer_text = ("WARNING: USE RESPONSIBLY\n\n"
-                          "This tool is for legitimate automation purposes only.\n"
-                          "Ensure compliance with application terms of service,\n"
-                          "website policies, and local laws. The author assumes\n"
-                          "no responsibility for misuse.")
-
-        disclaimer_label = ttk.Label(parent, text=disclaimer_text,
-                                    background="#fff3cd", foreground="#856404",
-                                    padding="10", justify=tk.CENTER, relief="solid", wraplength=400)
-        disclaimer_label.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
-
-        parent.grid_rowconfigure(5, weight=1)
+        build_title_section(self, main_frame)
+        build_coordinate_section(self, main_frame)
+        build_click_settings_section(self, main_frame)
+        build_control_section(self, main_frame)
+        build_status_section(self, main_frame)
+        build_disclaimer_section(self, main_frame)
 
     def _set_status_message(self, message: str) -> None:
-        """Show a status line in the GUI (replaces silent print for integration errors)."""
+        """Show a status line in the GUI."""
         if hasattr(self, "status_var"):
             self.status_var.set(message)
 
-    def _apply_safety_from_settings(self) -> None:
-        self.click_engine.configure_safety(
-            failsafe=bool(self.settings.get("enable_failsafe", True)),
-            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
-            pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
-            on_safety_stop=self._on_safety_stop,
-        )
-
     def _on_failsafe_toggle(self) -> None:
-        self.click_engine.configure_safety(
+        self.controller.configure_safety_from_ui(
             failsafe=self.failsafe_var.get(),
-            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
             pause_when_unfocused=self.pause_unfocused_var.get(),
             on_safety_stop=self._on_safety_stop,
         )
 
     def _on_safety_stop(self, reason: str) -> None:
         self._set_status_message(reason)
-        append_session_event("safety_stop", reason=reason, clicks=self.click_engine.click_count)
+        self.controller.log_safety_stop(reason)
         self.stop_clicking()
 
-    def setup_hotkeys(self):
-        """Setup keyboard hotkeys"""
-        try:
-            keyboard.add_hotkey('f6', self.start_clicking)
-            keyboard.add_hotkey('f7', self.stop_clicking)
-            keyboard.add_hotkey('esc', self.emergency_stop)
-        except Exception as e:
-            self._set_status_message(f"Hotkey setup failed: {e}")
-
-    def setup_system_tray(self):
-        """Setup system tray icon"""
-        try:
-            # Create a simple icon
-            icon_image = Image.new('RGB', (64, 64), color='red')
-
-            self.tray_icon = pystray.Icon(
-                "autoclicker",
-                icon_image,
-                "Windows Autoclicker",
-                menu=pystray.Menu(
-                    pystray.MenuItem('Show', self.show_window),
-                    pystray.MenuItem('Start (F6)', self.start_clicking),
-                    pystray.MenuItem('Stop (F7)', self.stop_clicking),
-                    pystray.MenuItem('Exit', self.quit_application)
-                )
-            )
-        except Exception as e:
-            self._set_status_message(f"System tray setup failed: {e}")
-            self.tray_icon = None
-
-    def start_coordinate_picker(self):
-        """Start coordinate picking mode"""
+    def start_coordinate_picker(self) -> None:
+        """Start coordinate picking mode."""
         if self.click_engine.is_running:
-            messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
+            messagebox.showwarning(
+                "Warning", "Stop clicking before picking coordinates."
+            )
             return
 
         if self.coordinate_picker.is_picking():
@@ -398,11 +163,11 @@ class AutoclickerApp:
 
         self.coordinate_picker.start_picking(
             on_selected=self._on_coordinates_selected,
-            on_cancelled=self._on_coordinate_picker_cancelled
+            on_cancelled=self._on_coordinate_picker_cancelled,
         )
 
-    def _on_coordinates_selected(self, x: int, y: int):
-        """Handle coordinate selection"""
+    def _on_coordinates_selected(self, x: int, y: int) -> None:
+        """Handle coordinate selection."""
         self.x_entry.delete(0, tk.END)
         self.x_entry.insert(0, str(x))
         self.y_entry.delete(0, tk.END)
@@ -412,14 +177,14 @@ class AutoclickerApp:
         self.pick_btn.config(state=tk.NORMAL)
         self.status_var.set("Coordinate selected")
 
-    def _on_coordinate_picker_cancelled(self):
-        """Handle coordinate picker cancellation"""
+    def _on_coordinate_picker_cancelled(self) -> None:
+        """Handle coordinate picker cancellation."""
         self.show_window()
         self.pick_btn.config(state=tk.NORMAL)
         self.status_var.set("Coordinate selection cancelled")
 
-    def save_preset(self):
-        """Save current coordinates as preset"""
+    def save_preset(self) -> None:
+        """Save current coordinates as preset."""
         try:
             x = int(self.x_entry.get())
             y = int(self.y_entry.get())
@@ -434,8 +199,8 @@ class AutoclickerApp:
         except ValueError:
             messagebox.showerror("Error", "Invalid coordinates")
 
-    def load_preset(self, event=None):
-        """Load selected preset"""
+    def load_preset(self, event=None) -> None:
+        """Load selected preset."""
         preset_name = self.preset_var.get()
         coords = self.preset_manager.load_preset(preset_name)
         if coords:
@@ -445,232 +210,184 @@ class AutoclickerApp:
             self.y_entry.delete(0, tk.END)
             self.y_entry.insert(0, str(y))
 
-    def update_preset_list(self):
-        """Update preset combobox with current presets"""
+    def update_preset_list(self) -> None:
+        """Update preset combobox with current presets."""
         preset_names = self.preset_manager.get_preset_names()
-        self.preset_combo['values'] = preset_names
+        self.preset_combo["values"] = preset_names
 
     def _collect_ui_settings(self) -> dict:
         """Collect current values from UI fields."""
-        return {
-            "x_coord": self.x_entry.get(),
-            "y_coord": self.y_entry.get(),
-            "interval": self.interval_entry.get(),
-            "interval_unit": self.interval_unit_var.get(),
-            "variation": self.variation_entry.get(),
-            "mouse_button": self.button_var.get(),
-            "click_type": self.click_type_var.get(),
-            "burst_clicks": self.burst_clicks_entry.get(),
-            "burst_pause": self.burst_pause_entry.get(),
-            "max_clicks": self.max_clicks_entry.get(),
-            "auto_stop_minutes": self.auto_stop_entry.get(),
-            "enable_failsafe": self.failsafe_var.get(),
-            "pause_when_unfocused": self.pause_unfocused_var.get(),
-            "max_cps_ceiling": self.settings.get("max_cps_ceiling", 50),
-        }
+        return AutoclickerController.collect_raw_settings(
+            {
+                "x_coord": self.x_entry.get(),
+                "y_coord": self.y_entry.get(),
+                "interval": self.interval_entry.get(),
+                "interval_unit": self.interval_unit_var.get(),
+                "variation": self.variation_entry.get(),
+                "mouse_button": self.button_var.get(),
+                "click_type": self.click_type_var.get(),
+                "burst_clicks": self.burst_clicks_entry.get(),
+                "burst_pause": self.burst_pause_entry.get(),
+                "max_clicks": self.max_clicks_entry.get(),
+                "auto_stop_minutes": self.auto_stop_entry.get(),
+                "enable_failsafe": self.failsafe_var.get(),
+                "pause_when_unfocused": self.pause_unfocused_var.get(),
+                "max_cps_ceiling": self.settings.get("max_cps_ceiling", 50),
+            }
+        )
 
-    def start_clicking(self):
-        """Start the autoclicking process with comprehensive validation"""
+    def start_clicking(self) -> None:
+        """Start the autoclicking process with comprehensive validation."""
         try:
-            raw_settings = self._collect_ui_settings()
+            result = self.controller.validate_and_start_clicking(
+                self._collect_ui_settings(),
+                failsafe=self.failsafe_var.get(),
+                pause_when_unfocused=self.pause_unfocused_var.get(),
+                on_safety_stop=self._on_safety_stop,
+                on_click_complete=self._on_clicking_complete,
+                on_status_update=self._on_status_update,
+            )
 
-            # Get screen dimensions for coordinate validation
-            screen_width, screen_height = pyautogui.size()
-
-            # Validate all settings
-            validation_result = self.settings.validate_all_settings(raw_settings, screen_width, screen_height)
-
-            if not validation_result['valid']:
-                # Show validation errors
-                error_messages = []
-                for field, error in validation_result['errors'].items():
-                    error_messages.append(f"{field.title()}: {error}")
-
+            if result.validation_errors is not None:
+                error_messages = [
+                    f"{field.title()}: {error}"
+                    for field, error in result.validation_errors.items()
+                ]
                 messagebox.showerror("Validation Error", "\n".join(error_messages))
                 return
 
-            # Use sanitized settings
-            sanitized = validation_result['sanitized_settings']
-
-            # Extract values for click engine
-            x = sanitized['x_coord']
-            y = sanitized['y_coord']
-            interval = sanitized['interval']
-            interval_unit = sanitized['interval_unit']
-            variation = sanitized['variation']
-            burst_clicks = sanitized['burst_clicks']
-            burst_pause = sanitized['burst_pause'] / 1000  # Convert to seconds for click engine
-
-            # Convert interval to milliseconds for click engine
-            if interval_unit == 'seconds':
-                interval_ms = interval * 1000
-            else:
-                interval_ms = interval
-
-            # Update settings with sanitized values
-            self.settings.update(sanitized)
-
-            self._apply_safety_from_settings()
-            self.click_engine.configure_safety(
-                failsafe=self.failsafe_var.get(),
-                max_cps=int(self.settings.get("max_cps_ceiling", 50)),
-                pause_when_unfocused=self.pause_unfocused_var.get(),
-                on_safety_stop=self._on_safety_stop,
-            )
-
-            # Start clicking with validated settings
-            if self.click_engine.start_clicking(
-                x=x, y=y, interval=interval_ms, variation=variation,
-                burst_clicks=burst_clicks, burst_pause=burst_pause,
-                max_clicks=sanitized['max_clicks'], auto_stop_minutes=sanitized['auto_stop_minutes'],
-                mouse_button=sanitized['mouse_button'], click_type=sanitized['click_type'],
-                on_click_complete=self._on_clicking_complete,
-                on_status_update=self._on_status_update
-            ):
+            if result.success and result.sanitized is not None:
+                sanitized = result.sanitized
+                x = sanitized["x_coord"]
+                y = sanitized["y_coord"]
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self.status_var.set("Running...")
                 self.coord_var.set(f"Target: ({x}, {y})")
-                append_session_event(
-                    "start",
-                    x=x,
-                    y=y,
-                    interval_ms=interval_ms,
-                    button=sanitized["mouse_button"],
-                )
-
-                # Start status update timer
                 self._start_status_timer()
 
         except AutoclickerError as e:
-            # Handle our custom exceptions with user-friendly messages
             user_message = create_user_friendly_error(e)
             messagebox.showerror("Autoclicker Error", user_message)
         except Exception as e:
-            # Handle unexpected errors
             user_message = create_user_friendly_error(e)
             messagebox.showerror("Unexpected Error", user_message)
 
-    def stop_clicking(self):
-        """Stop the autoclicking process"""
-        was_running = self.click_engine.is_running
-        self.click_engine.stop_clicking()
+    def stop_clicking(self) -> None:
+        """Stop the autoclicking process."""
+        self.controller.stop_clicking(reason="user_stop")
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.status_var.set("Stopped")
         self._stop_status_timer()
-        if was_running:
-            append_session_event(
-                "stop",
-                reason="user_stop",
-                clicks=self.click_engine.click_count,
-            )
 
-    def emergency_stop(self):
-        """Emergency stop - immediate halt"""
-        was_running = self.click_engine.is_running
-        self.click_engine.emergency_stop()
+    def emergency_stop(self) -> None:
+        """Emergency stop - immediate halt."""
+        self.controller.emergency_stop()
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.status_var.set("Emergency Stop")
         self._stop_status_timer()
-        if was_running:
-            append_session_event(
-                "stop",
-                reason="emergency",
-                clicks=self.click_engine.click_count,
-            )
 
-    def _on_clicking_complete(self):
-        """Handle clicking completion"""
+    def _on_clicking_complete(self) -> None:
+        """Handle clicking completion."""
         self.start_btn.config(state=tk.NORMAL)
         self.stop_btn.config(state=tk.DISABLED)
         self.status_var.set("Stopped")
         self._stop_status_timer()
 
-    def _on_status_update(self):
-        """Handle status updates from click engine"""
+    def _on_status_update(self) -> None:
+        """Handle status updates from click engine."""
         status = self.click_engine.get_status()
         self.click_count_var.set(f"Clicks: {status['click_count']}")
         self.runtime_var.set(f"Runtime: {status['runtime']}")
 
-        # Update performance metrics if available
-        if 'performance' in status:
-            perf = status['performance']
-            perf_text = f"Performance: {perf['clicks_per_second']} cps, {perf['success_rate']:.1f}% success"
+        if "performance" in status:
+            perf = status["performance"]
+            perf_text = (
+                f"Performance: {perf['clicks_per_second']} cps, "
+                f"{perf['success_rate']:.1f}% success"
+            )
             self.performance_var.set(perf_text)
         else:
             self.performance_var.set("Performance: --")
 
-    def _start_status_timer(self):
-        """Start periodic status updates"""
+    def _start_status_timer(self) -> None:
+        """Start periodic status updates."""
         self._status_timer = self.root.after(1000, self._update_status_loop)
 
-    def _stop_status_timer(self):
-        """Stop status update timer"""
-        if hasattr(self, '_status_timer'):
+    def _stop_status_timer(self) -> None:
+        """Stop status update timer."""
+        if hasattr(self, "_status_timer"):
             self.root.after_cancel(self._status_timer)
 
-    def _update_status_loop(self):
-        """Periodic status update loop"""
+    def _update_status_loop(self) -> None:
+        """Periodic status update loop."""
         if self.click_engine.is_running:
             self._on_status_update()
             self._status_timer = self.root.after(1000, self._update_status_loop)
 
-    def _toggle_click_queuing(self):
-        """Toggle click queuing on/off"""
+    def _toggle_click_queuing(self) -> None:
+        """Toggle click queuing on/off."""
         enabled = self.click_queuing_var.get()
         self.click_engine.enable_click_queuing(enabled)
 
-    def show_window(self):
-        """Show main window"""
+    def show_window(self) -> None:
+        """Show main window."""
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
 
-    def on_frame_configure(self, event):
-        """Handle frame resize"""
+    def on_frame_configure(self, event) -> None:
+        """Handle frame resize."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    def on_canvas_configure(self, event):
-        """Handle canvas resize"""
+    def on_canvas_configure(self, event) -> None:
+        """Handle canvas resize."""
         self.canvas.itemconfig(self.canvas_frame, width=event.width)
 
-    def on_closing(self):
-        """Handle window close event"""
+    def on_closing(self) -> None:
+        """Handle window close event."""
         if messagebox.askokcancel("Quit", "Do you want to quit the application?"):
             self.quit_application()
 
-    def quit_application(self):
-        """Quit the application"""
+    def quit_application(self) -> None:
+        """Quit the application."""
         self.stop_clicking()
         self.coordinate_picker.stop_picking()
-        screen_width, screen_height = pyautogui.size()
-        validation_result = self.settings.validate_all_settings(
-            self._collect_ui_settings(),
-            screen_width,
-            screen_height,
-        )
-        if validation_result["valid"]:
-            self.settings.update(validation_result["sanitized_settings"])
+        raw_settings = self._collect_ui_settings()
+        screen_size = pyautogui.size()
+        if hasattr(self, "controller"):
+            self.controller.persist_settings_on_quit(
+                raw_settings,
+                settings_manager=self.settings,
+                screen_size=screen_size,
+            )
         else:
-            self.settings.update(self._collect_ui_settings())
+            screen_width, screen_height = screen_size
+            validation_result = self.settings.validate_all_settings(
+                raw_settings, screen_width, screen_height
+            )
+            if validation_result["valid"]:
+                self.settings.update(validation_result["sanitized_settings"])
+            else:
+                self.settings.update(raw_settings)
 
-        if hasattr(self, 'tray_icon') and self.tray_icon:
+        if hasattr(self, "tray_icon") and self.tray_icon:
             self.tray_icon.stop()
 
         self.root.quit()
         self.root.destroy()
 
-    def run(self):
-        """Run the application"""
+    def run(self) -> None:
+        """Run the application."""
         try:
-            # Start system tray in background
-            if hasattr(self, 'tray_icon') and self.tray_icon:
-                tray_thread = threading.Thread(target=self.tray_icon.run, daemon=True)
+            if hasattr(self, "tray_icon") and self.tray_icon:
+                tray_thread = threading.Thread(
+                    target=self.tray_icon.run, daemon=True
+                )
                 tray_thread.start()
 
-            # Start main loop
             self.root.mainloop()
 
         except KeyboardInterrupt:
