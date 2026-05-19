@@ -72,7 +72,8 @@ autoclicker = ["*.ico", "*.png"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -v --tb=short"
+# Project-wide cov floor rises in phase 8; phase 3 gates click_engine at 60% (target 70%+).
+addopts = "-ra -v --tb=short --cov=autoclicker.core.click_engine --cov-report=term-missing:skip-covered --cov-fail-under=60"
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning"]
 python_files = "test_*.py"
