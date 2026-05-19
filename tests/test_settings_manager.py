@@ -59,15 +59,21 @@ class TestSettingsManager(unittest.TestCase):
     def test_coordinate_validation(self):
         """Test coordinate validation"""
         # Valid coordinates
-        self.assertTrue(self.manager.validate_coordinate(100, 100, 1920, 1080))
+        valid, error = self.manager.validate_coordinate(100, 100, 1920, 1080)
+        self.assertTrue(valid)
+        self.assertEqual(error, "")
 
         # Invalid coordinates (negative)
-        self.assertFalse(self.manager.validate_coordinate(-1, 100, 1920, 1080))
-        self.assertFalse(self.manager.validate_coordinate(100, -1, 1920, 1080))
+        valid, _ = self.manager.validate_coordinate(-1, 100, 1920, 1080)
+        self.assertFalse(valid)
+        valid, _ = self.manager.validate_coordinate(100, -1, 1920, 1080)
+        self.assertFalse(valid)
 
         # Invalid coordinates (too large)
-        self.assertFalse(self.manager.validate_coordinate(2000, 100, 1920, 1080))
-        self.assertFalse(self.manager.validate_coordinate(100, 1200, 1920, 1080))
+        valid, _ = self.manager.validate_coordinate(2000, 100, 1920, 1080)
+        self.assertFalse(valid)
+        valid, _ = self.manager.validate_coordinate(100, 1200, 1920, 1080)
+        self.assertFalse(valid)
 
     def test_interval_validation(self):
         """Test interval validation"""
@@ -132,7 +138,7 @@ class TestSettingsManager(unittest.TestCase):
 
         valid, error = self.manager.validate_clicks("not_a_number")
         self.assertFalse(valid)
-        self.assertIn("must be an integer", error)
+        self.assertIn("Must be a number", error)
 
     def test_minutes_validation(self):
         """Test minutes validation"""
@@ -156,7 +162,7 @@ class TestSettingsManager(unittest.TestCase):
 
         valid, error = self.manager.validate_minutes("not_a_number")
         self.assertFalse(valid)
-        self.assertIn("must be an integer", error)
+        self.assertIn("Must be a number", error)
 
     def test_variation_validation(self):
         """Test variation validation"""
@@ -183,7 +189,7 @@ class TestSettingsManager(unittest.TestCase):
 
         valid, error = self.manager.validate_variation("not_a_number", 1000, "ms")
         self.assertFalse(valid)
-        self.assertIn("must be an integer", error)
+        self.assertIn("Must be a number", error)
 
     def test_burst_settings_validation(self):
         """Test burst mode settings validation"""

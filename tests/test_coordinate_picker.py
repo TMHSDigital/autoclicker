@@ -27,7 +27,9 @@ class TestCoordinatePicker(unittest.TestCase):
         self.assertIsNone(self.picker.on_coordinate_selected)
         self.assertIsNone(self.picker.on_cancelled)
 
-    def test_start_picking_success(self):
+    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
+    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
+    def test_start_picking_success(self, mock_on_button, mock_hotkey):
         """Test successful start of coordinate picking"""
 
         def on_selected(x, y):
@@ -39,7 +41,9 @@ class TestCoordinatePicker(unittest.TestCase):
         self.assertTrue(self.picker.is_picking())
         self.assertEqual(self.picker.on_coordinate_selected, on_selected)
 
-    def test_start_picking_already_active(self):
+    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
+    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
+    def test_start_picking_already_active(self, mock_on_button, mock_hotkey):
         """Test starting coordinate picking when already active"""
         self.picker.start_picking(lambda x, y: None)
         self.assertTrue(self.picker.is_picking())
@@ -48,7 +52,11 @@ class TestCoordinatePicker(unittest.TestCase):
         result = self.picker.start_picking(lambda x, y: None)
         self.assertFalse(result)
 
-    def test_stop_picking(self):
+    @patch("autoclicker.utils.coordinate_picker.keyboard.remove_hotkey")
+    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
+    @patch("autoclicker.utils.coordinate_picker.mouse.unhook")
+    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
+    def test_stop_picking(self, mock_on_button, mock_unhook, mock_hotkey, mock_remove):
         """Test stopping coordinate picking"""
         cancelled_called = False
 
@@ -71,7 +79,13 @@ class TestCoordinatePicker(unittest.TestCase):
             nonlocal callback_coords
             callback_coords = (x, y)
 
-        self.picker.start_picking(on_selected)
+        with (
+            patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock()),
+            patch(
+                "autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock()
+            ),
+        ):
+            self.picker.start_picking(on_selected)
 
         # Simulate coordinate selection
         self.picker._on_mouse_click = MagicMock()
@@ -182,8 +196,9 @@ class TestCoordinatePickerIntegration(unittest.TestCase):
         if os.path.exists(self.settings_file):
             os.unlink(self.settings_file)
 
+    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
     @patch("autoclicker.utils.coordinate_picker.mouse")
-    def test_full_coordinate_workflow(self, mock_mouse):
+    def test_full_coordinate_workflow(self, mock_mouse, mock_hotkey):
         """Test full coordinate picking workflow"""
         # Mock mouse module
         mock_mouse.get_position.return_value = (150, 250)

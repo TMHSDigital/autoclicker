@@ -404,23 +404,26 @@ class AutoclickerApp:
         preset_names = self.preset_manager.get_preset_names()
         self.preset_combo['values'] = preset_names
 
+    def _collect_ui_settings(self) -> dict:
+        """Collect current values from UI fields."""
+        return {
+            "x_coord": self.x_entry.get(),
+            "y_coord": self.y_entry.get(),
+            "interval": self.interval_entry.get(),
+            "interval_unit": self.interval_unit_var.get(),
+            "variation": self.variation_entry.get(),
+            "mouse_button": self.button_var.get(),
+            "click_type": self.click_type_var.get(),
+            "burst_clicks": self.burst_clicks_entry.get(),
+            "burst_pause": self.burst_pause_entry.get(),
+            "max_clicks": self.max_clicks_entry.get(),
+            "auto_stop_minutes": self.auto_stop_entry.get(),
+        }
+
     def start_clicking(self):
         """Start the autoclicking process with comprehensive validation"""
         try:
-            # Collect all settings from UI
-            raw_settings = {
-                'x_coord': self.x_entry.get(),
-                'y_coord': self.y_entry.get(),
-                'interval': self.interval_entry.get(),
-                'interval_unit': self.interval_unit_var.get(),
-                'variation': self.variation_entry.get(),
-                'mouse_button': self.button_var.get(),
-                'click_type': self.click_type_var.get(),
-                'burst_clicks': self.burst_clicks_entry.get(),
-                'burst_pause': self.burst_pause_entry.get(),
-                'max_clicks': self.max_clicks_entry.get(),
-                'auto_stop_minutes': self.auto_stop_entry.get()
-            }
+            raw_settings = self._collect_ui_settings()
 
             # Get screen dimensions for coordinate validation
             screen_width, screen_height = pyautogui.size()
@@ -564,7 +567,16 @@ class AutoclickerApp:
         """Quit the application"""
         self.stop_clicking()
         self.coordinate_picker.stop_picking()
-        self.settings.update({})  # Save current settings
+        screen_width, screen_height = pyautogui.size()
+        validation_result = self.settings.validate_all_settings(
+            self._collect_ui_settings(),
+            screen_width,
+            screen_height,
+        )
+        if validation_result["valid"]:
+            self.settings.update(validation_result["sanitized_settings"])
+        else:
+            self.settings.update(self._collect_ui_settings())
 
         if hasattr(self, 'tray_icon') and self.tray_icon:
             self.tray_icon.stop()

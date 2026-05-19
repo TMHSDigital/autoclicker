@@ -169,7 +169,7 @@ class ClickEngine:
                     break
 
                 x, y, mouse_button, click_type = click_data
-                self._perform_click(x, y, mouse_button, click_type)
+                self._perform_click(x, y, mouse_button, click_type, from_queue=True)
 
             except IndexError:
                 # Queue is empty, wait a bit
@@ -247,20 +247,29 @@ class ClickEngine:
                 break
 
             self._perform_click(x, y, mouse_button, click_type)
-            self.click_count += 1
 
             # Wait between clicks in burst (except for last click)
             if burst_clicks > 1 and i < burst_clicks - 1:
                 time.sleep(burst_pause)
 
-    def _perform_click(self, x: int, y: int, mouse_button: str, click_type: str) -> None:
+    def _perform_click(
+        self,
+        x: int,
+        y: int,
+        mouse_button: str,
+        click_type: str,
+        from_queue: bool = False,
+    ) -> None:
         """Perform a single click at coordinates with performance monitoring"""
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
             # Check if queuing is enabled and queue is not full
-            if self.enable_queuing and len(self.click_queue) < self.max_queue_size:
-                # Add click to queue instead of executing immediately
+            if (
+                not from_queue
+                and self.enable_queuing
+                and len(self.click_queue) < self.max_queue_size
+            ):
                 self.click_queue.append((x, y, mouse_button, click_type))
                 return
 
@@ -294,7 +303,11 @@ class ClickEngine:
                     self.performance_metrics['click_success_count'] += 1
                     self.performance_metrics['total_click_time'] += total_time
                     self.performance_metrics['min_click_time'] = min(self.performance_metrics['min_click_time'], total_time)
-                    self.performance_metrics['max_click_time'] = max(self.performance_metrics['max_click_time'], total_time)
+                    self.performance_metrics['max_click_time'] = max(
+                        self.performance_metrics['max_click_time'], total_time
+                    )
+
+                self.click_count += 1
 
             except pyautogui.FailSafeException:
                 if self.enable_performance_monitoring:
