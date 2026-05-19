@@ -5,6 +5,21 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Whitelist real project deps; ignore noise from audit/baseline_pip_freeze.txt
+    # which is a historical snapshot of an unrelated environment.
+    allow:
+      - dependency-name: "pyautogui"
+      - dependency-name: "keyboard"
+      - dependency-name: "mouse"
+      - dependency-name: "pywin32"
+      - dependency-name: "Pillow"
+      - dependency-name: "pystray"
+      - dependency-name: "pytest*"
+      - dependency-name: "pytest-cov"
+      - dependency-name: "ruff"
+      - dependency-name: "mypy"
+      - dependency-name: "coverage"
+      - dependency-name: "pre-commit"
     groups:
       dev-dependencies:
         patterns:
