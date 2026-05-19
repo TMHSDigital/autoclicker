@@ -49,9 +49,20 @@ class ClickEngine:
         # Click queuing for high-frequency operations
         self.click_queue: deque = deque()
         self.queue_processor_thread: threading.Thread | None = None
+        self._queue_wake = threading.Event()
         self.max_queue_size = 1000
         self.enable_queuing = False
+        self.dropped_click_count = 0  # Long-soak observability for queue-full drops
         self._last_click_xy: tuple[int, int] | None = None
+
+        # Windowed CPS tracking (timestamps of recent successful clicks).
+        # 1024 samples ≈ 10 s at the 100 cps ceiling we cap at; bounded so a
+        # multi-day session never grows this deque.
+        self._recent_click_ts: deque = deque(maxlen=1024)
+
+        # Cached screen size; refreshed on start. Calling pyautogui.size() per
+        # click is a Win32 syscall and noticeably hot at high CPS.
+        self._screen_size: tuple[int, int] | None = None
 
         self.failsafe_enabled = True
         self.max_cps_ceiling = 50
@@ -114,9 +125,12 @@ class ClickEngine:
         # Reset state
         self.is_running = True
         self.click_count = 0
+        self.dropped_click_count = 0
         self.start_time = time.time()
         self._stop_event.clear()
         self._last_click_xy = None
+        self._recent_click_ts.clear()
+        self._screen_size = pyautogui.size()
 
         if self.pause_when_unfocused:
             from .safety import get_foreground_window_handle
@@ -215,23 +229,29 @@ class ClickEngine:
         """Stop the click queue processor thread"""
         if self.queue_processor_thread:
             self.click_queue.append(None)  # Sentinel value to stop processor
+            self._queue_wake.set()
             self.queue_processor_thread.join(timeout=1.0)
             self.queue_processor_thread = None
 
     def _process_click_queue(self) -> None:
-        """Process clicks from the queue"""
+        """Process clicks from the queue.
+
+        Blocks on an Event instead of busy-polling so an idle queue costs no CPU.
+        """
         while True:
             try:
                 click_data = self.click_queue.popleft()
-                if click_data is None:  # Sentinel value
-                    break
+            except IndexError:
+                self._queue_wake.wait(timeout=0.05)
+                self._queue_wake.clear()
+                continue
 
+            if click_data is None:  # Sentinel value
+                break
+
+            try:
                 x, y, mouse_button, click_type = click_data
                 self._perform_click(x, y, mouse_button, click_type, from_queue=True)
-
-            except IndexError:
-                # Queue is empty, wait a bit
-                time.sleep(0.001)
             except Exception as e:
                 print(f"Queue processor error: {e}")
 
@@ -308,13 +328,26 @@ class ClickEngine:
         return not is_foreground_window(self._foreground_hwnd)
 
     def _check_runaway_cps(self) -> bool:
+        """Detect runaway click rate using a sliding 1-second window.
+
+        The previous implementation used a lifetime average, which is useless
+        for long sessions: a sustained slow run dilutes any future spike.
+        """
         if self.max_cps_ceiling <= 0 or self.start_time <= 0:
             return False
         elapsed = time.time() - self.start_time
         if elapsed < 0.25:
             return False
-        cps = self.click_count / elapsed
-        return cps > self.max_cps_ceiling
+        now = time.time()
+        # Drop timestamps older than 1s so the window slides
+        ts = self._recent_click_ts
+        cutoff = now - 1.0
+        while ts and ts[0] < cutoff:
+            ts.popleft()
+        # Need a minimum sample to avoid flapping at startup
+        if len(ts) < 8:
+            return False
+        return len(ts) > self.max_cps_ceiling
 
     def _trigger_safety_stop(self, reason: str) -> None:
         self.is_running = False
@@ -368,17 +401,21 @@ class ClickEngine:
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
-            # Check if queuing is enabled and queue is not full
-            if (
-                not from_queue
-                and self.enable_queuing
-                and len(self.click_queue) < self.max_queue_size
-            ):
-                self.click_queue.append((x, y, mouse_button, click_type))
+            # Check if queuing is enabled
+            if not from_queue and self.enable_queuing:
+                if len(self.click_queue) < self.max_queue_size:
+                    self.click_queue.append((x, y, mouse_button, click_type))
+                    self._queue_wake.set()
+                else:
+                    # Backpressure: surface drops instead of swallowing silently
+                    self.dropped_click_count += 1
                 return
 
-            # Validate coordinates
-            screen_width, screen_height = pyautogui.size()
+            # Validate coordinates against cached screen size; falling back to a
+            # live query only if cache is empty (e.g. direct unit-test calls).
+            if self._screen_size is None:
+                self._screen_size = pyautogui.size()
+            screen_width, screen_height = self._screen_size
             if not (0 <= x <= screen_width and 0 <= y <= screen_height):
                 raise CoordinateError(
                     x,
@@ -421,6 +458,7 @@ class ClickEngine:
                     )
 
                 self.click_count += 1
+                self._recent_click_ts.append(time.time())
 
             except pyautogui.FailSafeException:
                 if self.enable_performance_monitoring:
@@ -483,6 +521,7 @@ class ClickEngine:
             "thread_alive": self.click_thread.is_alive() if self.click_thread else False,
             "queue_size": len(self.click_queue),
             "enable_queuing": self.enable_queuing,
+            "dropped_click_count": self.dropped_click_count,
         }
 
         # Add performance metrics if enabled
