@@ -20,16 +20,25 @@ Per-file `ALL` ignores added under `[tool.ruff.lint.per-file-ignores]` for `auto
 
 ## 2. Test failures or skips in the baseline
 
-Captured 2026-05-18 on Windows, Python 3.13.3 (see `audit/baseline_env.txt`). Runtime deps from `requirements.txt` were not installed in the capture environment; many failures are `ModuleNotFoundError: No module named 'mouse'`.
+### Hardening baseline (pre deep dive)
 
-| Runner | Exit code | Summary |
-|--------|-----------|---------|
-| `python run_tests.py` | 1 | 31 run, 3 failures, 13 errors (`audit/baseline_run_tests.txt`) |
-| `python -m pytest` | 2 | Collection error in `tests/test_coordinate_picker.py` (missing `mouse`); 30 items collected before error (`audit/baseline_pytest.txt`) |
-| `python run_tests.py --coverage` | 1 | Same failure set as unittest runner (`audit/baseline_coverage.txt`) |
-| `python test_autoclicker.py` | 1 | Import failures for pyautogui/mouse; file structure checks passed (`audit/baseline_smoke.txt`) |
+Captured 2026-05-18 on Windows, Python 3.13.3 (see `audit/baseline_env.txt`). With deps installed post-hardening: **28 passed, 15 failed** (`audit/post_hardening_check.txt`).
 
-Smoke script output uses Unicode symbols (checkmark/cross emojis) in print strings; violates project no-emoji rule.
+### After phase 1 audit (current)
+
+**22 failed, 28 passed** (50 tests). Added 7 failing repro tests in `tests/test_audit_regressions.py` (see [AUDIT.md](../AUDIT.md)).
+
+| New failure | Reason |
+|-------------|--------|
+| `test_queue_mode_increments_count_without_executing_clicks` | Queue mode inflates `click_count` without pyautogui clicks (C1) |
+| `test_queue_processor_does_not_execute_clicks` | Queued clicks never executed (C2) |
+| `test_stop_picking_unhooks_by_handle_not_callback` | `mouse.unhook` passed callback not handle (C7) |
+| `test_no_keyboard_cancel_handler_registered` | No ESC cancel hook on picker (C8) |
+| `test_quit_application_persists_ui_values_not_empty_update` | `quit_application` calls `update({})` (C9) |
+| `test_invalid_interval_unit_reported_in_validate_all` | Bad unit sanitized before validation (C11) |
+| `test_coordinate_error_user_message` | `create_user_friendly_error` uses missing `.reason` (C10) |
+
+The original **15 failures** remain unchanged (exceptions API, settings validation TypeError/tuple misuse).
 
 ## 3. Discrepancies between test runners
 
