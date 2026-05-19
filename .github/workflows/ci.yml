@@ -101,11 +101,11 @@ jobs:
         run: tasks.bat install
 
       - name: Generate icon
-        run: python create_icon.py
+        run: .venv\Scripts\python.exe create_icon.py
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --windowed --icon=autoclicker.ico --add-data "autoclicker.ico;." --name "WindowsAutoclicker" autoclicker.py
+          .venv\Scripts\pyinstaller.exe --onefile --windowed --icon=autoclicker.ico --add-data "autoclicker.ico;." --name "WindowsAutoclicker" autoclicker.py
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
