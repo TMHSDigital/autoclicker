@@ -235,7 +235,7 @@ opentelemetry-instrumentation-watsonx==0.50.1
 opentelemetry-instrumentation-weaviate==0.50.1
 opentelemetry-instrumentation-writer==0.50.1
 opentelemetry-proto==1.39.1
-opentelemetry-sdk==1.39.1
+opentelemetry-sdk==1.41.1
 opentelemetry-semantic-conventions==0.60b1
 opentelemetry-semantic-conventions-ai==0.4.13
 opentelemetry-util-http==0.60b1
