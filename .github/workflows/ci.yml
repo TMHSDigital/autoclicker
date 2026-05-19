@@ -15,6 +15,10 @@ concurrency:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: cmd
+
 jobs:
   lint:
     runs-on: windows-latest
@@ -30,9 +34,9 @@ jobs:
 
       - name: Install, lint, and typecheck
         run: |
-          call tasks.bat install
-          call tasks.bat lint
-          call tasks.bat typecheck
+          tasks.bat install
+          tasks.bat lint
+          tasks.bat typecheck
 
   test:
     runs-on: windows-latest
@@ -58,13 +62,12 @@ jobs:
       - name: Run checks
         continue-on-error: ${{ matrix.experimental == true }}
         run: |
-          call tasks.bat install
-          call tasks.bat check
+          tasks.bat install
+          tasks.bat check
 
       - name: Coverage report
         if: matrix.python-version == '3.11'
-        run: |
-          call tasks.bat coverage
+        run: tasks.bat coverage
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
@@ -90,7 +93,7 @@ jobs:
           cache: pip
 
       - name: Install build dependencies
-        run: call tasks.bat install
+        run: tasks.bat install
 
       - name: Generate icon
         run: python create_icon.py
