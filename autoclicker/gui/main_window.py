@@ -104,10 +104,10 @@ class AutoclickerApp:
         self.canvas = tk.Canvas(self.root, highlightthickness=0, borderwidth=0)
         self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
-        v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        self.canvas.configure(yscrollcommand=v_scrollbar.set)
+        self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
 
         main_frame = ttk.Frame(self.canvas, padding="20")
         self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
@@ -341,10 +341,22 @@ class AutoclickerApp:
     def on_frame_configure(self, event) -> None:
         """Handle frame resize."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self._update_scrollbar_visibility()
 
     def on_canvas_configure(self, event) -> None:
         """Handle canvas resize."""
         self.canvas.itemconfig(self.canvas_frame, width=event.width)
+        self._update_scrollbar_visibility()
+
+    def _update_scrollbar_visibility(self) -> None:
+        """Show the vertical scrollbar only when content overflows."""
+        if not hasattr(self, "v_scrollbar"):
+            return
+        bbox = self.canvas.bbox("all")
+        if bbox and bbox[3] > self.canvas.winfo_height():
+            self.v_scrollbar.grid()
+        else:
+            self.v_scrollbar.grid_remove()
 
     def on_closing(self) -> None:
         """Handle window close event."""

@@ -17,7 +17,7 @@
 .venv\Scripts\python.exe scripts\profile_click_engine.py --seconds 5 --interval-ms 10
 ```
 
-Artifacts under `audit/perf/` (`before.txt` / `after.txt` capture `cProfile` top functions).
+The script prints `cProfile` top functions before/after for comparison.
 
 ## Experiments not shipped
 

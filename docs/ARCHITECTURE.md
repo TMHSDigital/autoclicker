@@ -56,6 +56,12 @@ All worker threads are daemon threads so process exit does not block on them.
 - `tkinter`: GUI (stdlib)
 - `sv-ttk`: Sun Valley ttk theme (light/dark)
 
+## Design decisions
+
+- **GUI / logic split:** `AutoclickerController` (`app/controller.py`) owns settings, engine, picker, and presets; `gui/sections/*` only build widgets and forward values, keeping the UI replaceable without touching core logic.
+- **Safety defaults:** PyAutoGUI failsafe is on by default, with a runaway clicks-per-second ceiling and an optional pause when the foreground window changes. All stops are recorded in the session log.
+- **Performance:** O(1) Welford running stats back the 1 Hz status poll instead of recomputing aggregates over the timing history (see [PERFORMANCE.md](PERFORMANCE.md)). A Win32 `SendInput` hot path was evaluated and deferred (no measurable win over `pyautogui` with `PAUSE=0`, plus multi-monitor DPI risk).
+
 ## Test layout
 
-Unit tests under `tests/` (pytest, 86 tests). Coverage gate on `autoclicker.core.click_engine`. `scripts/smoke_check.py` verifies imports outside pytest.
+Unit tests under `tests/` (pytest, 90 tests). Coverage gate on `autoclicker.core.click_engine`. `scripts/smoke_check.py` verifies imports outside pytest.

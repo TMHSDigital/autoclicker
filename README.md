@@ -5,7 +5,21 @@
 [![Windows](https://img.shields.io/badge/Windows-10+-0078D4.svg)](https://www.microsoft.com/windows/)
 [![License](https://img.shields.io/badge/license-CC_BY--NC_4.0-green.svg)](LICENSE)
 
-A configurable autoclicker for Windows with coordinate targeting, burst mode, preset management, and safety controls.
+A fast, configurable autoclicker for Windows with a modern light/dark interface, precise coordinate targeting, burst mode, presets, and built-in safety controls.
+
+<p align="center">
+  <img src="docs/images/screenshot-light.png" alt="Windows Autoclicker (light theme)" width="49%">
+  <img src="docs/images/screenshot-dark.png" alt="Windows Autoclicker (dark theme)" width="49%">
+</p>
+
+### Highlights
+
+- Pixel-precise clicking at a fixed point, with single/double and left/right/middle support
+- Click-to-pick coordinate selection and named presets
+- Burst mode and randomized timing variation to vary cadence
+- Safety first: optional click/time limits, runaway-speed guard, and a corner-abort failsafe
+- Global hotkeys (F6/F7/ESC), system tray, and persistent settings
+- Modern themed UI with a one-click light/dark toggle
 
 ## Table of Contents
 
@@ -291,7 +305,7 @@ autoclicker/
     └── coordinate_picker.py
 ```
 
-Settings file: `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once). See [ARCHITECTURE.md](ARCHITECTURE.md).
+Settings file: `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 #### Threading Model
 - **Main Thread**: GUI event handling and user interaction

@@ -25,9 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Deep-dive audit (`AUDIT.md`) and regression tests for queue, picker, and settings edge cases.
+- Deep-dive audit and regression tests for queue, picker, and settings edge cases.
 - Click engine unit tests with 88%+ line coverage and pytest `cov-fail-under` gate.
-- Welford running timing stats for O(1) status polling (`PERFORMANCE.md`).
+- Welford running timing stats for O(1) status polling (see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)).
 - Configurable PyAutoGUI failsafe (default on), runaway CPS guard, optional pause when unfocused.
 - Session log at `%APPDATA%/WindowsAutoclicker/sessions.log`.
 - AppData settings path with one-time CWD legacy migration (`.migrated` marker beside legacy file).
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - Baseline
 
-Baseline release prior to the structured audit and refactor pass. See git tag `pre-hardening-baseline` and `audit/` captures for the pre-hardening test and coverage snapshot.
+Baseline release prior to the structured audit and refactor pass.
 
 [Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.2.0

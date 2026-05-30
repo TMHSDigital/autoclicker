@@ -73,10 +73,6 @@ tmp/
 *.pyd
 *.ico
 *.png
-
-# Local-only audit artifacts (committed audit/ is tracked)
-audit/*.local.*
-
 # Sensitive data
 secrets.json
 config.local.json
