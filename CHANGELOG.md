@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- UI/UX refresh: modern Sun Valley (`sv-ttk`) theme with light/dark toggle (persisted via new `theme` setting) and Segoe UI typography.
+- Simplified default view: burst mode, safety limits, and advanced toggles moved into a collapsible "Advanced" section (collapsed by default).
+- Status panel reworked into a compact status bar with a colored state indicator and inline metrics.
+- Disclaimer reduced to a one-line footer with an info dialog; removed the always-on horizontal scrollbar.
+
+### Added
+
+- `sv-ttk` dependency for theming.
+- Reusable `CollapsibleFrame` (`gui/sections/collapsible.py`) and `gui/sections/advanced.py`.
+- "Limit clicks" toggle in the Advanced section; when off, the click count is unlimited (runs indefinitely).
+- System tray now uses the real app icon (`autoclicker.png`/`.ico`) with a solid-color fallback.
+
 ## [1.2.0] - 2026-05-19
 
 ### Added

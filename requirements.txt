@@ -13,6 +13,9 @@ Pillow>=9.0.0  # For system tray icon and icon creation
 # System tray functionality
 pystray>=0.19.4
 
+# Modern Sun Valley ttk theme (light/dark)
+sv-ttk>=2.6.0
+
 # GUI Framework (tkinter comes with Python 3.8+)
 # No installation needed - built into Python
 

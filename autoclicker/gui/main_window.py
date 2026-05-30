@@ -9,12 +9,14 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
 import pyautogui
+import sv_ttk
 
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import setup_hotkeys
 from ..app.tray import create_tray_icon
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from .sections import (
+    build_advanced_section,
     build_click_settings_section,
     build_control_section,
     build_coordinate_section,
@@ -59,9 +61,9 @@ class AutoclickerApp:
     def setup_window(self) -> None:
         """Configure main window properties."""
         self.root.title("Windows Autoclicker")
-        self.root.geometry("550x700")
+        self.root.geometry("520x560")
         self.root.resizable(True, True)
-        self.root.minsize(450, 600)
+        self.root.minsize(460, 480)
 
         try:
             self.root.iconbitmap("autoclicker.ico")
@@ -73,12 +75,20 @@ class AutoclickerApp:
 
         self.center_window()
 
-        style = ttk.Style()
-        style.theme_use(
-            "vista"
-            if hasattr(style, "theme_names") and "vista" in style.theme_names()
-            else "default"
-        )
+        theme = "dark" if str(self.settings.get("theme", "light")) == "dark" else "light"
+        self.theme_var = tk.StringVar(value=theme)
+        sv_ttk.set_theme(theme)
+        self.root.option_add("*Font", ("Segoe UI", 10))
+
+    def toggle_theme(self) -> None:
+        """Switch between light and dark themes and persist the choice."""
+        new_theme = "dark" if self.theme_var.get() == "light" else "light"
+        self.theme_var.set(new_theme)
+        sv_ttk.set_theme(new_theme)
+        self.settings.set("theme", new_theme)
+        if hasattr(self, "theme_button"):
+            label = "\u2600 Light" if new_theme == "dark" else "\u263d Dark"
+            self.theme_button.configure(text=label)
 
     def center_window(self) -> None:
         """Center the window on screen."""
@@ -91,33 +101,37 @@ class AutoclickerApp:
 
     def create_gui(self) -> None:
         """Create the main GUI interface."""
-        self.canvas = tk.Canvas(self.root, highlightthickness=0)
+        self.canvas = tk.Canvas(self.root, highlightthickness=0, borderwidth=0)
         self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
         v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        h_scrollbar = ttk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
-        h_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
-
-        self.canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        self.canvas.configure(yscrollcommand=v_scrollbar.set)
 
         main_frame = ttk.Frame(self.canvas, padding="20")
         self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
 
-        main_frame.grid_rowconfigure(5, weight=1)
         main_frame.grid_columnconfigure(0, weight=1)
         main_frame.grid_columnconfigure(1, weight=1)
 
         main_frame.bind("<Configure>", self.on_frame_configure)
         self.canvas.bind("<Configure>", self.on_canvas_configure)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
         build_title_section(self, main_frame)
         build_coordinate_section(self, main_frame)
         build_click_settings_section(self, main_frame)
+        build_advanced_section(self, main_frame)
         build_control_section(self, main_frame)
         build_status_section(self, main_frame)
         build_disclaimer_section(self, main_frame)
+
+    def _on_mousewheel(self, event) -> None:
+        """Scroll the canvas with the mouse wheel when content overflows."""
+        bbox = self.canvas.bbox("all")
+        if bbox and bbox[3] > self.canvas.winfo_height():
+            self.canvas.yview_scroll(int(-event.delta / 120), "units")
 
     def _set_status_message(self, message: str) -> None:
         """Show a status line in the GUI."""
@@ -216,7 +230,7 @@ class AutoclickerApp:
                 "click_type": self.click_type_var.get(),
                 "burst_clicks": self.burst_clicks_entry.get(),
                 "burst_pause": self.burst_pause_entry.get(),
-                "max_clicks": self.max_clicks_entry.get(),
+                "max_clicks": (self.max_clicks_entry.get() if self.limit_clicks_var.get() else "0"),
                 "auto_stop_minutes": self.auto_stop_entry.get(),
                 "enable_failsafe": self.failsafe_var.get(),
                 "pause_when_unfocused": self.pause_unfocused_var.get(),

@@ -1,30 +1,33 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Disclaimer section."""
+"""Compact disclaimer footer with an info dialog."""
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
+
+_FULL_WARNING = (
+    "USE RESPONSIBLY\n\n"
+    "This tool is for legitimate automation purposes only.\n\n"
+    "Ensure compliance with application terms of service, website "
+    "policies, and local laws. The author assumes no responsibility "
+    "for misuse."
+)
 
 
 def build_disclaimer_section(app, parent: ttk.Frame) -> None:
-    """Create disclaimer section."""
-    disclaimer_text = (
-        "WARNING: USE RESPONSIBLY\n\n"
-        "This tool is for legitimate automation purposes only.\n"
-        "Ensure compliance with application terms of service,\n"
-        "website policies, and local laws. The author assumes\n"
-        "no responsibility for misuse."
-    )
+    """Create a one-line disclaimer footer with an info button."""
+    footer = ttk.Frame(parent)
+    footer.grid(row=6, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(4, 0))
+    footer.grid_columnconfigure(0, weight=1)
 
-    disclaimer_label = ttk.Label(
-        parent,
-        text=disclaimer_text,
-        background="#fff3cd",
-        foreground="#856404",
-        padding="10",
-        justify=tk.CENTER,
-        relief="solid",
-        wraplength=400,
-    )
-    disclaimer_label.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+    ttk.Label(
+        footer,
+        text="For legitimate automation only \u2014 use responsibly.",
+        foreground="#8b949e",
+    ).grid(row=0, column=0, sticky=tk.W)
 
-    parent.grid_rowconfigure(5, weight=1)
+    ttk.Button(
+        footer,
+        text="\u24d8 Info",
+        style="Toolbutton",
+        command=lambda: messagebox.showwarning("Use Responsibly", _FULL_WARNING),
+    ).grid(row=0, column=1, sticky=tk.E)

@@ -30,6 +30,7 @@ class SettingsManager:
         "enable_failsafe": True,
         "max_cps_ceiling": 50,
         "pause_when_unfocused": False,
+        "theme": "light",
         "presets": {},
     }
 

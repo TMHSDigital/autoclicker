@@ -13,8 +13,10 @@ autoclicker/
     hotkeys.py              # Global F6/F7/ESC registration
     tray.py                 # pystray icon
   gui/
-    main_window.py          # Window shell, canvas, wires sections + controller
-    sections/               # LabelFrame builders (coordinates, settings, status, …)
+    main_window.py          # Window shell, canvas, theme, wires sections + controller
+    sections/               # Section builders: title, coordinates, click_settings,
+                            #   advanced (collapsible), control, status bar, disclaimer
+                            #   + collapsible.py (reusable disclosure frame)
   core/
     settings_manager.py     # Validation + JSON persistence
     settings_paths.py       # AppData path + legacy migration
@@ -52,6 +54,7 @@ All worker threads are daemon threads so process exit does not block on them.
 - `pywin32`: foreground window check (`safety.py`)
 - `Pillow`, `pystray`: tray icon
 - `tkinter`: GUI (stdlib)
+- `sv-ttk`: Sun Valley ttk theme (light/dark)
 
 ## Test layout
 

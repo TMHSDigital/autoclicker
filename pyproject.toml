@@ -37,7 +37,8 @@ dependencies = [
     "mouse>=0.7.1",
     "pywin32>=227",
     "Pillow>=9.0.0",
-    "pystray>=0.19.4"
+    "pystray>=0.19.4",
+    "sv-ttk>=2.6.0"
 ]
 
 [project.optional-dependencies]
@@ -159,6 +160,7 @@ module = [
     "mouse.*",
     "pystray.*",
     "PIL.*",
-    "win32.*"
+    "win32.*",
+    "sv_ttk.*"
 ]
 ignore_missing_imports = true

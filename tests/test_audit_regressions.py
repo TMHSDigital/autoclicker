@@ -105,6 +105,8 @@ class TestQuitPersistence(unittest.TestCase):
         app.burst_pause_entry.get.return_value = "1000"
         app.max_clicks_entry = MagicMock()
         app.max_clicks_entry.get.return_value = "0"
+        app.limit_clicks_var = MagicMock()
+        app.limit_clicks_var.get.return_value = True
         app.auto_stop_entry = MagicMock()
         app.auto_stop_entry.get.return_value = "0"
         app.failsafe_var = MagicMock()

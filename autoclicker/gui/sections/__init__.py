@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """GUI section builders for the main window."""
 
+from .advanced import build_advanced_section
 from .click_settings import build_click_settings_section
 from .control import build_control_section
 from .coordinates import build_coordinate_section
@@ -9,6 +10,7 @@ from .status import build_status_section
 from .title import build_title_section
 
 __all__ = [
+    "build_advanced_section",
     "build_click_settings_section",
     "build_control_section",
     "build_coordinate_section",

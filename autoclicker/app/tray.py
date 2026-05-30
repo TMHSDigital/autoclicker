@@ -3,10 +3,22 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 
 import pystray
 from PIL import Image
+
+
+def _load_tray_image() -> Image.Image:
+    """Load the app icon for the tray, falling back to a solid square."""
+    for candidate in ("autoclicker.png", "autoclicker.ico"):
+        if os.path.exists(candidate):
+            try:
+                return Image.open(candidate).convert("RGBA")
+            except Exception:
+                continue
+    return Image.new("RGB", (64, 64), color="red")
 
 
 def create_tray_icon(
@@ -18,7 +30,7 @@ def create_tray_icon(
 ) -> pystray.Icon | None:
     """Create the system tray icon and menu, or None on failure."""
     try:
-        icon_image = Image.new("RGB", (64, 64), color="red")
+        icon_image = _load_tray_image()
         return pystray.Icon(
             "autoclicker",
             icon_image,

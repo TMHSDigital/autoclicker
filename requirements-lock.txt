@@ -12,3 +12,4 @@ pystray==0.19.5
 pytweening==1.2.0
 pywin32==311
 six==1.17.0
+sv-ttk==2.6.1

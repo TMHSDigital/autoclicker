@@ -40,9 +40,10 @@ A configurable autoclicker for Windows with coordinate targeting, burst mode, pr
 - **Safety Control Systems**: Maximum click limits and automatic time-based shutdown
 
 ### User Interface
-- **Native GUI**: Built with tkinter for Windows integration
-- **Live Status**: Click counter, runtime display, and status indicators
-- **System Tray Integration**: Minimize to tray for background operation
+- **Modern Themed GUI**: tkinter with the Sun Valley (sv-ttk) theme and a light/dark toggle (remembered between sessions)
+- **Minimal by Default**: Burst, safety limits, and advanced toggles tuck into a collapsible "Advanced" section
+- **Compact Status Bar**: Colored state indicator with inline click counter, runtime, and performance
+- **System Tray Integration**: Minimize to tray (using the app icon) for background operation
 - **Persistent Settings**: Automatic save/load of user preferences
 - **Input Validation**: Comprehensive validation with user-friendly error messages
 
@@ -117,6 +118,7 @@ run_autoclicker.bat
    - Select mouse button (Left/Right/Middle)
    - Choose click type (Single/Double)
    - Set interval timing in milliseconds
+   - Expand **Advanced** for burst mode, safety limits, and failsafe toggles
 
 4. **Start Automation**
    - Press the "Start" button or use F6 hotkey
@@ -199,6 +201,7 @@ The application automatically creates `autoclicker_settings.json`:
   "burst_pause": 1000,
   "max_clicks": 0,
   "auto_stop_minutes": 0,
+  "theme": "light",
   "presets": {
     "Game Target": {"x": 800, "y": 600},
     "Browser Click": {"x": 450, "y": 300}
@@ -221,6 +224,7 @@ The application automatically creates `autoclicker_settings.json`:
 | burst_pause | integer | 1000 | Pause between bursts (ms) |
 | max_clicks | integer | 0 | Maximum clicks (0 = unlimited) |
 | auto_stop_minutes | integer | 0 | Auto-stop timer (0 = disabled) |
+| theme | string | "light" | UI theme ("light" or "dark") |
 
 ## Safety & Compliance
 
@@ -271,6 +275,7 @@ Do not use for:
 - **pywin32** (227+): Windows API integration
 - **Pillow** (9.0.0+): Image processing and icon handling
 - **pystray** (0.19.4+): System tray functionality
+- **sv-ttk** (2.6.0+): Sun Valley ttk theme (light/dark UI)
 
 ### Architecture Overview
 
@@ -280,7 +285,7 @@ autoclicker.py
 autoclicker/
 ├── main.py
 ├── app/                  # controller, hotkeys, tray
-├── gui/                  # main_window + sections/
+├── gui/                  # main_window + sections/ (incl. collapsible.py, advanced.py)
 ├── core/                 # engine, settings, safety, session_log
 └── utils/
     └── coordinate_picker.py
