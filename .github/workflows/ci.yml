@@ -21,7 +21,7 @@ defaults:
 
 jobs:
   lint:
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -39,7 +39,7 @@ jobs:
           tasks.bat typecheck
 
   test:
-    runs-on: windows-latest
+    runs-on: windows-2025
     needs: lint
     strategy:
       fail-fast: false
@@ -76,12 +76,12 @@ jobs:
         if: matrix.python-version == '3.11'
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
 
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025
     needs: test
 
     steps:
@@ -111,7 +111,7 @@ jobs:
           path: dist/
 
   release:
-    runs-on: windows-latest
+    runs-on: windows-2025
     needs: [test, build]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
