@@ -10,6 +10,6 @@ PyRect==0.2.0
 PyScreeze==1.0.1
 pystray==0.19.5
 pytweening==1.2.0
-pywin32==311
+pywin32==312
 six==1.17.0
 sv-ttk==2.6.1
