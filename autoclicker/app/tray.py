@@ -3,19 +3,21 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 
 import pystray
 from PIL import Image
 
+from ..core.resources import resource_path
+
 
 def _load_tray_image() -> Image.Image:
     """Load the app icon for the tray, falling back to a solid square."""
     for candidate in ("autoclicker.png", "autoclicker.ico"):
-        if os.path.exists(candidate):
+        path = resource_path(candidate)
+        if path.is_file():
             try:
-                return Image.open(candidate).convert("RGBA")
+                return Image.open(path).convert("RGBA")
             except Exception:
                 continue
     return Image.new("RGB", (64, 64), color="red")

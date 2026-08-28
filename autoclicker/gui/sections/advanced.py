@@ -89,5 +89,5 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
         toggles_frame,
         text="Pause when window loses focus",
         variable=app.pause_unfocused_var,
-        command=app._on_failsafe_toggle,
+        command=app._sync_safety_from_ui,
     ).pack(anchor=tk.W, pady=(4, 0))

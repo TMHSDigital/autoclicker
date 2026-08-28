@@ -20,9 +20,7 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
-        exclude: ^(autoclicker/|create_icon\.py)
       - id: ruff-format
-        exclude: ^(autoclicker/|create_icon\.py|autoclicker\.py)
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: bbc3dc1f890007061f18f17e2334f216ea9e5df7 # v1.14.1

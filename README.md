@@ -17,8 +17,8 @@ A fast, configurable autoclicker for Windows with a modern light/dark interface,
 - Pixel-precise clicking at a fixed point, with single/double and left/right/middle support
 - Click-to-pick coordinate selection and named presets
 - Burst mode and randomized timing variation to vary cadence
-- Safety first: optional click/time limits, runaway-speed guard, and a corner-abort failsafe
-- Global hotkeys (F6/F7/ESC), system tray, and persistent settings
+- Safety first: failsafe on by default, optional click/time limits, runaway-speed guard, fail-closed pause-when-unfocused
+- Global hotkeys (F6/F7/ESC), system tray, settings in `%APPDATA%\WindowsAutoclicker`
 - Modern themed UI with a one-click light/dark toggle
 
 ## Table of Contents
@@ -48,8 +48,8 @@ A fast, configurable autoclicker for Windows with a modern light/dark interface,
 
 ### Advanced Automation Features
 - **Interactive Coordinate Picker**: Click-to-select target locations with visual feedback
-- **Preset Management System**: Save and load coordinate presets with custom names
-- **Random Variation Engine**: Add realistic timing variation to avoid detection patterns
+- **Preset Management System**: Save, load, and delete named coordinate presets
+- **Random Variation Engine**: Optional jitter around the click interval for a less metronomic cadence
 - **Burst Mode Automation**: Multiple clicks with configurable pause intervals
 - **Safety Control Systems**: Maximum click limits and automatic time-based shutdown
 
@@ -102,10 +102,10 @@ git clone https://github.com/TMHSDigital/autoclicker.git
 cd autoclicker
 
 # Create virtual environment
-python -m venv autoclicker_env
+python -m venv .venv
 
 # Activate virtual environment
-autoclicker_env\Scripts\activate
+.venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -194,7 +194,7 @@ run_autoclicker.bat
 |--------|----------|-------------|
 | F6 | Start Clicking | Begin automation sequence |
 | F7 | Stop Clicking | End automation sequence |
-| ESC | Emergency Stop | Immediate halt with cleanup |
+| ESC | Emergency Stop | Immediate halt (cancels coordinate pick if picking) |
 | Alt+F4 | Close Application | Standard window close |
 
 ## Configuration
@@ -271,9 +271,11 @@ Do not use for:
 ### Built-in Safety Features
 
 #### Emergency Control Systems
-- **ESC Key**: Instant emergency stop with cleanup
+- **ESC Key**: Instant emergency stop (or cancel Pick Location)
+- **PyAutoGUI failsafe**: On by default; moving the mouse to a screen corner aborts clicking
+- **Pause when unfocused**: Optional; refuses to start if the foreground window cannot be read
 - **Screen Bounds Checking**: Prevents invalid coordinates
-- **Resource Limits**: Configurable click and time limits
+- **Resource Limits**: Configurable click and time limits plus a runaway CPS ceiling
 - **Status Monitoring**: Real-time operation visibility
 
 #### Session log
@@ -308,7 +310,7 @@ autoclicker/
 Settings file: `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 #### Threading Model
-- **Main Thread**: GUI event handling and user interaction
+- **Main Thread**: GUI event handling; worker callbacks marshaled with `root.after`
 - **Click Thread**: Isolated automation execution
 - **Queue Processor Thread**: Optional thread for high-frequency click queuing
 
@@ -335,9 +337,10 @@ python scripts/smoke_check.py
 
 ### Test modules
 - `test_settings_manager.py`, `test_settings_migration.py`
-- `test_click_engine.py` (mocked pyautogui; coverage gate on click engine)
+- `test_click_engine.py` (mocked pyautogui)
 - `test_exceptions.py`, `test_safety.py`, `test_audit_regressions.py`
-- `test_coordinate_picker.py`
+- `test_coordinate_picker.py`, `test_gui_callbacks.py`, `test_controller.py`
+- Coverage gate: `autoclicker` package, `--cov-fail-under=65`
 
 ## Troubleshooting
 
@@ -420,7 +423,7 @@ CI and maintainers use pinned dependencies in `requirements-lock.txt` (regenerat
 - **Performance Enhancements**: Improve monitoring, queuing, or timing systems
 - **UI/UX Improvements**: Enhance user interface design and user experience
 - **Advanced Automation**: Pattern recognition, conditional clicking, macro recording
-- **Safety Features**: Anti-detection, rate limiting, advanced validation
+- **Safety Features**: Failsafe default-on, rate limiting, input validation
 - **Cross-platform Support**: Linux/macOS compatibility and mobile companions
 - **Testing & Quality**: Add tests, type hints, linting, and code quality improvements
 - **Documentation**: Improve guides, examples, and user help systems
@@ -437,5 +440,7 @@ You are free to share and adapt this software for non-commercial purposes, with 
 ## Disclaimer
 
 This software is provided "as is" without warranty of any kind. The authors and contributors assume no responsibility for any damages, legal issues, or consequences arising from the use or misuse of this application.
+
+Automation tools can be abused. Use only on systems and software you are authorized to control.
 
 **Use at your own risk and ensure compliance with all applicable laws, regulations, and terms of service.**

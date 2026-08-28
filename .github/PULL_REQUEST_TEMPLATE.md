@@ -36,7 +36,7 @@ Please describe the testing performed to verify your changes.
 - [ ] All existing tests pass
 - [ ] Tested on Windows 10
 - [ ] Tested on Windows 11
-- [ ] Tested with different Python versions (3.8+)
+- [ ] Tested with different Python versions (3.10+)
 
 ### Test Cases Covered
 - [ ] Test case 1: [Description]
@@ -74,7 +74,7 @@ If your changes include UI modifications, please include screenshots showing:
 
 ### Compatibility
 - [ ] Backward compatible (no breaking changes)
-- [ ] Works with Python 3.8+
+- [ ] Works with Python 3.10+
 - [ ] Windows 10/11 compatible
 - [ ] No conflicts with existing features
 

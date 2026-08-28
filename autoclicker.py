@@ -7,6 +7,7 @@ import sys
 
 try:
     from autoclicker.main import main
+
     main()
 except ImportError as e:
     print(f"Failed to import autoclicker package: {e}")
@@ -14,9 +15,13 @@ except ImportError as e:
     try:
         import tkinter as tk
         from tkinter import messagebox
+
         root = tk.Tk()
         root.withdraw()
-        messagebox.showerror("Import Error", f"Could not load autoclicker: {e}\n\nRun: pip install -r requirements.txt")
+        messagebox.showerror(
+            "Import Error",
+            f"Could not load autoclicker: {e}\n\nRun: pip install -r requirements.txt",
+        )
         root.destroy()
     except Exception:
         pass
@@ -26,6 +31,7 @@ except Exception as e:
     try:
         import tkinter as tk
         from tkinter import messagebox
+
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror("Error", f"Application failed to start: {e}")

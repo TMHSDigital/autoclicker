@@ -5,6 +5,11 @@ from __future__ import annotations
 
 import pyautogui
 
+try:
+    import win32gui
+except ImportError:  # pragma: no cover
+    win32gui = None  # type: ignore[assignment, unused-ignore]
+
 
 def apply_failsafe(enabled: bool) -> None:
     """Configure pyautogui failsafe (corner abort). Default should be enabled."""
@@ -13,17 +18,22 @@ def apply_failsafe(enabled: bool) -> None:
 
 def get_foreground_window_handle() -> int | None:
     """Return Win32 foreground HWND or None if unavailable."""
+    if win32gui is None:
+        return None
     try:
-        import win32gui
-
         return int(win32gui.GetForegroundWindow())
     except Exception:
         return None
 
 
 def is_foreground_window(hwnd: int | None) -> bool:
-    """True if hwnd is still foreground, or check skipped when hwnd is None."""
+    """True if hwnd is still the foreground window.
+
+    Fail-closed: missing hwnd or a failed lookup is treated as unfocused.
+    """
     if hwnd is None:
-        return True
+        return False
     current = get_foreground_window_handle()
-    return current is None or current == hwnd
+    if current is None:
+        return False
+    return current == hwnd

@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any
 
 
+def _escape_field(value: Any) -> str:
+    """Keep session-log records on a single TSV line."""
+    return str(value).replace("\t", " ").replace("\r", " ").replace("\n", " ")
+
+
 def session_log_path() -> Path:
     appdata = os.environ.get("APPDATA", "")
     return Path(appdata) / "WindowsAutoclicker" / "sessions.log"
@@ -20,7 +25,7 @@ def append_session_event(event: str, **fields: Any) -> None:
         path = session_log_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        extras = " ".join(f"{k}={fields[k]}" for k in sorted(fields))
+        extras = " ".join(f"{k}={_escape_field(fields[k])}" for k in sorted(fields))
         line = f"{ts}\tevent={event}"
         if extras:
             line += f"\t{extras}"

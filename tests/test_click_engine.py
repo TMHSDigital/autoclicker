@@ -2,6 +2,7 @@
 Unit tests for ClickEngine with mocked pyautogui and time.
 """
 
+import threading
 import time
 import unittest
 from unittest.mock import MagicMock, patch
@@ -129,24 +130,25 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.is_running = True
-        engine._perform_burst(1, 1, 3, 0.05, "left", "single")
+        with patch.object(engine._stop_event, "wait") as mock_wait:
+            engine._perform_burst(1, 1, 3, 0.05, "left", "single")
         self.assertEqual(engine.click_count, 3)
-        self.assertEqual(mock_sleep.call_count, 2)
+        self.assertEqual(mock_wait.call_count, 2)
+        mock_sleep.assert_not_called()
 
     @patch("autoclicker.core.click_engine.random.randint", return_value=10)
-    @patch("autoclicker.core.click_engine.time.sleep")
-    def test_wait_with_variation(self, mock_sleep, mock_randint):
+    def test_wait_with_variation(self, mock_randint):
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine._wait_with_variation(100, 20)
-        mock_sleep.assert_called_once()
-        args, _ = mock_sleep.call_args
-        self.assertAlmostEqual(args[0], 0.11)
+        with patch.object(engine._stop_event, "wait") as mock_wait:
+            engine._wait_with_variation(100, 20)
+        mock_wait.assert_called_once()
+        self.assertAlmostEqual(mock_wait.call_args.kwargs["timeout"], 0.11)
 
-    @patch("autoclicker.core.click_engine.time.sleep")
-    def test_wait_zero_interval_no_sleep(self, mock_sleep):
+    def test_wait_zero_interval_no_sleep(self):
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine._wait_with_variation(0, 0)
-        mock_sleep.assert_not_called()
+        with patch.object(engine._stop_event, "wait") as mock_wait:
+            engine._wait_with_variation(0, 0)
+        mock_wait.assert_not_called()
 
     def test_should_stop_max_clicks(self):
         engine = ClickEngine(enable_performance_monitoring=False)
@@ -174,8 +176,105 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
             patch.object(engine, "_perform_burst", side_effect=stop_after_burst),
             patch.object(engine, "_wait_with_variation"),
         ):
-            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", complete, None)
+            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", complete)
         complete.assert_called_once()
+        self.assertFalse(engine.is_running)
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_max_clicks_clears_running_and_allows_restart(self, mock_pyautogui):
+        mock_pyautogui.size.return_value = (1920, 1080)
+        engine = ClickEngine(enable_performance_monitoring=False)
+        complete = MagicMock()
+        self.assertTrue(engine.start_clicking(1, 1, 0, 0, 1, 0, 1, 0, "left", "single", complete))
+        self.assertIsNotNone(engine.click_thread)
+        engine.click_thread.join(timeout=2.0)
+        self.assertFalse(engine.is_running)
+        complete.assert_called_once()
+        engine.stop_clicking()
+        self.assertTrue(engine.start_clicking(1, 1, 0, 0, 1, 0, 1, 0, "left", "single"))
+        engine.stop_clicking()
+
+    def test_start_returns_false_when_click_thread_still_alive(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        alive = MagicMock()
+        alive.is_alive.return_value = True
+        engine.click_thread = alive
+        engine.is_running = False
+        self.assertFalse(engine.start_clicking(0, 0, 100, 0, 1, 0, 0, 0, "left", "single"))
+
+    def test_emergency_stop_drops_queue_and_stops_processor(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        started = threading.Event()
+        release = threading.Event()
+
+        def blocking_click(*_args, **_kwargs):
+            started.set()
+            release.wait(timeout=2.0)
+
+        engine.enable_click_queuing(True, max_queue_size=10)
+        with patch.object(engine, "_perform_click", side_effect=blocking_click):
+            engine.click_queue.append((1, 1, "left", "single"))
+            engine.click_queue.append((2, 2, "left", "single"))
+            engine._queue_wake.set()
+            self.assertTrue(started.wait(timeout=1.0))
+            engine.is_running = True
+            engine.emergency_stop()
+            release.set()
+            if engine.queue_processor_thread is not None:
+                engine.queue_processor_thread.join(timeout=1.0)
+        self.assertFalse(engine.is_running)
+        self.assertTrue(engine._stop_event.is_set())
+        pending = [item for item in engine.click_queue if item is not None]
+        self.assertEqual(pending, [])
+        self.assertIsNone(engine.queue_processor_thread)
+
+    def test_safety_stop_from_click_thread_does_not_join_self(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        raised: list[BaseException] = []
+
+        def on_safety(_reason: str) -> None:
+            try:
+                engine.stop_clicking()
+            except BaseException as exc:
+                raised.append(exc)
+
+        engine.on_safety_stop = on_safety
+        engine.is_running = True
+        engine.click_thread = threading.current_thread()
+        engine._trigger_safety_stop("test reason")
+        self.assertEqual(raised, [])
+        self.assertFalse(engine.is_running)
+        self.assertIs(engine.click_thread, threading.current_thread())
+
+    def test_safety_stop_skips_complete_callback(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.is_running = True
+        engine.start_time = time.time()
+        complete = MagicMock()
+        safety = MagicMock()
+        engine.on_safety_stop = safety
+        with patch.object(engine, "_check_runaway_cps", return_value=True):
+            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", complete)
+        safety.assert_called_once()
+        complete.assert_not_called()
+        self.assertFalse(engine.is_running)
+        self.assertTrue(engine._safety_fired)
+
+    def test_failsafe_in_loop_uses_safety_path(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.is_running = True
+        complete = MagicMock()
+        safety = MagicMock()
+        engine.on_safety_stop = safety
+        with patch.object(
+            engine,
+            "_perform_burst",
+            side_effect=SafetyError("fail_safe", "detected", "corner"),
+        ):
+            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", complete)
+        safety.assert_called_once_with("failsafe")
+        complete.assert_not_called()
+        self.assertFalse(engine.is_running)
 
 
 class TestClickEnginePerformance(unittest.TestCase):
@@ -257,11 +356,11 @@ class TestClickEngineQueuing(unittest.TestCase):
 class TestMainImport(unittest.TestCase):
     """Smoke import for modular entry point."""
 
-    @patch("autoclicker.main.AutoclickerApp")
-    def test_main_starts_app(self, mock_app_cls):
-        from autoclicker.main import main
+    def test_main_starts_app(self):
+        from autoclicker import main as main_mod
 
-        mock_app = MagicMock()
-        mock_app_cls.return_value = mock_app
-        main()
-        mock_app.run.assert_called_once()
+        with patch.object(main_mod, "AutoclickerApp") as mock_app_cls:
+            mock_app = MagicMock()
+            mock_app_cls.return_value = mock_app
+            main_mod.main()
+            mock_app.run.assert_called_once()

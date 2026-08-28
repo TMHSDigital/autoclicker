@@ -5,11 +5,15 @@ Handles loading, saving, and validation of user settings
 """
 
 import json
+import logging
 import os
+from pathlib import Path
 from typing import Any
 
 from .exceptions import ValidationError
-from .settings_paths import LEGACY_FILENAME, resolve_settings_file
+from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
+
+_log = logging.getLogger(__name__)
 
 
 class SettingsManager:
@@ -47,20 +51,21 @@ class SettingsManager:
             if os.path.exists(self.settings_file):
                 with open(self.settings_file, encoding="utf-8") as f:
                     loaded_settings = json.load(f)
-                    # Merge with defaults to handle missing keys
-                    return {**self.DEFAULT_SETTINGS, **loaded_settings}
+                if not isinstance(loaded_settings, dict):
+                    _log.warning("Settings file is not a JSON object; using defaults")
+                    return self.DEFAULT_SETTINGS.copy()
+                return {**self.DEFAULT_SETTINGS, **loaded_settings}
         except (OSError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load settings file: {e}")
+            _log.warning("Could not load settings file: %s", e)
 
         return self.DEFAULT_SETTINGS.copy()
 
     def _save_settings(self) -> None:
-        """Save current settings to file"""
+        """Save current settings to file atomically"""
         try:
-            with open(self.settings_file, "w", encoding="utf-8") as f:
-                json.dump(self._settings, f, indent=2, ensure_ascii=False)
+            atomic_write_json(Path(self.settings_file), self._settings)
         except OSError as e:
-            print(f"Warning: Could not save settings file: {e}")
+            _log.warning("Could not save settings file: %s", e)
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a setting value"""
@@ -217,6 +222,22 @@ class SettingsManager:
         except ValidationError as e:
             return False, e.reason
 
+    def validate_max_cps(self, max_cps: int) -> tuple[bool, str]:
+        """Validate runaway CPS ceiling. 0 disables the guard."""
+        try:
+            max_cps = self._parse_int(max_cps, "max_cps_ceiling")
+            if max_cps < 0:
+                raise ValidationError("max_cps_ceiling", max_cps, "CPS ceiling cannot be negative")
+            if max_cps > 10000:
+                raise ValidationError(
+                    "max_cps_ceiling",
+                    max_cps,
+                    "CPS ceiling cannot exceed 10,000",
+                )
+            return True, ""
+        except ValidationError as e:
+            return False, e.reason
+
     def sanitize_input(self, key: str, value: Any) -> Any:
         """Sanitize and validate input values"""
         try:
@@ -232,7 +253,13 @@ class SettingsManager:
                 return max(0, min(int(float(value)), 10000))  # Reasonable coordinate bounds
             elif key in ["interval"]:
                 return max(0, min(float(value), 60000))  # 0 = max speed between bursts
-            elif key in ["variation", "burst_clicks", "max_clicks", "auto_stop_minutes"]:
+            elif key in [
+                "variation",
+                "burst_clicks",
+                "max_clicks",
+                "auto_stop_minutes",
+                "max_cps_ceiling",
+            ]:
                 return max(0, int(float(value)))
             elif key in ["burst_pause"]:
                 return max(0, min(float(value), 60000))  # Max 1 minute
@@ -307,6 +334,11 @@ class SettingsManager:
         time_valid, time_error = self.validate_minutes(auto_stop)
         if not time_valid:
             errors["auto_stop"] = time_error
+
+        max_cps = sanitized_settings.get("max_cps_ceiling", 50)
+        cps_valid, cps_error = self.validate_max_cps(max_cps)
+        if not cps_valid:
+            errors["max_cps_ceiling"] = cps_error
 
         return {
             "valid": len(errors) == 0,

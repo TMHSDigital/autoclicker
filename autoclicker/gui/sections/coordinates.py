@@ -53,3 +53,10 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
         command=app.save_preset,
     )
     app.save_preset_btn.grid(row=1, column=4, pady=(10, 0), sticky=tk.W)
+
+    app.delete_preset_btn = ttk.Button(
+        coord_frame,
+        text="Delete",
+        command=app.delete_preset,
+    )
+    app.delete_preset_btn.grid(row=1, column=5, padx=(5, 0), pady=(10, 0), sticky=tk.W)

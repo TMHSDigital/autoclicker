@@ -23,3 +23,5 @@ This is a public repository. Do not commit:
 - Signed executables or binaries except through the release pipeline
 
 If sensitive data is committed accidentally, contact the maintainers immediately so the history can be addressed.
+
+This is an input-automation tool. Reports of unsafe defaults, privilege issues, or supply-chain problems in the release pipeline are in scope; “how do I abuse this against a third party” is not.
