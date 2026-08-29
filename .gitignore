@@ -16,6 +16,7 @@ MANIFEST
 
 # PyInstaller
 *.spec
+!WindowsAutoclicker.spec
 
 # Virtual environments
 autoclicker_env/

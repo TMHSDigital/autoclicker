@@ -4,11 +4,14 @@ Coordinate picker utility
 Handles interactive coordinate selection with mouse events
 """
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 import keyboard
 import mouse
+
+_log = logging.getLogger(__name__)
 
 
 class CoordinatePicker:
@@ -50,7 +53,7 @@ class CoordinatePicker:
             self._keyboard_hook = keyboard.add_hotkey("esc", self._on_cancel_hotkey)
             return True
         except Exception as e:
-            print(f"Failed to start coordinate picker: {e}")
+            _log.warning("Failed to start coordinate picker: %s", e)
             self.is_active = False
             self._clear_hooks()
             return False
@@ -100,7 +103,7 @@ class CoordinatePicker:
                 self.on_coordinate_selected(x, y)
 
         except Exception as e:
-            print(f"Coordinate picker error: {e}")
+            _log.warning("Coordinate picker error: %s", e)
             self.stop_picking()
 
     def is_picking(self) -> bool:
@@ -122,7 +125,7 @@ class PresetManager:
             self.settings.set("presets", presets)
             return True
         except Exception as e:
-            print(f"Failed to save preset: {e}")
+            _log.warning("Failed to save preset: %s", e)
             return False
 
     def load_preset(self, name: str) -> tuple[int, int] | None:
@@ -134,7 +137,7 @@ class PresetManager:
                 return preset["x"], preset["y"]
             return None
         except Exception as e:
-            print(f"Failed to load preset: {e}")
+            _log.warning("Failed to load preset: %s", e)
             return None
 
     def get_preset_names(self) -> list:
@@ -152,5 +155,5 @@ class PresetManager:
                 return True
             return False
         except Exception as e:
-            print(f"Failed to delete preset: {e}")
+            _log.warning("Failed to delete preset: %s", e)
             return False

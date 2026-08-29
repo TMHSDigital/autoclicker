@@ -6,6 +6,7 @@ Tests validation, sanitization, and persistence functionality
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from autoclicker.core.settings_manager import SettingsManager
 
@@ -278,6 +279,35 @@ class TestSettingsManager(unittest.TestCase):
         sanitized = result["sanitized_settings"]
         self.assertEqual(sanitized["x_coord"], 0)  # Clamped to 0
         self.assertEqual(sanitized["interval_unit"], "ms")  # Reset to default
+
+    def test_non_dict_json_uses_defaults(self):
+        with open(self.settings_file, "w", encoding="utf-8") as fh:
+            fh.write("[1, 2, 3]")
+        mgr = SettingsManager(self.settings_file)
+        self.assertEqual(mgr.get("x_coord"), 100)
+
+    def test_atomic_save_keeps_last_good_on_dump_failure(self):
+        self.manager.set("x_coord", 111)
+        with open(self.settings_file, encoding="utf-8") as fh:
+            good = fh.read()
+        with patch("autoclicker.core.settings_paths.json.dump", side_effect=OSError("disk")):
+            self.manager.set("x_coord", 222)
+        with open(self.settings_file, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), good)
+        self.assertEqual(self.manager.get("x_coord"), 222)
+
+    def test_max_cps_validation(self):
+        valid, _error = self.manager.validate_max_cps(0)
+        self.assertTrue(valid)
+        valid, _error = self.manager.validate_max_cps(50)
+        self.assertTrue(valid)
+        valid, _error = self.manager.validate_max_cps(-1)
+        self.assertFalse(valid)
+        valid, _error = self.manager.validate_max_cps(20000)
+        self.assertFalse(valid)
+        result = self.manager.validate_all_settings({"max_cps_ceiling": 20000})
+        self.assertFalse(result["valid"])
+        self.assertIn("max_cps_ceiling", result["errors"])
 
 
 if __name__ == "__main__":

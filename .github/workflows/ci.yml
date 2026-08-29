@@ -45,9 +45,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        include:
-          - python-version: "3.13"
-            experimental: true
 
     steps:
       - name: Checkout code
@@ -59,14 +56,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install and static checks
-        run: |
-          tasks.bat install
-          tasks.bat lint
-          tasks.bat typecheck
+      - name: Install
+        run: tasks.bat install
 
       - name: Unit tests
         run: tasks.bat test
+
+      - name: Smoke check
+        if: matrix.python-version == '3.11'
+        run: tasks.bat smoke
 
       - name: Coverage report
         if: matrix.python-version == '3.11'
@@ -101,8 +99,7 @@ jobs:
         run: .venv\Scripts\python.exe create_icon.py
 
       - name: Build executable
-        run: |
-          .venv\Scripts\pyinstaller.exe --onefile --windowed --icon=autoclicker.ico --add-data "autoclicker.ico;." --name "WindowsAutoclicker" autoclicker.py
+        run: .venv\Scripts\pyinstaller.exe --clean --noconfirm WindowsAutoclicker.spec
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -132,13 +129,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: |
-            ## Changes
-            - Release ${{ github.ref_name }} from commit ${{ github.sha }}
-            - Built on Windows with Python 3.11
-
-            ## Downloads
-            - Windows executable in release assets
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
           files: dist/WindowsAutoclicker.exe

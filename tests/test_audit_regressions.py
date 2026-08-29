@@ -67,61 +67,32 @@ class TestCoordinatePickerHooks(unittest.TestCase):
 
 
 class TestQuitPersistence(unittest.TestCase):
-    """C9: quit must persist UI field values."""
+    """C9: quit must persist UI field values via the controller."""
 
-    def test_quit_application_persists_ui_values_not_empty_update(self):
+    def test_quit_application_persists_via_controller(self):
         from autoclicker.gui.main_window import AutoclickerApp
 
         app = AutoclickerApp.__new__(AutoclickerApp)
+        app.controller = MagicMock()
+        app.settings = MagicMock()
         app.click_engine = MagicMock()
         app.click_engine.is_running = False
         app.stop_clicking = MagicMock()
         app.coordinate_picker = MagicMock()
-        app.settings = MagicMock()
-        app.settings.validate_all_settings.return_value = {
-            "valid": True,
-            "sanitized_settings": {"x_coord": 321, "y_coord": 654},
-        }
+        app._hotkeys = MagicMock()
         app.root = MagicMock()
         app.tray_icon = None
-
-        app.x_entry = MagicMock()
-        app.x_entry.get.return_value = "321"
-        app.y_entry = MagicMock()
-        app.y_entry.get.return_value = "654"
-        app.interval_entry = MagicMock()
-        app.interval_entry.get.return_value = "1000"
-        app.interval_unit_var = MagicMock()
-        app.interval_unit_var.get.return_value = "ms"
-        app.variation_entry = MagicMock()
-        app.variation_entry.get.return_value = "0"
-        app.button_var = MagicMock()
-        app.button_var.get.return_value = "left"
-        app.click_type_var = MagicMock()
-        app.click_type_var.get.return_value = "single"
-        app.burst_clicks_entry = MagicMock()
-        app.burst_clicks_entry.get.return_value = "1"
-        app.burst_pause_entry = MagicMock()
-        app.burst_pause_entry.get.return_value = "1000"
-        app.max_clicks_entry = MagicMock()
-        app.max_clicks_entry.get.return_value = "0"
-        app.limit_clicks_var = MagicMock()
-        app.limit_clicks_var.get.return_value = True
-        app.auto_stop_entry = MagicMock()
-        app.auto_stop_entry.get.return_value = "0"
-        app.failsafe_var = MagicMock()
-        app.failsafe_var.get.return_value = True
-        app.pause_unfocused_var = MagicMock()
-        app.pause_unfocused_var.get.return_value = False
-        app.click_engine.configure_safety = MagicMock()
+        app._collect_ui_settings = MagicMock(return_value={"x_coord": 321, "y_coord": 654})
 
         with patch("autoclicker.gui.main_window.pyautogui.size", return_value=(1920, 1080)):
             app.quit_application()
 
-        app.settings.update.assert_called_once()
-        saved = app.settings.update.call_args[0][0]
-        self.assertEqual(saved.get("x_coord"), 321)
-        self.assertEqual(saved.get("y_coord"), 654)
+        app.controller.persist_settings_on_quit.assert_called_once()
+        kwargs = app.controller.persist_settings_on_quit.call_args
+        self.assertEqual(kwargs.kwargs["settings_manager"], app.settings)
+        self.assertEqual(kwargs.args[0]["x_coord"], 321)
+        app._hotkeys.unregister.assert_called_once()
+        app.coordinate_picker.stop_picking.assert_called_once_with(cancelled=False)
 
 
 class TestSettingsValidationGaps(unittest.TestCase):

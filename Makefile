@@ -27,10 +27,10 @@ coverage:
 
 lint:
 	$(VENV_PYTHON) -m ruff check autoclicker autoclicker.py tests scripts
-	$(VENV_PYTHON) -m ruff format --check tests scripts tools run_tests.py
+	$(VENV_PYTHON) -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py
 
 format:
-	$(VENV_PYTHON) -m ruff format tests scripts tools run_tests.py
+	$(VENV_PYTHON) -m ruff format .
 
 typecheck:
 	$(VENV_PYTHON) -m mypy autoclicker

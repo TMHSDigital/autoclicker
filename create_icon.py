@@ -3,14 +3,17 @@
 Create a simple icon for the autoclicker application
 """
 
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
-import os
+
 
 def create_icon():
     """Create a simple autoclicker icon"""
+    root = Path(__file__).resolve().parent
     # Create a 256x256 image
     size = (256, 256)
-    image = Image.new('RGBA', size, (64, 128, 255, 255))  # Blue background
+    image = Image.new("RGBA", size, (64, 128, 255, 255))  # Blue background
     draw = ImageDraw.Draw(image)
 
     # Draw a simple mouse cursor shape
@@ -19,16 +22,24 @@ def create_icon():
     draw.polygon(pointer_points, fill=(255, 255, 255, 255))
 
     # Mouse body (rectangle with rounded corners)
-    draw.rectangle([80, 90, 180, 180], fill=(200, 200, 200, 255), outline=(100, 100, 100, 255), width=3)
+    draw.rectangle(
+        [80, 90, 180, 180], fill=(200, 200, 200, 255), outline=(100, 100, 100, 255), width=3
+    )
 
     # Left mouse button
-    draw.rectangle([90, 100, 130, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2)
+    draw.rectangle(
+        [90, 100, 130, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2
+    )
 
     # Right mouse button
-    draw.rectangle([130, 100, 170, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2)
+    draw.rectangle(
+        [130, 100, 170, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2
+    )
 
     # Scroll wheel
-    draw.rectangle([125, 125, 135, 145], fill=(150, 150, 150, 255), outline=(100, 100, 100, 255), width=1)
+    draw.rectangle(
+        [125, 125, 135, 145], fill=(150, 150, 150, 255), outline=(100, 100, 100, 255), width=1
+    )
 
     # Add text "AC" in the center
     try:
@@ -42,13 +53,17 @@ def create_icon():
     draw.text((100, 200), "AC", fill=(255, 255, 255, 255), font=font)
 
     # Save as ICO file
-    image.save('autoclicker.ico', format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (32, 32), (16, 16)])
+    image.save(
+        root / "autoclicker.ico",
+        format="ICO",
+        sizes=[(256, 256), (128, 128), (64, 64), (32, 32), (16, 16)],
+    )
 
-    # Also save as PNG for reference
-    image.save('autoclicker.png', format='PNG')
+    image.save(root / "autoclicker.png", format="PNG")
 
     print("Icon created successfully!")
     print("Files: autoclicker.ico, autoclicker.png")
+
 
 if __name__ == "__main__":
     create_icon()

@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem. You can drag and dr
 
 **Environment:**
 - **OS**: [e.g. Windows 10, Windows 11]
-- **Python Version**: [e.g. Python 3.8, Python 3.11]
+- **Python Version**: [e.g. Python 3.11]
 - **Application Version**: [e.g. v1.0.0, latest]
 - **Installation Method**: [e.g. Direct, Virtual Environment, Executable]
 

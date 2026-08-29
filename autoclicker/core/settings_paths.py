@@ -39,6 +39,24 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     return None
 
 
+def atomic_write_json(path: Path, data: Any) -> None:
+    """Write JSON via a same-directory temp file, then os.replace."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, ensure_ascii=False)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def resolve_settings_file(explicit: str | None = None) -> str:
     """
     Primary settings path is %APPDATA%/WindowsAutoclicker/autoclicker_settings.json.
@@ -66,8 +84,7 @@ def resolve_settings_file(explicit: str | None = None) -> str:
 
     if legacy_data is not None and not marker.exists():
         try:
-            with primary.open("w", encoding="utf-8") as fh:
-                json.dump(legacy_data, fh, indent=2, ensure_ascii=False)
+            atomic_write_json(primary, legacy_data)
             marker.write_text("migrated\n", encoding="utf-8")
             append_session_event("settings_migrated", from_path=str(legacy), to_path=str(primary))
         except OSError:

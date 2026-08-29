@@ -128,7 +128,7 @@ def main() -> bool:
         print("All checks passed. The autoclicker should work correctly.")
         print("\nTo run the application:")
         print("1. Double-click run_autoclicker.bat")
-        print("2. Or: autoclicker_env\\Scripts\\activate && python autoclicker.py")
+        print("2. Or: .venv\\Scripts\\activate && python autoclicker.py")
     else:
         print("Some checks failed. See messages above.")
 

@@ -6,6 +6,7 @@ Handles user interface and event coordination.
 
 import threading
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import messagebox, simpledialog, ttk
 
 import pyautogui
@@ -15,6 +16,7 @@ from ..app.controller import AutoclickerController
 from ..app.hotkeys import setup_hotkeys
 from ..app.tray import create_tray_icon
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
+from ..core.resources import resource_path
 from .sections import (
     build_advanced_section,
     build_click_settings_section,
@@ -36,23 +38,25 @@ class AutoclickerApp:
         self.click_engine = self.controller.click_engine
         self.coordinate_picker = self.controller.coordinate_picker
         self.preset_manager = self.controller.preset_manager
-        self.controller.apply_safety_from_settings(on_safety_stop=self._on_safety_stop)
+        self.controller.apply_safety_from_settings(
+            on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
+        )
 
         self.setup_window()
         self.create_gui()
 
-        setup_hotkeys(
-            start=self.start_clicking,
-            stop=self.stop_clicking,
-            emergency=self.emergency_stop,
-            on_error=self._set_status_message,
+        self._hotkeys = setup_hotkeys(
+            start=lambda: self._ui(self.start_clicking),
+            stop=lambda: self._ui(self.stop_clicking),
+            emergency=lambda: self._ui(self.emergency_stop),
+            on_error=lambda msg: self._ui(self._set_status_message, msg),
         )
         self.tray_icon = create_tray_icon(
-            show_window=self.show_window,
-            start=self.start_clicking,
-            stop=self.stop_clicking,
-            quit_app=self.quit_application,
-            on_error=self._set_status_message,
+            show_window=lambda: self._ui(self.show_window),
+            start=lambda: self._ui(self.start_clicking),
+            stop=lambda: self._ui(self.stop_clicking),
+            quit_app=lambda: self._ui(self.quit_application),
+            on_error=lambda msg: self._ui(self._set_status_message, msg),
         )
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -66,7 +70,9 @@ class AutoclickerApp:
         self.root.minsize(460, 480)
 
         try:
-            self.root.iconbitmap("autoclicker.ico")
+            icon = resource_path("autoclicker.ico")
+            if icon.is_file():
+                self.root.iconbitmap(str(icon))
         except Exception:
             pass
 
@@ -133,22 +139,49 @@ class AutoclickerApp:
         if bbox and bbox[3] > self.canvas.winfo_height():
             self.canvas.yview_scroll(int(-event.delta / 120), "units")
 
+    def _ui(self, fn: Callable, *args) -> None:
+        """Marshal a callback onto the Tk main thread."""
+
+        def _run() -> None:
+            fn(*args)
+
+        self.root.after(0, _run)
+
+    def _paint_stopped(self, message: str) -> None:
+        """Reset start/stop widgets after clicking ends."""
+        if hasattr(self, "start_btn"):
+            self.start_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+        self._set_status_message(message)
+        self._stop_status_timer()
+
     def _set_status_message(self, message: str) -> None:
         """Show a status line in the GUI."""
         if hasattr(self, "status_var"):
             self.status_var.set(message)
 
     def _on_failsafe_toggle(self) -> None:
+        if not self.failsafe_var.get():
+            confirmed = messagebox.askokcancel(
+                "Disable failsafe",
+                "Moving the mouse to a screen corner will no longer abort clicking. Continue?",
+            )
+            if not confirmed:
+                self.failsafe_var.set(True)
+                return
+        self._sync_safety_from_ui()
+
+    def _sync_safety_from_ui(self) -> None:
         self.controller.configure_safety_from_ui(
             failsafe=self.failsafe_var.get(),
             pause_when_unfocused=self.pause_unfocused_var.get(),
-            on_safety_stop=self._on_safety_stop,
+            on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
         )
 
     def _on_safety_stop(self, reason: str) -> None:
-        self._set_status_message(reason)
         self.controller.log_safety_stop(reason)
-        self.stop_clicking()
+        self.controller.click_engine.stop_clicking()
+        self._paint_stopped(reason)
 
     def start_coordinate_picker(self) -> None:
         """Start coordinate picking mode."""
@@ -161,12 +194,17 @@ class AutoclickerApp:
 
         self.status_var.set("Click anywhere to select coordinates...")
         self.pick_btn.config(state=tk.DISABLED)
-        self.root.withdraw()
 
-        self.coordinate_picker.start_picking(
-            on_selected=self._on_coordinates_selected,
-            on_cancelled=self._on_coordinate_picker_cancelled,
+        started = self.coordinate_picker.start_picking(
+            on_selected=lambda x, y: self._ui(self._on_coordinates_selected, x, y),
+            on_cancelled=lambda: self._ui(self._on_coordinate_picker_cancelled),
         )
+        if not started:
+            self.pick_btn.config(state=tk.NORMAL)
+            self.status_var.set("Could not start coordinate picker")
+            return
+
+        self.root.withdraw()
 
     def _on_coordinates_selected(self, x: int, y: int) -> None:
         """Handle coordinate selection."""
@@ -200,6 +238,21 @@ class AutoclickerApp:
 
         except ValueError:
             messagebox.showerror("Error", "Invalid coordinates")
+
+    def delete_preset(self) -> None:
+        """Delete the selected coordinate preset."""
+        preset_name = self.preset_var.get()
+        if not preset_name:
+            messagebox.showwarning("Delete Preset", "Select a preset to delete.")
+            return
+        if not messagebox.askokcancel("Delete Preset", f"Delete preset '{preset_name}'?"):
+            return
+        if self.preset_manager.delete_preset(preset_name):
+            self.update_preset_list()
+            self.preset_var.set("")
+            self.status_var.set(f"Deleted preset '{preset_name}'")
+        else:
+            messagebox.showerror("Error", "Failed to delete preset")
 
     def load_preset(self, event=None) -> None:
         """Load selected preset."""
@@ -245,9 +298,8 @@ class AutoclickerApp:
                 self._collect_ui_settings(),
                 failsafe=self.failsafe_var.get(),
                 pause_when_unfocused=self.pause_unfocused_var.get(),
-                on_safety_stop=self._on_safety_stop,
-                on_click_complete=self._on_clicking_complete,
-                on_status_update=self._on_status_update,
+                on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
+                on_click_complete=lambda: self._ui(self._on_clicking_complete),
             )
 
             if result.validation_errors is not None:
@@ -277,25 +329,20 @@ class AutoclickerApp:
     def stop_clicking(self) -> None:
         """Stop the autoclicking process."""
         self.controller.stop_clicking(reason="user_stop")
-        self.start_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
-        self.status_var.set("Stopped")
-        self._stop_status_timer()
+        self._paint_stopped("Stopped")
 
     def emergency_stop(self) -> None:
-        """Emergency stop - immediate halt."""
+        """Emergency stop — immediate halt. Cancels picker if it is active."""
+        if self.coordinate_picker.is_picking():
+            self.coordinate_picker.stop_picking(cancelled=True)
+            return
         self.controller.emergency_stop()
-        self.start_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
-        self.status_var.set("Emergency Stop")
-        self._stop_status_timer()
+        self._paint_stopped("Emergency Stop")
 
     def _on_clicking_complete(self) -> None:
         """Handle clicking completion."""
-        self.start_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
-        self.status_var.set("Stopped")
-        self._stop_status_timer()
+        self.controller.notify_click_complete()
+        self._paint_stopped("Stopped")
 
     def _on_status_update(self) -> None:
         """Handle status updates from click engine."""
@@ -366,24 +413,16 @@ class AutoclickerApp:
     def quit_application(self) -> None:
         """Quit the application."""
         self.stop_clicking()
-        self.coordinate_picker.stop_picking()
+        self.coordinate_picker.stop_picking(cancelled=False)
+        if hasattr(self, "_hotkeys") and self._hotkeys:
+            self._hotkeys.unregister()
         raw_settings = self._collect_ui_settings()
         screen_size = pyautogui.size()
-        if hasattr(self, "controller"):
-            self.controller.persist_settings_on_quit(
-                raw_settings,
-                settings_manager=self.settings,
-                screen_size=screen_size,
-            )
-        else:
-            screen_width, screen_height = screen_size
-            validation_result = self.settings.validate_all_settings(
-                raw_settings, screen_width, screen_height
-            )
-            if validation_result["valid"]:
-                self.settings.update(validation_result["sanitized_settings"])
-            else:
-                self.settings.update(raw_settings)
+        self.controller.persist_settings_on_quit(
+            raw_settings,
+            settings_manager=self.settings,
+            screen_size=screen_size,
+        )
 
         if hasattr(self, "tray_icon") and self.tray_icon:
             self.tray_icon.stop()

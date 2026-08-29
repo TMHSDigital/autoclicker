@@ -4,6 +4,7 @@ Click engine for the autoclicker
 Handles mouse clicking operations with safety checks
 """
 
+import logging
 import random
 import threading
 import time
@@ -13,11 +14,13 @@ from collections.abc import Callable
 import pyautogui
 
 from .exceptions import ClickEngineError, CoordinateError, SafetyError
-from .safety import apply_failsafe, is_foreground_window
+from .safety import apply_failsafe, get_foreground_window_handle, is_foreground_window
 
 # Default PAUSE is 0.1s between every PyAutoGUI call — caps CPS at ~5–10/s
 pyautogui.PAUSE = 0
 apply_failsafe(True)
+
+_log = logging.getLogger(__name__)
 
 
 class ClickEngine:
@@ -69,6 +72,7 @@ class ClickEngine:
         self.pause_when_unfocused = False
         self._foreground_hwnd: int | None = None
         self.on_safety_stop: Callable[[str], None] | None = None
+        self._safety_fired = False
 
     def configure_safety(
         self,
@@ -80,7 +84,7 @@ class ClickEngine:
     ) -> None:
         """Apply safety limits before starting."""
         self.failsafe_enabled = failsafe
-        self.max_cps_ceiling = max(1, int(max_cps))
+        self.max_cps_ceiling = max(0, int(max_cps))
         self.pause_when_unfocused = pause_when_unfocused
         self.on_safety_stop = on_safety_stop
         apply_failsafe(failsafe)
@@ -98,7 +102,6 @@ class ClickEngine:
         mouse_button: str,
         click_type: str,
         on_click_complete: Callable | None = None,
-        on_status_update: Callable | None = None,
     ) -> bool:
         """
         Start the clicking process
@@ -113,17 +116,27 @@ class ClickEngine:
             auto_stop_minutes: Auto-stop after minutes (0 = disabled)
             mouse_button: 'left', 'right', or 'middle'
             click_type: 'single' or 'double'
-            on_click_complete: Callback when clicking finishes
-            on_status_update: Callback for status updates
+            on_click_complete: Callback when clicking finishes naturally
 
         Returns:
             True if started successfully, False otherwise
         """
         if self.is_running:
             return False
+        if self.click_thread is not None and self.click_thread.is_alive():
+            return False
+
+        if self.pause_when_unfocused:
+            hwnd = get_foreground_window_handle()
+            if hwnd is None:
+                return False
+            self._foreground_hwnd = hwnd
+        else:
+            self._foreground_hwnd = None
 
         # Reset state
         self.is_running = True
+        self._safety_fired = False
         self.click_count = 0
         self.dropped_click_count = 0
         self.start_time = time.time()
@@ -132,14 +145,6 @@ class ClickEngine:
         self._recent_click_ts.clear()
         self._screen_size = pyautogui.size()
 
-        if self.pause_when_unfocused:
-            from .safety import get_foreground_window_handle
-
-            self._foreground_hwnd = get_foreground_window_handle()
-        else:
-            self._foreground_hwnd = None
-
-        # Start click thread
         self.click_thread = threading.Thread(
             target=self._click_loop,
             args=(
@@ -154,9 +159,9 @@ class ClickEngine:
                 mouse_button,
                 click_type,
                 on_click_complete,
-                on_status_update,
             ),
             daemon=True,
+            name="ClickLoop",
         )
         self.click_thread.start()
 
@@ -177,7 +182,6 @@ class ClickEngine:
         if count > 0:
             mean = metrics["_timing_mean"]
             metrics["average_click_time"] = mean
-            metrics["median_click_time"] = mean  # Approximation; exact median needs the deque
             if count > 1:
                 metrics["click_time_std_dev"] = (metrics["_timing_m2"] / (count - 1)) ** 0.5
             else:
@@ -225,13 +229,38 @@ class ClickEngine:
         )
         self.queue_processor_thread.start()
 
-    def _stop_queue_processor(self) -> None:
-        """Stop the click queue processor thread"""
-        if self.queue_processor_thread:
-            self.click_queue.append(None)  # Sentinel value to stop processor
-            self._queue_wake.set()
-            self.queue_processor_thread.join(timeout=1.0)
+    def _request_stop(self) -> None:
+        """Signal the click loop to exit without joining threads."""
+        self.is_running = False
+        self._stop_event.set()
+
+    def _stop_queue_processor(self, *, drop_pending: bool = False) -> None:
+        """Stop the click queue processor thread.
+
+        When drop_pending is True, queued clicks are discarded before the
+        sentinel so emergency stop does not drain leftover work.
+        """
+        if drop_pending:
+            self.click_queue.clear()
+        if not self.queue_processor_thread:
+            return
+        self.click_queue.append(None)  # Sentinel value to stop processor
+        self._queue_wake.set()
+        thread = self.queue_processor_thread
+        if thread is not threading.current_thread() and thread.is_alive():
+            thread.join(timeout=1.0)
+        if thread is not threading.current_thread():
             self.queue_processor_thread = None
+
+    def _join_click_thread(self) -> None:
+        """Join the click loop if it is a different, still-alive thread."""
+        thread = self.click_thread
+        if thread is None:
+            return
+        if thread is not threading.current_thread() and thread.is_alive():
+            thread.join(timeout=1.0)
+        if thread is not threading.current_thread():
+            self.click_thread = None
 
     def _process_click_queue(self) -> None:
         """Process clicks from the queue.
@@ -253,26 +282,18 @@ class ClickEngine:
                 x, y, mouse_button, click_type = click_data
                 self._perform_click(x, y, mouse_button, click_type, from_queue=True)
             except Exception as e:
-                print(f"Queue processor error: {e}")
+                _log.warning("Queue processor error: %s", e)
 
     def stop_clicking(self) -> None:
         """Stop the clicking process"""
-        self.is_running = False
-        self._stop_event.set()
-
-        # Stop queue processor
+        self._request_stop()
         self._stop_queue_processor()
-
-        # Wait for thread to finish
-        if self.click_thread and self.click_thread.is_alive():
-            self.click_thread.join(timeout=1.0)
-
-        self.click_thread = None
+        self._join_click_thread()
 
     def emergency_stop(self) -> None:
-        """Emergency stop - immediate halt"""
-        self.is_running = False
-        self._stop_event.set()
+        """Emergency stop — halt loop and drop any queued clicks."""
+        self._request_stop()
+        self._stop_queue_processor(drop_pending=True)
 
     def _click_loop(
         self,
@@ -287,13 +308,12 @@ class ClickEngine:
         mouse_button: str,
         click_type: str,
         on_click_complete: Callable | None,
-        on_status_update: Callable | None,
     ) -> None:
         """Main clicking loop"""
         try:
             while self.is_running and not self._stop_event.is_set():
                 if self._should_pause_for_foreground():
-                    time.sleep(0.1)
+                    self._stop_event.wait(timeout=0.1)
                     continue
 
                 if self._check_runaway_cps():
@@ -308,18 +328,20 @@ class ClickEngine:
 
                 # Perform clicks
                 self._perform_burst(x, y, burst_clicks, burst_pause, mouse_button, click_type)
+                if self._safety_fired:
+                    break
 
                 # Wait for next burst
                 if self.is_running and not self._stop_event.is_set():
                     self._wait_with_variation(interval, variation)
 
-            # Call completion callback
-            if on_click_complete:
-                on_click_complete()
-
+        except (SafetyError, pyautogui.FailSafeException):
+            self._trigger_safety_stop("failsafe")
         except Exception as e:
-            print(f"Click loop error: {e}")
-            if on_click_complete:
+            _log.warning("Click loop error: %s", e)
+        finally:
+            self._request_stop()
+            if not self._safety_fired and on_click_complete:
                 on_click_complete()
 
     def _should_pause_for_foreground(self) -> bool:
@@ -350,8 +372,12 @@ class ClickEngine:
         return len(ts) > self.max_cps_ceiling
 
     def _trigger_safety_stop(self, reason: str) -> None:
-        self.is_running = False
-        self._stop_event.set()
+        already = self._safety_fired
+        self._safety_fired = True
+        self._request_stop()
+        self._stop_queue_processor()
+        if already:
+            return
         if self.on_safety_stop:
             self.on_safety_stop(reason)
 
@@ -385,9 +411,15 @@ class ClickEngine:
 
             self._perform_click(x, y, mouse_button, click_type)
 
+            if self._check_runaway_cps():
+                self._trigger_safety_stop(
+                    f"Runaway guard: exceeded {self.max_cps_ceiling} clicks/sec"
+                )
+                break
+
             # Wait between clicks in burst (except for last click)
-            if burst_clicks > 1 and i < burst_clicks - 1:
-                time.sleep(burst_pause)
+            if burst_clicks > 1 and i < burst_clicks - 1 and burst_pause > 0:
+                self._stop_event.wait(timeout=burst_pause)
 
     def _perform_click(
         self,
@@ -505,7 +537,7 @@ class ClickEngine:
 
         wait_time = max(0.0, actual_interval / 1000)
         if wait_time > 0:
-            time.sleep(wait_time)
+            self._stop_event.wait(timeout=wait_time)
 
     def get_status(self) -> dict:
         """Get current clicking status"""

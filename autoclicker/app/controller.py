@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -10,9 +11,12 @@ from typing import Any
 import pyautogui
 
 from ..core.click_engine import ClickEngine
+from ..core.safety import get_foreground_window_handle
 from ..core.session_log import append_session_event
 from ..core.settings_manager import SettingsManager
 from ..utils.coordinate_picker import CoordinatePicker, PresetManager
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -92,7 +96,6 @@ class AutoclickerController:
         pause_when_unfocused: bool,
         on_safety_stop: Callable[[str], None],
         on_click_complete: Callable[[], None],
-        on_status_update: Callable[[], None],
         screen_size: tuple[int, int] | None = None,
     ) -> StartClickResult:
         """Validate settings and start the click engine if valid."""
@@ -129,6 +132,17 @@ class AutoclickerController:
         self.apply_safety_from_settings(on_safety_stop)
         self.configure_safety_from_ui(failsafe, pause_when_unfocused, on_safety_stop)
 
+        if pause_when_unfocused and get_foreground_window_handle() is None:
+            return StartClickResult(
+                success=False,
+                validation_errors={
+                    "pause_when_unfocused": (
+                        "Could not read the foreground window. "
+                        "Uncheck pause-when-unfocused or install pywin32."
+                    )
+                },
+            )
+
         started = self.click_engine.start_clicking(
             x=x,
             y=y,
@@ -141,7 +155,6 @@ class AutoclickerController:
             mouse_button=sanitized["mouse_button"],
             click_type=sanitized["click_type"],
             on_click_complete=on_click_complete,
-            on_status_update=on_status_update,
         )
 
         if started:
@@ -191,6 +204,15 @@ class AutoclickerController:
             clicks=self.click_engine.click_count,
         )
 
+    def notify_click_complete(self) -> None:
+        """Halt the engine from the UI thread and log a natural completion."""
+        self.click_engine.stop_clicking()
+        append_session_event(
+            "stop",
+            reason="completed",
+            clicks=self.click_engine.click_count,
+        )
+
     def persist_settings_on_quit(
         self,
         raw_settings: dict[str, Any],
@@ -209,4 +231,4 @@ class AutoclickerController:
         if validation_result["valid"]:
             settings.update(validation_result["sanitized_settings"])
         else:
-            settings.update(raw_settings)
+            _log.warning("Quit settings invalid; keeping last-good file")
