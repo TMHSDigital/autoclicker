@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Status bar: the click counter and runtime show exact totals when a run ends instead of the last one-second update, safety stops and errors are shown in red, and the runtime placeholder matches the live format (#53).
 - Stop and Emergency Stop no longer also report the run as "completed": the status keeps showing "Emergency stop" and `sessions.log` gets exactly one stop line per run with the real reason (#41).
 - Errors during a run (for example coordinates that went off screen after a display change) are shown in the status bar and a dialog instead of a plain "Stopped", and are logged with a traceback (#42).
 - Pressing Start while the previous run is still shutting down now says so instead of doing nothing.

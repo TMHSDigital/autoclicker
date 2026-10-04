@@ -14,7 +14,7 @@ import sv_ttk
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import setup_hotkeys
 from ..app.tray import create_tray_icon
-from ..core.click_engine import STOP_ERROR, RunOutcome
+from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutcome
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import field_label
@@ -27,6 +27,10 @@ from .sections import (
     build_status_section,
     build_title_section,
 )
+from .sections.status import STATUS_COLORS
+
+# Status-dot state for each way a run can end; anything else is "stopped".
+_OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
 
 
 class AutoclickerApp:
@@ -48,14 +52,14 @@ class AutoclickerApp:
             start=lambda: self._ui(self.start_clicking),
             stop=lambda: self._ui(self.stop_clicking),
             emergency=lambda: self._ui(self.emergency_stop),
-            on_error=lambda msg: self._ui(self._set_status_message, msg),
+            on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
         )
         self.tray_icon = create_tray_icon(
             show_window=lambda: self._ui(self.show_window),
             start=lambda: self._ui(self.start_clicking),
             stop=lambda: self._ui(self.stop_clicking),
             quit_app=lambda: self._ui(self.quit_application),
-            on_error=lambda msg: self._ui(self._set_status_message, msg),
+            on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
         )
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -146,18 +150,27 @@ class AutoclickerApp:
 
         self.root.after(0, _run)
 
-    def _paint_stopped(self, message: str) -> None:
+    def _paint_stopped(self, message: str, state: str = "stopped") -> None:
         """Reset start/stop widgets after clicking ends."""
         if hasattr(self, "start_btn"):
             self.start_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
-        self._set_status_message(message)
+        self._set_status_message(message, state)
         self._stop_status_timer()
+        # Final refresh so the counters show the exact totals, not the last 1 s tick
+        if hasattr(self, "click_count_var"):
+            self._on_status_update()
 
-    def _set_status_message(self, message: str) -> None:
-        """Show a status line in the GUI."""
+    def _set_status_message(self, message: str, state: str = "stopped") -> None:
+        """Show a status line and color the dot for ``state``.
+
+        ``state`` is one of ``running``, ``stopped``, ``alert`` or ``error``.
+        """
         if hasattr(self, "status_var"):
             self.status_var.set(message)
+        dot = getattr(self, "status_dot", None)
+        if dot is not None:
+            dot.configure(foreground=STATUS_COLORS.get(state, STATUS_COLORS["stopped"]))
 
     def _on_failsafe_toggle(self) -> None:
         if not self.failsafe_var.get():
@@ -185,7 +198,7 @@ class AutoclickerApp:
         if self.coordinate_picker.is_picking():
             return
 
-        self.status_var.set("Click anywhere to select coordinates...")
+        self._set_status_message("Click anywhere to select coordinates...", "running")
         self.pick_btn.config(state=tk.DISABLED)
 
         started = self.coordinate_picker.start_picking(
@@ -194,7 +207,7 @@ class AutoclickerApp:
         )
         if not started:
             self.pick_btn.config(state=tk.NORMAL)
-            self.status_var.set("Could not start coordinate picker")
+            self._set_status_message("Could not start coordinate picker", "error")
             return
 
         self.root.withdraw()
@@ -208,13 +221,13 @@ class AutoclickerApp:
 
         self.show_window()
         self.pick_btn.config(state=tk.NORMAL)
-        self.status_var.set("Coordinate selected")
+        self._set_status_message("Coordinate selected", "alert")
 
     def _on_coordinate_picker_cancelled(self) -> None:
         """Handle coordinate picker cancellation."""
         self.show_window()
         self.pick_btn.config(state=tk.NORMAL)
-        self.status_var.set("Coordinate selection cancelled")
+        self._set_status_message("Coordinate selection cancelled", "alert")
 
     def save_preset(self) -> None:
         """Save current coordinates as preset."""
@@ -243,7 +256,7 @@ class AutoclickerApp:
         if self.preset_manager.delete_preset(preset_name):
             self.update_preset_list()
             self.preset_var.set("")
-            self.status_var.set(f"Deleted preset '{preset_name}'")
+            self._set_status_message(f"Deleted preset '{preset_name}'")
         else:
             messagebox.showerror("Error", "Failed to delete preset")
 
@@ -303,7 +316,7 @@ class AutoclickerApp:
                 return
 
             if result.busy:
-                self._set_status_message("Still stopping the previous run. Try again.")
+                self._set_status_message("Still stopping the previous run. Try again.", "alert")
                 return
 
             if result.success and result.sanitized is not None:
@@ -312,7 +325,7 @@ class AutoclickerApp:
                 y = sanitized["y_coord"]
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
-                self.status_var.set("Running...")
+                self._set_status_message("Running...", "running")
                 self.coord_var.set(f"Target: ({x}, {y})")
                 self._start_status_timer()
 
@@ -334,12 +347,12 @@ class AutoclickerApp:
             self.coordinate_picker.stop_picking(cancelled=True)
             return
         self.controller.emergency_stop()
-        self._paint_stopped("Emergency stop")
+        self._paint_stopped("Emergency stop", "error")
 
     def _on_run_finished(self, outcome: RunOutcome) -> None:
         """Paint the result of a finished run (exactly once per run)."""
         self.controller.finish_run()
-        self._paint_stopped(outcome.message)
+        self._paint_stopped(outcome.message, _OUTCOME_STATE.get(outcome.reason, "stopped"))
         if outcome.reason == STOP_ERROR:
             messagebox.showerror("Clicking stopped", outcome.message)
 

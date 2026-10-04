@@ -8,8 +8,15 @@ from unittest.mock import MagicMock, patch
 
 from autoclicker.app.controller import StartClickResult
 from autoclicker.app.hotkeys import setup_hotkeys
-from autoclicker.core.click_engine import STOP_EMERGENCY, STOP_ERROR, RunOutcome
+from autoclicker.core.click_engine import (
+    STOP_COMPLETED,
+    STOP_EMERGENCY,
+    STOP_ERROR,
+    STOP_SAFETY,
+    RunOutcome,
+)
 from autoclicker.gui.main_window import AutoclickerApp
+from autoclicker.gui.sections.status import STATUS_COLORS
 
 
 def _bare_app() -> AutoclickerApp:
@@ -117,3 +124,32 @@ class TestRunFinishedUi(unittest.TestCase):
         )
         app.start_clicking()
         app.status_var.set.assert_called_with("Still stopping the previous run. Try again.")
+
+
+class TestStatusBar(unittest.TestCase):
+    """#53: explicit status colors and exact final counters."""
+
+    def test_safety_outcome_paints_error_color(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app.status_dot = MagicMock()
+        app._on_run_finished(RunOutcome(STOP_SAFETY, "Runaway guard: over 50 clicks per second", 9))
+        app.status_dot.configure.assert_called_with(foreground=STATUS_COLORS["error"])
+
+    def test_completed_outcome_paints_stopped_color(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app.status_dot = MagicMock()
+        app._on_run_finished(RunOutcome(STOP_COMPLETED, "Done: reached 3 clicks", 3))
+        app.status_dot.configure.assert_called_with(foreground=STATUS_COLORS["stopped"])
+
+    def test_paint_stopped_refreshes_counters(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app.click_count_var = MagicMock()
+        app.runtime_var = MagicMock()
+        app.performance_var = MagicMock()
+        app.click_engine.get_status.return_value = {"click_count": 1234, "runtime": "00:01:02"}
+        app._paint_stopped("Stopped")
+        app.click_count_var.set.assert_called_with("Clicks: 1234")
+        app.runtime_var.set.assert_called_with("Runtime: 00:01:02")
