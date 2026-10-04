@@ -55,6 +55,7 @@ class AutoclickerApp:
 
         self.setup_window()
         self.create_gui()
+        self._fit_to_content()
 
         self._hotkeys = HotkeyManager(
             callbacks_for(
@@ -115,6 +116,21 @@ class AutoclickerApp:
             label = "\u2600 Light" if new_theme == "dark" else "\u263d Dark"
             self.theme_button.configure(text=label)
 
+    def _fit_to_content(self) -> None:
+        """Size the window to its content (Advanced collapsed) so nothing starts cut off.
+
+        Capped at 90% of the screen height; the scrollbar covers anything taller.
+        """
+        try:
+            self.root.update_idletasks()
+            width = max(520, int(self.main_frame.winfo_reqwidth()))
+            height = int(self.main_frame.winfo_reqheight())
+            height = min(height, int(self.root.winfo_screenheight() * 0.9))
+        except (TypeError, ValueError, AttributeError):
+            return
+        self.root.geometry(f"{width}x{height}")
+        self.center_window()
+
     def center_window(self) -> None:
         """Center the window on screen."""
         self.root.update_idletasks()
@@ -135,6 +151,7 @@ class AutoclickerApp:
         self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
 
         main_frame = ttk.Frame(self.canvas, padding="20")
+        self.main_frame = main_frame
         self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
 
         main_frame.grid_columnconfigure(0, weight=1)
@@ -431,7 +448,7 @@ class AutoclickerApp:
         self._paint_stopped("Stopped")
 
     def emergency_stop(self) -> None:
-        """Emergency stop — immediate halt. Cancels picker if it is active."""
+        """Emergency stop: immediate halt. Cancels the picker if it is active."""
         if self.coordinate_picker.is_picking():
             self.coordinate_picker.stop_picking(cancelled=True)
             return

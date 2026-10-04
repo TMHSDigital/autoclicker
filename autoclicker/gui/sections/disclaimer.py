@@ -21,7 +21,7 @@ def build_disclaimer_section(app, parent: ttk.Frame) -> None:
 
     ttk.Label(
         footer,
-        text="For legitimate automation only \u2014 use responsibly.",
+        text="For legitimate automation only. Use responsibly.",
         foreground="#8b949e",
     ).grid(row=0, column=0, sticky=tk.W)
 

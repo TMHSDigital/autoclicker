@@ -23,7 +23,7 @@ from .exceptions import (
 from .safety import apply_failsafe, get_foreground_window_handle, is_foreground_window
 from .screen import ScreenBounds, virtual_screen_bounds
 
-# Default PAUSE is 0.1s between every PyAutoGUI call — caps CPS at ~5–10/s
+# Default PAUSE is 0.1s between every PyAutoGUI call, which caps CPS at about 5 to 10
 pyautogui.PAUSE = 0
 apply_failsafe(True)
 
