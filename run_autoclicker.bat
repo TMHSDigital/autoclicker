@@ -54,12 +54,6 @@ if %errorlevel% neq 0 (
 )
 echo.
 
-if not exist autoclicker.ico (
-    echo Creating application icon...
-    python create_icon.py
-    echo.
-)
-
 if not exist autoclicker.py (
     echo ERROR: autoclicker.py not found
     echo Please ensure all files are in the same directory

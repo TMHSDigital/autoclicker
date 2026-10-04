@@ -74,6 +74,9 @@ tmp/
 *.pyd
 *.ico
 *.png
+!autoclicker/assets/*.ico
+!autoclicker/assets/*.png
+!docs/images/*.png
 # Sensitive data
 secrets.json
 config.local.json

@@ -1,68 +1,85 @@
 #!/usr/bin/env python3
 """
-Create a simple icon for the autoclicker application
+Draw the application icon (matches docs/images/logo.svg).
+
+Writes autoclicker/assets/autoclicker.png and autoclicker/assets/autoclicker.ico.
+Uses no fonts, so the output is identical on every machine.
 """
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
+
+SIZE = 256
+SCALE = 4  # supersample for smooth edges
+TOP = (59, 140, 255)  # #3b8cff
+BOTTOM = (0, 88, 201)  # #0058c9
 
 
-def create_icon():
-    """Create a simple autoclicker icon"""
-    root = Path(__file__).resolve().parent
-    # Create a 256x256 image
-    size = (256, 256)
-    image = Image.new("RGBA", size, (64, 128, 255, 255))  # Blue background
-    draw = ImageDraw.Draw(image)
+def _gradient(size: int) -> Image.Image:
+    """Diagonal top-left to bottom-right blue gradient."""
+    grad = Image.new("RGBA", (size, size))
+    px = grad.load()
+    for y in range(size):
+        for x in range(size):
+            t = (x + y) / (2 * (size - 1))
+            rgb = (round(a + (b - a) * t) for a, b in zip(TOP, BOTTOM, strict=True))
+            px[x, y] = (*rgb, 255)
+    return grad
 
-    # Draw a simple mouse cursor shape
-    # Mouse pointer (triangle)
-    pointer_points = [(128, 60), (140, 80), (128, 100), (160, 90)]
-    draw.polygon(pointer_points, fill=(255, 255, 255, 255))
 
-    # Mouse body (rectangle with rounded corners)
-    draw.rectangle(
-        [80, 90, 180, 180], fill=(200, 200, 200, 255), outline=(100, 100, 100, 255), width=3
-    )
+def draw_icon() -> Image.Image:
+    s = SIZE * SCALE
+    unit = s / 128  # logo.svg is drawn on a 128 grid
 
-    # Left mouse button
-    draw.rectangle(
-        [90, 100, 130, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2
-    )
+    def p(v: float) -> float:
+        return v * unit
 
-    # Right mouse button
-    draw.rectangle(
-        [130, 100, 170, 170], fill=(255, 255, 255, 255), outline=(100, 100, 100, 255), width=2
-    )
+    tile = _gradient(s)
+    mask = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, s - 1, s - 1), radius=p(28), fill=255)
+    icon = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    icon.paste(tile, (0, 0), mask)
 
-    # Scroll wheel
-    draw.rectangle(
-        [125, 125, 135, 145], fill=(150, 150, 150, 255), outline=(100, 100, 100, 255), width=1
-    )
+    # Click ripples centred on the cursor tip
+    rings = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(rings)
+    for radius, width, alpha in ((13, 4, 217), (25, 3.5, 115), (37, 3, 46)):
+        r = p(radius)
+        draw.ellipse(
+            (p(50) - r, p(46) - r, p(50) + r, p(46) + r),
+            outline=(255, 255, 255, alpha),
+            width=round(p(width)),
+        )
+    icon = Image.alpha_composite(icon, rings)
 
-    # Add text "AC" in the center
-    try:
-        # Try to use a system font
-        font = ImageFont.truetype("arial.ttf", 48)
-    except Exception:
-        # Fall back to default font
-        font = ImageFont.load_default()
+    cursor = [(50, 46), (50, 98), (63, 86), (72, 106), (82, 101.5), (73, 82), (91, 82)]
+    points = [(p(x), p(y)) for x, y in cursor]
 
-    # Draw "AC" text
-    draw.text((100, 200), "AC", fill=(255, 255, 255, 255), font=font)
+    shadow = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).polygon([(x, y + p(2)) for x, y in points], fill=(0, 36, 90, 90))
+    icon = Image.alpha_composite(icon, shadow.filter(ImageFilter.GaussianBlur(p(2))))
 
-    # Save as ICO file
+    arrow = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    adraw = ImageDraw.Draw(arrow)
+    adraw.polygon(points, fill=(255, 255, 255, 255))
+    adraw.line([*points, points[0]], fill=(11, 61, 145, 255), width=round(p(2.5)), joint="curve")
+    icon = Image.alpha_composite(icon, arrow)
+
+    return icon.resize((SIZE, SIZE), Image.LANCZOS)
+
+
+def create_icon() -> None:
+    assets = Path(__file__).resolve().parent / "autoclicker" / "assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    image = draw_icon()
+    image.save(assets / "autoclicker.png", format="PNG", optimize=True)
     image.save(
-        root / "autoclicker.ico",
+        assets / "autoclicker.ico",
         format="ICO",
-        sizes=[(256, 256), (128, 128), (64, 64), (32, 32), (16, 16)],
+        sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (24, 24), (16, 16)],
     )
-
-    image.save(root / "autoclicker.png", format="PNG")
-
-    print("Icon created successfully!")
-    print("Files: autoclicker.ico, autoclicker.png")
+    print(f"Wrote {assets / 'autoclicker.png'} and {assets / 'autoclicker.ico'}")
 
 
 if __name__ == "__main__":

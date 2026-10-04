@@ -95,9 +95,6 @@ jobs:
       - name: Install build dependencies
         run: tasks.bat install
 
-      - name: Generate icon
-        run: .venv\Scripts\python.exe create_icon.py
-
       - name: Build executable
         run: .venv\Scripts\pyinstaller.exe --clean --noconfirm WindowsAutoclicker.spec
 

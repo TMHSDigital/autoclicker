@@ -26,7 +26,7 @@ autoclicker/
     single_instance.py      # Named mutex + show event: one running instance
     app_data.py             # %APPDATA%/WindowsAutoclicker (never CWD-relative)
     screen.py               # Virtual-desktop bounds across monitors
-    resources.py            # Frozen/source asset paths
+    resources.py            # Asset paths (autoclicker/assets) for source, wheel and frozen runs
     logging_setup.py        # stderr + AppData rotating log
     exceptions.py
   utils/

@@ -116,6 +116,13 @@ pip install -r requirements-lock.txt
 python autoclicker.py
 ```
 
+Or install it as a command with [pipx](https://pipx.pypa.io/):
+
+```bash
+pipx install git+https://github.com/TMHSDigital/autoclicker.git
+autoclicker
+```
+
 </details>
 
 ## How timing works

@@ -86,7 +86,7 @@ def check_file_structure() -> bool:
         "autoclicker.py",
         "requirements.txt",
         "README.md",
-        "autoclicker.ico",
+        "autoclicker/assets/autoclicker.ico",
         "run_autoclicker.bat",
     ]
     passed = True

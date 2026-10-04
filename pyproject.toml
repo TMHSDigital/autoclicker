@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "windows-autoclicker"
 version = "1.4.1"
 description = "Windows autoclicker with coordinate targeting, burst mode, and safety controls"
 readme = "README.md"
-license = {text = "CC-BY-NC-4.0"}
+license = "CC-BY-NC-4.0"
+license-files = ["LICENSE"]
 authors = [
     {name = "TM Hospitality Strategies", email = "info@tmhsdigital.com"}
 ]
@@ -18,7 +19,6 @@ keywords = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
-    "License :: Other/Proprietary License",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -67,7 +67,7 @@ autoclicker = "autoclicker.main:main"
 include = ["autoclicker*"]
 
 [tool.setuptools.package-data]
-autoclicker = ["*.ico", "*.png"]
+autoclicker = ["assets/*.ico", "assets/*.png"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
