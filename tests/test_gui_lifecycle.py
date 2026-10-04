@@ -127,6 +127,7 @@ class GuiHarness(unittest.TestCase):
         p(patch("tkinter.StringVar", FakeVar))
         p(patch("tkinter.BooleanVar", FakeVar))
         p(patch("tkinter.Canvas", MagicMock()))
+        p(patch("tkinter.Listbox", MagicMock()))
         for name in (
             "Frame",
             "LabelFrame",
@@ -573,3 +574,90 @@ class TestProfilesUi(GuiHarness):
         self.filedialog.askopenfilename.return_value = str(bad)
         app.import_profiles()
         self.messagebox.showerror.assert_called_once()
+
+
+class TestSequenceUi(GuiHarness):
+    """#72: build a sequence with the picker, edit it, and run it."""
+
+    def add(self, x, y):
+        app = self.app
+        app.add_sequence_point()
+        on_selected = self.picker_cls.return_value.start_picking.call_args.kwargs["on_selected"]
+        on_selected(x, y)
+
+    def test_build_edit_and_run(self):
+        app = self.app
+        app.target_mode_var.set("sequence")
+        app._on_target_mode_change()
+        app.sequence_frame.grid.assert_called()
+        self.assertEqual(app.x_entry.cget("state"), "disabled")
+
+        self.add(10, 10)
+        app.button_var.set("right")
+        self.add(20, 20)
+        self.add(30, 30)
+        self.assertEqual(
+            [(s["x"], s["button"]) for s in app.sequence_steps],
+            [(10, "left"), (20, "right"), (30, "right")],
+        )
+        self.assertEqual(len(app.settings.get("sequence")), 3)  # persisted
+
+        app.sequence_list.curselection.return_value = (2,)
+        app.move_sequence_step(-1)
+        self.assertEqual([s["x"] for s in app.sequence_steps], [10, 30, 20])
+        app.sequence_list.curselection.return_value = (0,)
+        app.remove_sequence_step()
+        self.assertEqual([s["x"] for s in app.sequence_steps], [30, 20])
+        self.simpledialog.askfloat.return_value = 5
+        app.edit_sequence_delay()
+        self.assertEqual(app.sequence_steps[0]["delay_ms"], 5)
+
+        self.set_fields(interval="0", sequence_repeat="2")
+        app.start_clicking()
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: ran the sequence 2 times")
+        clicked = [(c.kwargs["x"], c.kwargs["y"]) for c in self.pyautogui.click.call_args_list]
+        self.assertEqual(clicked, [(30, 30), (20, 20)] * 2)
+        log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log").read_text("utf-8")
+        self.assertIn("target=sequence:2", log)
+
+    def test_empty_sequence_is_reported(self):
+        app = self.app
+        app.target_mode_var.set("sequence")
+        app.start_clicking()
+        _title, message = self.messagebox.showerror.call_args.args
+        self.assertIn("Sequence: Add at least one point", message)
+
+    def test_other_modes_hide_the_steps(self):
+        app = self.app
+        app.target_mode_var.set("cursor")
+        app._on_target_mode_change()
+        app.sequence_frame.grid_remove.assert_called()
+
+    def test_profile_keeps_the_sequence(self):
+        app = self.app
+        app.target_mode_var.set("sequence")
+        self.add(40, 50)
+        self.simpledialog.askstring.return_value = "Route"
+        app.save_preset()
+        app.sequence_steps.clear()
+        app.target_mode_var.set("fixed")
+        app.preset_var.set("Route")
+        app.load_preset()
+        self.assertEqual(app.target_mode_var.get(), "sequence")
+        self.assertEqual([(s["x"], s["y"]) for s in app.sequence_steps], [(40, 50)])
+        self.assertIn("sequence of 1 point", app.preset_summary_var.get())
+
+
+class TestTargetSummary(GuiHarness):
+    def test_status_line_follows_the_form(self):
+        app = self.app
+        self.assertEqual(app.coord_var.get(), "Target: (100, 100)")
+        app._on_coordinates_selected(640, 480)
+        self.assertEqual(app.coord_var.get(), "Target: (640, 480)")
+        app.target_mode_var.set("cursor")
+        app._on_target_mode_change()
+        self.assertEqual(app.coord_var.get(), "Target: current cursor position")
+        app.target_mode_var.set("sequence")
+        app._on_target_mode_change()
+        self.assertEqual(app.coord_var.get(), "Target: sequence of 0 points")

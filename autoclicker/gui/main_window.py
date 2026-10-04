@@ -23,7 +23,7 @@ from ..app.tray import create_tray_icon
 from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutcome
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
-from ..core.settings_manager import field_label
+from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
 from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
 from .hotkeys_dialog import HotkeysDialog
 from .picker import CoordinatePicker
@@ -78,6 +78,11 @@ class AutoclickerApp:
     runtime_var: tk.StringVar
     performance_var: tk.StringVar
     theme_button: ttk.Button
+    sequence_frame: ttk.Frame
+    sequence_list: tk.Listbox
+    sequence_repeat_entry: ttk.Entry
+    # Steps of the sequence target mode: {"x", "y", "button", "click_type", "delay_ms"}
+    sequence_steps: list[dict]
 
     # Pending root.after id while a Start-button countdown is running.
     _countdown_job: str | None = None
@@ -323,19 +328,129 @@ class AutoclickerApp:
         )
 
     def _apply_target_mode_state(self) -> None:
-        """Enable X/Y and Pick Location only when targeting a fixed location."""
-        fixed = self.target_mode_var.get() != "cursor"
-        state = tk.NORMAL if fixed else tk.DISABLED
+        """Enable X/Y and Pick Location only for a fixed target; show the steps in sequence mode."""
+        mode = self.target_mode_var.get()
+        state = tk.NORMAL if mode == "fixed" else tk.DISABLED
         for widget in (self.x_entry, self.y_entry, self.pick_btn):
             widget.configure(state=state)
+        frame = getattr(self, "sequence_frame", None)
+        if frame is not None:
+            if mode == "sequence":
+                frame.grid()
+            else:
+                frame.grid_remove()
+            self._refresh_target_summary()
+
+    def _target_summary(self) -> str:
+        """Status-bar description of what the form currently targets."""
+        mode = self.target_mode_var.get()
+        if mode == "cursor":
+            return "Target: current cursor position"
+        if mode == "sequence":
+            count = len(self.sequence_steps)
+            return f"Target: sequence of {count} point{'s' * (count != 1)}"
+        return f"Target: ({self.x_entry.get().strip()}, {self.y_entry.get().strip()})"
+
+    def _refresh_target_summary(self) -> None:
+        if hasattr(self, "coord_var"):
+            self.coord_var.set(self._target_summary())
+
+    # -- sequence steps ------------------------------------------------------
+
+    _DEFAULT_STEP_DELAY_MS = 500
+
+    def _refresh_sequence_list(self, select: int | None = None) -> None:
+        listbox = self.sequence_list
+        listbox.delete(0, tk.END)
+        last = len(self.sequence_steps)
+        for number, step in enumerate(self.sequence_steps, start=1):
+            delay = step.get("delay_ms", 0)
+            after = "then the Interval" if number == last else f"then wait {delay:g} ms"
+            listbox.insert(
+                tk.END,
+                f"{number}. ({step['x']}, {step['y']})  {step['button']} {step['click_type']}, {after}",
+            )
+        if select is not None and 0 <= select < last:
+            listbox.selection_clear(0, tk.END)
+            listbox.selection_set(select)
+            listbox.see(select)
+
+    def _selected_step(self) -> int | None:
+        selection = self.sequence_list.curselection()
+        return int(selection[0]) if selection else None
+
+    def _sequence_changed(self, select: int | None = None) -> None:
+        self._refresh_sequence_list(select)
+        self._refresh_target_summary()
+        self.settings.set("sequence", [dict(step) for step in self.sequence_steps])
+
+    def add_sequence_point(self) -> None:
+        """Pick a point and append it as a step using the current button and click type."""
+        if len(self.sequence_steps) >= MAX_SEQUENCE_STEPS:
+            self._set_status_message(f"A sequence has at most {MAX_SEQUENCE_STEPS} steps", "alert")
+            return
+        self.start_coordinate_picker(on_selected=self._on_sequence_point_picked)
+
+    def _on_sequence_point_picked(self, x: int, y: int) -> None:
+        self.sequence_steps.append(
+            {
+                "x": x,
+                "y": y,
+                "button": self.button_var.get(),
+                "click_type": self.click_type_var.get(),
+                "delay_ms": self._DEFAULT_STEP_DELAY_MS,
+            }
+        )
+        self._sequence_changed(select=len(self.sequence_steps) - 1)
+        self.show_window()
+        self._apply_target_mode_state()
+        self._set_status_message(f"Added step {len(self.sequence_steps)}", "alert")
+
+    def edit_sequence_delay(self) -> None:
+        index = self._selected_step()
+        if index is None:
+            self._set_status_message("Select a step first", "alert")
+            return
+        step = self.sequence_steps[index]
+        value = simpledialog.askfloat(
+            "Wait after step",
+            f"Milliseconds to wait after step {index + 1} before the next one:",
+            initialvalue=step.get("delay_ms", 0),
+            minvalue=0,
+            maxvalue=MAX_STEP_DELAY_MS,
+        )
+        if value is None:
+            return
+        step["delay_ms"] = int(value) if float(value).is_integer() else value
+        self._sequence_changed(select=index)
+
+    def move_sequence_step(self, offset: int) -> None:
+        index = self._selected_step()
+        if index is None:
+            return
+        target = index + offset
+        if not 0 <= target < len(self.sequence_steps):
+            return
+        steps = self.sequence_steps
+        steps[index], steps[target] = steps[target], steps[index]
+        self._sequence_changed(select=target)
+
+    def remove_sequence_step(self) -> None:
+        index = self._selected_step()
+        if index is None:
+            return
+        del self.sequence_steps[index]
+        self._sequence_changed(select=min(index, len(self.sequence_steps) - 1))
 
     def _on_target_mode_change(self) -> None:
         """Apply and remember the chosen target mode."""
         self._apply_target_mode_state()
         self.settings.set("target_mode", self.target_mode_var.get())
 
-    def start_coordinate_picker(self) -> None:
-        """Start coordinate picking mode."""
+    def start_coordinate_picker(
+        self, on_selected: Callable[[int, int], None] | None = None
+    ) -> None:
+        """Start coordinate picking mode (fills X/Y unless ``on_selected`` is given)."""
         if self.click_engine.is_running:
             messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
             return
@@ -348,7 +463,7 @@ class AutoclickerApp:
 
         # The overlay runs on the Tk thread, so its callbacks can touch widgets directly.
         started = self.coordinate_picker.start_picking(
-            on_selected=self._on_coordinates_selected,
+            on_selected=on_selected or self._on_coordinates_selected,
             on_cancelled=self._on_coordinate_picker_cancelled,
         )
         if not started:
@@ -365,14 +480,15 @@ class AutoclickerApp:
         self.y_entry.delete(0, tk.END)
         self.y_entry.insert(0, str(y))
 
+        self._refresh_target_summary()
         self.show_window()
-        self.pick_btn.config(state=tk.NORMAL)
+        self._apply_target_mode_state()
         self._set_status_message("Coordinate selected", "alert")
 
     def _on_coordinate_picker_cancelled(self) -> None:
         """Handle coordinate picker cancellation."""
         self.show_window()
-        self.pick_btn.config(state=tk.NORMAL)
+        self._apply_target_mode_state()
         self._set_status_message("Coordinate selection cancelled", "alert")
 
     def _profile_from_ui(self) -> dict | None:
@@ -468,10 +584,16 @@ class AutoclickerApp:
             if limited:
                 put(self.max_clicks_entry, profile["max_clicks"])
             self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
-        if profile.get("target_mode") in ("fixed", "cursor"):
+        if isinstance(profile.get("sequence"), list):
+            self.sequence_steps = [dict(step) for step in profile["sequence"]]
+            self._refresh_sequence_list()
+        if "sequence_repeat" in profile:
+            put(self.sequence_repeat_entry, profile["sequence_repeat"])
+        if profile.get("target_mode") in ("fixed", "cursor", "sequence"):
             self.target_mode_var.set(profile["target_mode"])
             self._apply_target_mode_state()
         self.preset_summary_var.set(describe_profile(profile))
+        self._refresh_target_summary()
 
     def export_profiles(self) -> None:
         """Save every profile to a JSON file."""
@@ -547,6 +669,8 @@ class AutoclickerApp:
                 "pause_when_unfocused": self.pause_unfocused_var.get(),
                 "max_cps_ceiling": self.max_cps_entry.get(),
                 "start_delay_seconds": self.start_delay_entry.get(),
+                "sequence": [dict(step) for step in self.sequence_steps],
+                "sequence_repeat": self.sequence_repeat_entry.get(),
             }
         )
 
@@ -647,17 +771,13 @@ class AutoclickerApp:
                 self._set_status_message("Still stopping the previous run. Try again.", "alert")
                 return
 
-            if result.success and result.sanitized is not None:
-                sanitized = result.sanitized
+            if result.success:
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self._set_status_message("Running...", "running")
                 self._shown_paused = False
                 self._hotkeys.set_running(True)
-                if sanitized.get("target_mode") == "cursor":
-                    self.coord_var.set("Target: current cursor position")
-                else:
-                    self.coord_var.set(f"Target: ({sanitized['x_coord']}, {sanitized['y_coord']})")
+                self._refresh_target_summary()
                 self._start_status_timer()
 
         except AutoclickerError as e:

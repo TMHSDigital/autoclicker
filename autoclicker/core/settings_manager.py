@@ -34,6 +34,7 @@ _INT_FIELDS = frozenset(
         "auto_stop_minutes",
         "max_cps_ceiling",
         "start_delay_seconds",
+        "sequence_repeat",
     }
 )
 _FLOAT_FIELDS = frozenset({"interval", "burst_pause"})
@@ -41,7 +42,7 @@ _CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
     "mouse_button": ("left", "right", "middle"),
     "click_type": ("single", "double"),
     "interval_unit": ("ms", "seconds"),
-    "target_mode": ("fixed", "cursor"),
+    "target_mode": ("fixed", "cursor", "sequence"),
 }
 
 # Human-readable names for validation error keys, used in error dialogs.
@@ -64,10 +65,27 @@ FIELD_LABELS: dict[str, str] = {
     "max_cps_ceiling": "Max clicks per second",
     "pause_when_unfocused": "Pause when unfocused",
     "start_delay_seconds": "Start delay",
+    "sequence": "Sequence",
+    "sequence_repeat": "Repeat",
 }
 
 # Longest countdown before a Start-button run begins, in seconds.
 MAX_START_DELAY_SECONDS = 60
+
+# Sequence mode limits: steps per round, rounds per run, wait between steps (ms).
+MAX_SEQUENCE_STEPS = 50
+MAX_SEQUENCE_REPEAT = 1_000_000
+MAX_STEP_DELAY_MS = 60_000
+
+# Fields of one sequence step and the setting whose parser reads each.
+_STEP_FIELDS = (
+    ("x", "x_coord"),
+    ("y", "y_coord"),
+    ("button", "mouse_button"),
+    ("click_type", "click_type"),
+    ("delay_ms", "burst_pause"),
+)
+_STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click type"}
 
 
 # Settings whose stored value must be of a given JSON type; anything else falls
@@ -75,6 +93,7 @@ MAX_START_DELAY_SECONDS = 60
 # because the UI stores what was typed, and validation reports bad values.
 _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
+_LIST_KEYS = frozenset({"sequence"})
 _STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme"})
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
@@ -84,6 +103,8 @@ def _has_valid_type(key: str, value: Any) -> bool:
         return isinstance(value, bool)
     if key in _DICT_KEYS:
         return isinstance(value, dict)
+    if key in _LIST_KEYS:
+        return isinstance(value, list)
     if key in _STR_KEYS:
         return isinstance(value, str)
     if key in _NUMERIC_KEYS:
@@ -122,6 +143,8 @@ class SettingsManager:
         "enable_failsafe": True,
         "max_cps_ceiling": 50,
         "start_delay_seconds": 3,
+        "sequence": [],
+        "sequence_repeat": 0,
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -413,6 +436,8 @@ class SettingsManager:
                 return int(number), None
             # Keep whole numbers as int so they round-trip to the UI as "500", not "500.0"
             return (int(number) if number.is_integer() else number), None
+        if key == "sequence":
+            return self._parse_sequence(value)
         if key in _CHOICE_FIELDS:
             choices = _CHOICE_FIELDS[key]
             text = str(value).strip()
@@ -420,6 +445,30 @@ class SettingsManager:
                 return None, f"Must be one of: {', '.join(choices)}"
             return text, None
         return value, None
+
+    def _parse_sequence(self, value: Any) -> tuple[Any, str | None]:
+        """Parse a list of sequence steps; missing button/type/delay get defaults."""
+        if not isinstance(value, list):
+            return None, "Must be a list of steps"
+        steps = []
+        for number, raw in enumerate(value, start=1):
+            if not isinstance(raw, dict):
+                return None, f"Step {number} is not a step"
+            step: dict[str, Any] = {"button": "left", "click_type": "single", "delay_ms": 0}
+            for field, setting in _STEP_FIELDS:
+                if field not in raw:
+                    if field in ("x", "y"):
+                        return None, f"Step {number} has no {field.upper()}"
+                    continue
+                parsed, error = self.parse_input(setting, raw[field])
+                if error is not None:
+                    label = _STEP_LABELS.get(field, "wait")
+                    return None, f"Step {number} {label}: {error}"
+                step[field] = parsed
+            if not 0 <= step["delay_ms"] <= MAX_STEP_DELAY_MS:
+                return None, f"Step {number} wait must be 0 to {MAX_STEP_DELAY_MS:,} ms"
+            steps.append(step)
+        return steps, None
 
     def validate_all_settings(
         self,
@@ -438,10 +487,14 @@ class SettingsManager:
         """
         errors: dict[str, str] = {}
         parsed: dict[str, Any] = {}
-        # In cursor mode the X/Y fields are unused, so they are not validated.
-        cursor_mode = str(settings.get("target_mode", "fixed")).strip() == "cursor"
+        # Fields the chosen target mode doesn't use are not validated: X/Y in
+        # cursor and sequence mode, the sequence outside sequence mode.
+        mode = str(settings.get("target_mode", "fixed")).strip()
+        unused = {"sequence", "sequence_repeat"} if mode != "sequence" else set()
+        if mode in ("cursor", "sequence"):
+            unused |= {"x_coord", "y_coord"}
         for key, value in settings.items():
-            if cursor_mode and key in ("x_coord", "y_coord"):
+            if key in unused:
                 continue
             result, error = self.parse_input(key, value)
             if error is not None:
@@ -495,6 +548,21 @@ class SettingsManager:
             if not ok:
                 errors["max_cps_ceiling"] = error
 
+        if mode == "sequence" and "sequence" in parsed:
+            error = self._check_sequence(
+                parsed["sequence"],
+                ScreenBounds(screen_left, screen_top, screen_width, screen_height),
+            )
+            if error:
+                errors["sequence"] = error
+        elif mode == "sequence" and "sequence" not in errors:
+            errors["sequence"] = "Add at least one point"
+        repeat = parsed.get("sequence_repeat")
+        if repeat is not None and not 0 <= repeat <= MAX_SEQUENCE_REPEAT:
+            errors["sequence_repeat"] = (
+                f"Must be between 0 and {MAX_SEQUENCE_REPEAT:,} (0 = until stopped)"
+            )
+
         delay = parsed.get("start_delay_seconds")
         if delay is not None and not 0 <= delay <= MAX_START_DELAY_SECONDS:
             errors["start_delay_seconds"] = (
@@ -506,6 +574,21 @@ class SettingsManager:
             "errors": errors,
             "sanitized_settings": parsed,
         }
+
+    @staticmethod
+    def _check_sequence(steps: list[dict[str, Any]], bounds: ScreenBounds) -> str | None:
+        """Error for a parsed sequence that can't run, or None."""
+        if not steps:
+            return "Add at least one point"
+        if len(steps) > MAX_SEQUENCE_STEPS:
+            return f"At most {MAX_SEQUENCE_STEPS} steps"
+        for number, step in enumerate(steps, start=1):
+            if not bounds.contains(step["x"], step["y"]):
+                return (
+                    f"Step {number} ({step['x']}, {step['y']}) is off screen. "
+                    f"Valid range: {bounds.describe()}"
+                )
+        return None
 
     def get_all(self) -> dict[str, Any]:
         """Get all current settings"""

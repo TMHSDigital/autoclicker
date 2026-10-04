@@ -39,6 +39,7 @@ built around safety stops that are on by default.
 [Quick start](#quick-start) ·
 [Features](#features) ·
 [How timing works](#how-timing-works) ·
+[Sequences](#sequences) ·
 [Hotkeys](#hotkeys) ·
 [Safety](#safety) ·
 [Settings](#settings-and-logs) ·
@@ -55,7 +56,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
+      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -144,6 +145,16 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 
 </div>
 
+## Sequences
+
+Choose **Sequence** under Target to click several points in order, for example *claim, close, next*.
+
+1. Press **Add point** and click the spot; repeat for each step. Each step uses the button and click type selected when you add it.
+2. Select a step and use **Wait...** to set how long to wait before the next step (500 ms by default), or **Up**, **Down** and **Remove** to rearrange.
+3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Interval** is the wait between rounds; burst settings don't apply.
+
+Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles.
+
 ## Hotkeys
 
 <table align="center">
@@ -214,7 +225,9 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | Key | Default | Meaning |
 | :-- | :-: | :-- |
-| `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is |
+| `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is; `"sequence"` clicks the steps in `sequence` |
+| `sequence` | `[]` | Steps for sequence mode: `[{"x": 800, "y": 600, "button": "left", "click_type": "single", "delay_ms": 500}, ...]`; `delay_ms` is the wait before the next step |
+| `sequence_repeat` | `0` | Rounds to run in sequence mode; `0` = until stopped |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |
 | `interval` | `1000` | Wait between bursts, in `interval_unit` |
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |

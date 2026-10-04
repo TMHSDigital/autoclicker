@@ -9,7 +9,7 @@ import random
 import threading
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -62,6 +62,17 @@ class RunOutcome:
     message: str
     clicks: int
     error: BaseException | None = None
+
+
+@dataclass(frozen=True)
+class ClickStep:
+    """One step of a click sequence: click here, then wait before the next step."""
+
+    x: int
+    y: int
+    button: str = "left"
+    click_type: str = "single"
+    delay_ms: float = 0.0
 
 
 @dataclass
@@ -132,6 +143,11 @@ class ClickEngine:
         self._foreground_hwnd: int | None = None
         self.is_paused = False
         self._safety_fired = False
+        # Sequence mode: the steps of one round and how many rounds to run
+        # (0 = until stopped). Empty means a normal single-target run.
+        self._steps: tuple[ClickStep, ...] = ()
+        self._repeat = 0
+        self.current_step = 0  # 1-based step being clicked, for error messages
         # First stop source wins; reset on every start.
         self._stop_reason: tuple[str, str] | None = None
         self._stop_lock = threading.Lock()
@@ -168,6 +184,9 @@ class ClickEngine:
         mouse_button: str,
         click_type: str,
         on_finished: Callable[[RunOutcome], None] | None = None,
+        *,
+        steps: Sequence[ClickStep] | None = None,
+        repeat: int = 0,
     ) -> bool:
         """
         Start the clicking process
@@ -185,6 +204,10 @@ class ClickEngine:
             click_type: 'single' or 'double'
             on_finished: Called exactly once, from the click thread, when the
                 run ends for any reason (see RunOutcome)
+            steps: Sequence mode. Each round clicks every step in order (x, y,
+                mouse_button, click_type and burst settings are ignored), then
+                waits ``interval`` before the next round
+            repeat: Rounds to run in sequence mode (0 = until stopped)
 
         Returns:
             True if started successfully, False otherwise
@@ -194,10 +217,15 @@ class ClickEngine:
         if self.click_thread is not None and self.click_thread.is_alive():
             return False
 
+        self._steps = tuple(steps or ())
+        self._repeat = max(0, int(repeat))
+        self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
             if hwnd is None:
                 return False
+            if self._steps:
+                x, y = self._steps[0].x, self._steps[0].y
             self._foreground_hwnd = self._pick_focus_window(hwnd, x, y)
         else:
             self._foreground_hwnd = None
@@ -303,6 +331,7 @@ class ClickEngine:
     ) -> None:
         """Main clicking loop. Reports exactly one RunOutcome via on_finished."""
         error: BaseException | None = None
+        rounds = 0
         try:
             while self.is_running and not self._stop_event.is_set():
                 if self._should_pause_for_foreground():
@@ -322,7 +351,18 @@ class ClickEngine:
                     break
 
                 # Perform clicks
-                self._perform_burst(x, y, burst_clicks, burst_pause, mouse_button, click_type)
+                if self._steps:
+                    if not self._perform_sequence(max_clicks, auto_stop_minutes):
+                        break
+                    rounds += 1
+                    if self._repeat and rounds >= self._repeat:
+                        times = "time" if self._repeat == 1 else "times"
+                        self._set_stop_reason(
+                            STOP_COMPLETED, f"Done: ran the sequence {self._repeat:,} {times}"
+                        )
+                        break
+                else:
+                    self._perform_burst(x, y, burst_clicks, burst_pause, mouse_button, click_type)
                 if self._safety_fired:
                     break
 
@@ -335,7 +375,10 @@ class ClickEngine:
         except Exception as e:
             _log.exception("Click loop error")
             error = e
-            self._set_stop_reason(STOP_ERROR, create_user_friendly_error(e))
+            message = create_user_friendly_error(e)
+            if self._steps and self.current_step:
+                message = f"Step {self.current_step}: {message}"
+            self._set_stop_reason(STOP_ERROR, message)
         finally:
             self.is_paused = False
             self._request_stop()
@@ -419,6 +462,37 @@ class ClickEngine:
                 return f"Done: auto-stopped after {auto_stop_minutes} {unit}"
 
         return None
+
+    def _perform_sequence(self, max_clicks: int, auto_stop_minutes: int) -> bool:
+        """Click every step once, in order. Returns False if the run should end.
+
+        Stop requests, limits, pause when unfocused and the runaway guard are
+        checked before every step, not just once per round. The wait after
+        the last step is the main interval, applied by the caller.
+        """
+        last = len(self._steps)
+        for index, step in enumerate(self._steps, start=1):
+            while self._should_pause_for_foreground():
+                if self._stop_event.wait(timeout=0.1):
+                    return False
+            if not self.is_running or self._stop_event.is_set():
+                return False
+            limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
+            if limit_message:
+                self._set_stop_reason(STOP_COMPLETED, limit_message)
+                return False
+
+            self.current_step = index
+            self._perform_click(step.x, step.y, step.button, step.click_type)
+
+            if self._check_runaway_cps():
+                self._trigger_safety_stop(
+                    f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
+                )
+                return False
+            if index < last and step.delay_ms > 0:
+                self._stop_event.wait(timeout=step.delay_ms / 1000)
+        return True
 
     def _perform_burst(
         self,

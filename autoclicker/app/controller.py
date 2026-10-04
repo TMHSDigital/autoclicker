@@ -10,7 +10,7 @@ from typing import Any
 
 import pyautogui
 
-from ..core.click_engine import ClickEngine, RunOutcome
+from ..core.click_engine import ClickEngine, ClickStep, RunOutcome
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -76,6 +76,8 @@ class AutoclickerController:
             "pause_when_unfocused": ui_fields["pause_when_unfocused"],
             "max_cps_ceiling": ui_fields.get("max_cps_ceiling", 50),
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
+            "sequence": ui_fields.get("sequence", []),
+            "sequence_repeat": ui_fields.get("sequence_repeat", 0),
         }
 
     def validate(
@@ -120,9 +122,13 @@ class AutoclickerController:
 
         sanitized = validation_result["sanitized_settings"]
 
-        cursor_mode = sanitized.get("target_mode") == "cursor"
-        x = None if cursor_mode else sanitized["x_coord"]
-        y = None if cursor_mode else sanitized["y_coord"]
+        mode = sanitized.get("target_mode", "fixed")
+        has_point = mode == "fixed"
+        x = sanitized["x_coord"] if has_point else None
+        y = sanitized["y_coord"] if has_point else None
+        steps = (
+            [ClickStep(**step) for step in sanitized["sequence"]] if mode == "sequence" else None
+        )
         interval = sanitized["interval"]
         interval_unit = sanitized["interval_unit"]
         variation = sanitized["variation"]
@@ -160,10 +166,15 @@ class AutoclickerController:
             mouse_button=sanitized["mouse_button"],
             click_type=sanitized["click_type"],
             on_finished=lambda outcome: self._run_finished(outcome, on_finished),
+            steps=steps,
+            repeat=int(sanitized.get("sequence_repeat", 0)),
         )
 
         if started:
-            target = "cursor" if cursor_mode else f"{x},{y}"
+            if steps:
+                target = f"sequence:{len(steps)}"
+            else:
+                target = f"{x},{y}" if has_point else "cursor"
             append_session_event(
                 "start",
                 target=target,

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Sequence target mode: click several points in order, each with its own button, click type and wait before the next step, repeated N times or until stopped. Points are added with Pick Location and can be reordered or removed; every stop path and limit is checked before each step, and sequences are saved in settings and profiles (#72).
 - Presets are now profiles: besides the target point they remember the target mode, interval, variation, button, click type, burst and limits, and loading one restores them all. Saving over an existing name asks first, a summary line shows what the selected profile does, and profiles can be exported to and imported from a JSON file. Presets saved by older versions still load (#73).
 - Start countdown: the Start button and the tray menu wait 3 seconds before clicking (Advanced, Start delay; 0 to 60, 0 starts at once), showing "Starting in N...". Stop, Emergency stop and the toggle key cancel it; the Start hotkey still starts immediately (#74).
 - Speed limit setting under Advanced for the runaway guard (previously only editable in the settings file). Setting it to 0 asks for confirmation (#64).
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The status bar's Target line shows the saved point (or cursor/sequence mode) at launch and follows changes, instead of always reading "(100, 100)" until the first run.
 - The status bar's success rate is per run; it used to add up every run since launch, and a failed click was counted twice (#68).
 - The app icon in the title row shows again; it was looked up in the current directory instead of the package (#68).
 - The corner failsafe works on every monitor, not just the primary one. Corners where two screens meet are ignored, so moving between monitors never stops a run (#66).

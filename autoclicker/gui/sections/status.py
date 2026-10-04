@@ -45,7 +45,7 @@ def build_status_section(app, parent: ttk.Frame) -> None:
     ttk.Label(metrics, text="\u00b7").pack(side=tk.LEFT, padx=8)
     ttk.Label(metrics, textvariable=app.performance_var).pack(side=tk.LEFT)
 
-    app.coord_var = tk.StringVar(value="Target: (100, 100)")
+    app.coord_var = tk.StringVar(value=app._target_summary())
     ttk.Label(status_frame, textvariable=app.coord_var, foreground=STATUS_COLORS["stopped"]).grid(
         row=2, column=0, columnspan=2, sticky=tk.W, pady=(6, 0)
     )

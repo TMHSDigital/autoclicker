@@ -16,7 +16,9 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
 
     settings = app.controller.settings
     mode = settings.get("target_mode", "fixed")
-    app.target_mode_var = tk.StringVar(value=mode if mode in ("fixed", "cursor") else "fixed")
+    app.target_mode_var = tk.StringVar(
+        value=mode if mode in ("fixed", "cursor", "sequence") else "fixed"
+    )
     mode_frame = ttk.Frame(coord_frame)
     mode_frame.grid(row=0, column=0, columnspan=6, sticky=tk.W, pady=(0, 10))
     ttk.Radiobutton(
@@ -31,6 +33,13 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
         text="Current cursor position",
         variable=app.target_mode_var,
         value="cursor",
+        command=app._on_target_mode_change,
+    ).pack(side=tk.LEFT, padx=(0, 15))
+    ttk.Radiobutton(
+        mode_frame,
+        text="Sequence",
+        variable=app.target_mode_var,
+        value="sequence",
         command=app._on_target_mode_change,
     ).pack(side=tk.LEFT)
 
@@ -97,4 +106,45 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
         side=tk.LEFT, padx=(5, 0)
     )
 
+    _build_sequence_panel(app, coord_frame, settings)
+
     app._apply_target_mode_state()
+
+
+def _build_sequence_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
+    """Step list for sequence mode; shown only while Sequence is selected."""
+    saved, error = settings.parse_input("sequence", settings.get("sequence", []))
+    app.sequence_steps = saved if error is None else []
+
+    app.sequence_frame = ttk.Frame(coord_frame)
+    app.sequence_frame.grid(row=4, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(10, 0))
+    app.sequence_frame.grid_columnconfigure(0, weight=1)
+
+    app.sequence_list = tk.Listbox(
+        app.sequence_frame, height=5, activestyle="none", exportselection=False
+    )
+    app.sequence_list.grid(row=0, column=0, rowspan=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+    buttons = (
+        ("Add point", app.add_sequence_point),
+        ("Wait\u2026", app.edit_sequence_delay),
+        ("Up", lambda: app.move_sequence_step(-1)),
+        ("Down", lambda: app.move_sequence_step(1)),
+        ("Remove", app.remove_sequence_step),
+    )
+    for row, (text, command) in enumerate(buttons):
+        ttk.Button(app.sequence_frame, text=text, width=10, command=command).grid(
+            row=row, column=1, padx=(8, 0), pady=(0, 4), sticky=tk.W
+        )
+
+    repeat_frame = ttk.Frame(app.sequence_frame)
+    repeat_frame.grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))
+    ttk.Label(repeat_frame, text="Repeat:").pack(side=tk.LEFT)
+    app.sequence_repeat_entry = ttk.Entry(repeat_frame, width=7)
+    app.sequence_repeat_entry.pack(side=tk.LEFT, padx=(5, 5))
+    app.sequence_repeat_entry.insert(0, str(settings.get("sequence_repeat", "0")))
+    ttk.Label(repeat_frame, text="times (0 = until stopped); the Interval separates rounds").pack(
+        side=tk.LEFT
+    )
+
+    app._refresh_sequence_list()

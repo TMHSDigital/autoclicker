@@ -28,6 +28,8 @@ PROFILE_KEYS = (
     "burst_pause",
     "max_clicks",
     "auto_stop_minutes",
+    "sequence",
+    "sequence_repeat",
 )
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
@@ -47,6 +49,9 @@ def describe_profile(profile: dict[str, Any]) -> str:
     parts = []
     if profile.get("target_mode") == "cursor":
         parts.append("at the cursor")
+    elif profile.get("target_mode") == "sequence":
+        count = len(profile.get("sequence") or [])
+        parts.append(f"sequence of {count} point{'s' if count != 1 else ''}")
     else:
         parts.append(f"({profile.get('x')}, {profile.get('y')})")
     if "interval" in profile:
