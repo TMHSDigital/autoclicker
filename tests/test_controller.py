@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from autoclicker.app.controller import AutoclickerController
+from autoclicker.core.click_engine import STOP_EMERGENCY, RunOutcome
 from autoclicker.core.screen import ScreenBounds
 from autoclicker.core.settings_manager import SettingsManager
 
@@ -99,6 +100,7 @@ class TestStartClickForegroundGate(unittest.TestCase):
         }
         controller.settings.update = MagicMock()
         controller.click_engine = MagicMock()
+        controller.click_engine.is_running = False
         controller.apply_safety_from_settings = MagicMock()
         controller.configure_safety_from_ui = MagicMock()
 
@@ -110,8 +112,7 @@ class TestStartClickForegroundGate(unittest.TestCase):
                 {},
                 failsafe=True,
                 pause_when_unfocused=True,
-                on_safety_stop=MagicMock(),
-                on_click_complete=MagicMock(),
+                on_finished=MagicMock(),
                 screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
         self.assertFalse(result.success)
@@ -119,15 +120,33 @@ class TestStartClickForegroundGate(unittest.TestCase):
         controller.click_engine.start_clicking.assert_not_called()
 
 
-class TestNotifyClickComplete(unittest.TestCase):
-    def test_notify_halts_engine_and_logs(self):
+class TestRunFinishedLogging(unittest.TestCase):
+    """#41: exactly one session-log stop event per run, with the real reason."""
+
+    def test_logs_once_then_forwards(self):
+        outcome = RunOutcome(STOP_EMERGENCY, "Emergency stop", 7)
+        ui = MagicMock()
+        with patch("autoclicker.app.controller.append_session_event") as log:
+            AutoclickerController._run_finished(outcome, ui)
+        log.assert_called_once_with("stop", reason="emergency", clicks=7, detail="Emergency stop")
+        ui.assert_called_once_with(outcome)
+
+    def test_stop_clicking_does_not_log(self):
         controller = AutoclickerController.__new__(AutoclickerController)
         controller.click_engine = MagicMock()
-        controller.click_engine.click_count = 7
+        controller.click_engine.is_running = True
         with patch("autoclicker.app.controller.append_session_event") as log:
-            controller.notify_click_complete()
-        controller.click_engine.stop_clicking.assert_called_once()
-        log.assert_called_once()
-        self.assertEqual(log.call_args.args[0], "stop")
-        self.assertEqual(log.call_args.kwargs["reason"], "completed")
-        self.assertEqual(log.call_args.kwargs["clicks"], 7)
+            self.assertTrue(controller.stop_clicking())
+            self.assertTrue(controller.emergency_stop())
+        log.assert_not_called()
+
+    def test_start_while_running_is_refused(self):
+        controller = AutoclickerController.__new__(AutoclickerController)
+        controller.click_engine = MagicMock()
+        controller.click_engine.is_running = True
+        controller.settings = MagicMock()
+        result = controller.validate_and_start_clicking(
+            {}, failsafe=True, pause_when_unfocused=False
+        )
+        self.assertFalse(result.success)
+        controller.settings.validate_all_settings.assert_not_called()

@@ -41,16 +41,19 @@ autoclicker/
 
 All worker threads are daemon threads so process exit does not block on them.
 
-Worker callbacks (hotkeys, tray, picker, click complete, safety stop) are marshaled onto the Tk thread with `root.after(0, ...)`. The click thread never `join()`s itself.
+Worker callbacks (hotkeys, tray, picker, run finished) are marshaled onto the Tk thread with `root.after(0, ...)`. The click thread never `join()`s itself.
 
 ## Stop paths
 
-| Path | Clears `is_running` | Joins click thread |
-|------|---------------------|--------------------|
-| `stop_clicking` | yes | yes, if not the click thread |
-| `emergency_stop` | yes | no |
-| runaway / failsafe | yes | UI joins from Tk thread |
-| max_clicks / auto_stop | yes (`finally`) | via `notify_click_complete` |
+| Path | Stop reason (`RunOutcome.reason`) | Clears `is_running` | Joins click thread |
+|------|-----------------------------------|---------------------|--------------------|
+| `stop_clicking` | `user_stop` | yes | yes, if not the click thread |
+| `emergency_stop` | `emergency` | yes | no |
+| runaway / failsafe | `safety` | yes (click thread) | UI reaps via `finish_run` |
+| max_clicks / auto_stop | `completed` | yes (`finally`) | UI reaps via `finish_run` |
+| exception in the loop | `error` (carries the exception) | yes (`finally`) | UI reaps via `finish_run` |
+
+The first stop source to fire records the reason; later ones are ignored. The click thread's `finally` builds one `RunOutcome` and calls `on_finished` exactly once per run. The controller writes the single `stop` session-log line from that callback (on the click thread, so it is written even during quit), then the GUI marshals it to the Tk thread to paint the status and, for `error`, show a dialog.
 
 Clicks are only ever issued from the click thread, so once a stop call returns (or, for `emergency_stop`, once the click thread exits) no further clicks happen.
 

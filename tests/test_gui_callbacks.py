@@ -6,7 +6,9 @@ import tkinter as tk
 import unittest
 from unittest.mock import MagicMock, patch
 
+from autoclicker.app.controller import StartClickResult
 from autoclicker.app.hotkeys import setup_hotkeys
+from autoclicker.core.click_engine import STOP_EMERGENCY, STOP_ERROR, RunOutcome
 from autoclicker.gui.main_window import AutoclickerApp
 
 
@@ -84,3 +86,34 @@ class TestHotkeys(unittest.TestCase):
             self.assertEqual(kb.add_hotkey.call_count, 3)
             handle.unregister()
             self.assertEqual(kb.remove_hotkey.call_count, 3)
+
+
+class TestRunFinishedUi(unittest.TestCase):
+    """#41/#42: the UI paints the run's real outcome and surfaces errors."""
+
+    def test_emergency_outcome_keeps_emergency_status(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app._on_run_finished(RunOutcome(STOP_EMERGENCY, "Emergency stop", 3))
+        app.controller.finish_run.assert_called_once()
+        app.status_var.set.assert_called_with("Emergency stop")
+
+    def test_error_outcome_shows_dialog(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        outcome = RunOutcome(STOP_ERROR, "Please select valid coordinates: off screen", 0)
+        with patch("autoclicker.gui.main_window.messagebox") as mb:
+            app._on_run_finished(outcome)
+        mb.showerror.assert_called_once()
+        app.status_var.set.assert_called_with(outcome.message)
+
+    def test_busy_start_reports_status(self):
+        app = _bare_app()
+        app._collect_ui_settings = MagicMock(return_value={})
+        app.failsafe_var = MagicMock()
+        app.pause_unfocused_var = MagicMock()
+        app.controller.validate_and_start_clicking.return_value = StartClickResult(
+            success=False, busy=True
+        )
+        app.start_clicking()
+        app.status_var.set.assert_called_with("Still stopping the previous run. Try again.")

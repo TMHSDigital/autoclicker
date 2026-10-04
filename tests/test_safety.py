@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from autoclicker.core import session_log
 from autoclicker.core.click_engine import ClickEngine
@@ -104,11 +104,16 @@ class TestSessionLog(unittest.TestCase):
             self.assertIn("reason=a b c", lines[0])
 
 
-class TestSafetyStopCallback(unittest.TestCase):
-    def test_trigger_safety_stop_invokes_callback(self):
+class TestSafetyStopReason(unittest.TestCase):
+    def test_trigger_safety_stop_records_reason(self):
         engine = ClickEngine(enable_performance_monitoring=False)
-        cb = MagicMock()
-        engine.on_safety_stop = cb
         engine._trigger_safety_stop("test reason")
-        cb.assert_called_once_with("test reason")
+        self.assertEqual(engine._stop_reason, ("safety", "test reason"))
         self.assertFalse(engine.is_running)
+
+    def test_first_stop_reason_wins(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.is_running = True
+        engine._trigger_safety_stop("runaway")
+        engine.stop_clicking()
+        self.assertEqual(engine._stop_reason, ("safety", "runaway"))

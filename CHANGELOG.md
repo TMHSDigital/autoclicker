@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Stop and Emergency Stop no longer also report the run as "completed": the status keeps showing "Emergency stop" and `sessions.log` gets exactly one stop line per run with the real reason (#41).
+- Errors during a run (for example coordinates that went off screen after a display change) are shown in the status bar and a dialog instead of a plain "Stopped", and are logged with a traceback (#42).
+- Pressing Start while the previous run is still shutting down now says so instead of doing nothing.
+- Click and time limits report what happened, e.g. "Done: reached 1,000 clicks".
 - Auto-stop, the runaway guard and the runtime display use a monotonic clock, so a system clock change during a session no longer stops it early, keeps it running past its limit, or shows a negative runtime (#52).
 - Multiple monitors are supported. Coordinates are checked against the whole desktop instead of the primary screen, so picks on a monitor to the right are no longer rejected and picks on a monitor to the left (negative X) click where they should (#40). The rightmost and bottom edge pixels are no longer accepted as on-screen.
 - Invalid input is now reported instead of silently rewritten. Previously an interval of `-500` ran at maximum speed, `1OO` ran at 1000 ms, and a negative X clicked at the left edge of the screen (#39). Validation errors name the field in plain words.

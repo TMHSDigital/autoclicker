@@ -10,10 +10,16 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pyautogui
 
-from .exceptions import ClickEngineError, CoordinateError, SafetyError
+from .exceptions import (
+    ClickEngineError,
+    CoordinateError,
+    SafetyError,
+    create_user_friendly_error,
+)
 from .safety import apply_failsafe, get_foreground_window_handle, is_foreground_window
 from .screen import ScreenBounds, virtual_screen_bounds
 
@@ -22,6 +28,23 @@ pyautogui.PAUSE = 0
 apply_failsafe(True)
 
 _log = logging.getLogger(__name__)
+
+# Why a run ended. Exactly one is reported per run via RunOutcome.
+STOP_COMPLETED = "completed"  # max clicks or auto-stop limit reached
+STOP_USER = "user_stop"
+STOP_EMERGENCY = "emergency"
+STOP_SAFETY = "safety"  # failsafe corner or runaway guard
+STOP_ERROR = "error"
+
+
+@dataclass(frozen=True)
+class RunOutcome:
+    """How a click run ended, reported once from the click thread."""
+
+    reason: str
+    message: str
+    clicks: int
+    error: BaseException | None = None
 
 
 class ClickEngine:
@@ -65,8 +88,10 @@ class ClickEngine:
         self.max_cps_ceiling = 50
         self.pause_when_unfocused = False
         self._foreground_hwnd: int | None = None
-        self.on_safety_stop: Callable[[str], None] | None = None
         self._safety_fired = False
+        # First stop source wins; reset on every start.
+        self._stop_reason: tuple[str, str] | None = None
+        self._stop_lock = threading.Lock()
 
     def configure_safety(
         self,
@@ -74,13 +99,11 @@ class ClickEngine:
         failsafe: bool = True,
         max_cps: int = 50,
         pause_when_unfocused: bool = False,
-        on_safety_stop: Callable[[str], None] | None = None,
     ) -> None:
         """Apply safety limits before starting."""
         self.failsafe_enabled = failsafe
         self.max_cps_ceiling = max(0, int(max_cps))
         self.pause_when_unfocused = pause_when_unfocused
-        self.on_safety_stop = on_safety_stop
         apply_failsafe(failsafe)
 
     def start_clicking(
@@ -95,7 +118,7 @@ class ClickEngine:
         auto_stop_minutes: int,
         mouse_button: str,
         click_type: str,
-        on_click_complete: Callable | None = None,
+        on_finished: Callable[[RunOutcome], None] | None = None,
     ) -> bool:
         """
         Start the clicking process
@@ -110,7 +133,8 @@ class ClickEngine:
             auto_stop_minutes: Auto-stop after minutes (0 = disabled)
             mouse_button: 'left', 'right', or 'middle'
             click_type: 'single' or 'double'
-            on_click_complete: Callback when clicking finishes naturally
+            on_finished: Called exactly once, from the click thread, when the
+                run ends for any reason (see RunOutcome)
 
         Returns:
             True if started successfully, False otherwise
@@ -131,6 +155,7 @@ class ClickEngine:
         # Reset state
         self.is_running = True
         self._safety_fired = False
+        self._stop_reason = None
         self.click_count = 0
         self.start_time = time.monotonic()
         self._stop_event.clear()
@@ -151,7 +176,7 @@ class ClickEngine:
                 auto_stop_minutes,
                 mouse_button,
                 click_type,
-                on_click_complete,
+                on_finished,
             ),
             daemon=True,
             name="ClickLoop",
@@ -202,6 +227,12 @@ class ClickEngine:
             "_timing_m2": 0.0,
         }
 
+    def _set_stop_reason(self, reason: str, message: str) -> None:
+        """Record why the run is ending; only the first reason sticks."""
+        with self._stop_lock:
+            if self._stop_reason is None:
+                self._stop_reason = (reason, message)
+
     def _request_stop(self) -> None:
         """Signal the click loop to exit without joining threads."""
         self.is_running = False
@@ -218,12 +249,16 @@ class ClickEngine:
             self.click_thread = None
 
     def stop_clicking(self) -> None:
-        """Stop the clicking process"""
+        """Stop the clicking process (joins the click thread unless called from it)."""
+        if self.is_running:
+            self._set_stop_reason(STOP_USER, "Stopped")
         self._request_stop()
         self._join_click_thread()
 
     def emergency_stop(self) -> None:
         """Emergency stop: signal the loop to halt without joining (safe from any thread)."""
+        if self.is_running:
+            self._set_stop_reason(STOP_EMERGENCY, "Emergency stop")
         self._request_stop()
 
     def _click_loop(
@@ -238,9 +273,10 @@ class ClickEngine:
         auto_stop_minutes: int,
         mouse_button: str,
         click_type: str,
-        on_click_complete: Callable | None,
+        on_finished: Callable[[RunOutcome], None] | None,
     ) -> None:
-        """Main clicking loop"""
+        """Main clicking loop. Reports exactly one RunOutcome via on_finished."""
+        error: BaseException | None = None
         try:
             while self.is_running and not self._stop_event.is_set():
                 if self._should_pause_for_foreground():
@@ -249,12 +285,14 @@ class ClickEngine:
 
                 if self._check_runaway_cps():
                     self._trigger_safety_stop(
-                        f"Runaway guard: exceeded {self.max_cps_ceiling} clicks/sec"
+                        f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
                     )
                     break
 
                 # Check auto-stop conditions
-                if self._should_stop(max_clicks, auto_stop_minutes):
+                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
+                if limit_message:
+                    self._set_stop_reason(STOP_COMPLETED, limit_message)
                     break
 
                 # Perform clicks
@@ -267,13 +305,20 @@ class ClickEngine:
                     self._wait_with_variation(interval, variation)
 
         except (SafetyError, pyautogui.FailSafeException):
-            self._trigger_safety_stop("failsafe")
+            self._trigger_safety_stop("Failsafe: mouse moved to a screen corner")
         except Exception as e:
-            _log.warning("Click loop error: %s", e)
+            _log.exception("Click loop error")
+            error = e
+            self._set_stop_reason(STOP_ERROR, create_user_friendly_error(e))
         finally:
             self._request_stop()
-            if not self._safety_fired and on_click_complete:
-                on_click_complete()
+            self._set_stop_reason(STOP_COMPLETED, "Finished")
+            reason, message = self._stop_reason or (STOP_COMPLETED, "Finished")
+            if on_finished:
+                try:
+                    on_finished(RunOutcome(reason, message, self.click_count, error))
+                except Exception:
+                    _log.exception("on_finished callback failed")
 
     def _should_pause_for_foreground(self) -> bool:
         if not self.pause_when_unfocused:
@@ -302,28 +347,27 @@ class ClickEngine:
             return False
         return len(ts) > self.max_cps_ceiling
 
-    def _trigger_safety_stop(self, reason: str) -> None:
-        already = self._safety_fired
+    def _trigger_safety_stop(self, message: str) -> None:
         self._safety_fired = True
+        self._set_stop_reason(STOP_SAFETY, message)
         self._request_stop()
-        if already:
-            return
-        if self.on_safety_stop:
-            self.on_safety_stop(reason)
 
-    def _should_stop(self, max_clicks: int, auto_stop_minutes: int) -> bool:
-        """Check if clicking should stop based on limits"""
-        # Check click limit
+    def _limit_reached(self, max_clicks: int, auto_stop_minutes: int) -> str | None:
+        """Return a completion message if a click or time limit was reached."""
         if max_clicks > 0 and self.click_count >= max_clicks:
-            return True
+            return f"Done: reached {max_clicks:,} clicks"
 
-        # Check time limit
         if auto_stop_minutes > 0:
             elapsed_minutes = (time.monotonic() - self.start_time) / 60
             if elapsed_minutes >= auto_stop_minutes:
-                return True
+                unit = "minute" if auto_stop_minutes == 1 else "minutes"
+                return f"Done: auto-stopped after {auto_stop_minutes} {unit}"
 
-        return False
+        return None
+
+    def _should_stop(self, max_clicks: int, auto_stop_minutes: int) -> bool:
+        """Check if clicking should stop based on limits"""
+        return self._limit_reached(max_clicks, auto_stop_minutes) is not None
 
     def _perform_burst(
         self,
@@ -343,7 +387,7 @@ class ClickEngine:
 
             if self._check_runaway_cps():
                 self._trigger_safety_stop(
-                    f"Runaway guard: exceeded {self.max_cps_ceiling} clicks/sec"
+                    f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
                 )
                 break
 

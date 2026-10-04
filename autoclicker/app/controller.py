@@ -10,7 +10,7 @@ from typing import Any
 
 import pyautogui
 
-from ..core.click_engine import ClickEngine
+from ..core.click_engine import ClickEngine, RunOutcome
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -28,6 +28,8 @@ class StartClickResult:
     validation_errors: dict[str, str] | None = None
     sanitized: dict[str, Any] | None = None
     interval_ms: float | None = None
+    # True when Start was refused because the previous run is still shutting down
+    busy: bool = False
 
 
 class AutoclickerController:
@@ -38,35 +40,21 @@ class AutoclickerController:
         self.click_engine = ClickEngine()
         self.coordinate_picker = CoordinatePicker()
         self.preset_manager = PresetManager(self.settings)
-        self._on_safety_stop: Callable[[str], None] | None = None
 
-    def apply_safety_from_settings(
-        self,
-        on_safety_stop: Callable[[str], None] | None = None,
-    ) -> None:
+    def apply_safety_from_settings(self) -> None:
         """Apply persisted safety settings to the click engine."""
-        if on_safety_stop is not None:
-            self._on_safety_stop = on_safety_stop
         self.click_engine.configure_safety(
             failsafe=bool(self.settings.get("enable_failsafe", True)),
             max_cps=int(self.settings.get("max_cps_ceiling", 50)),
             pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
-            on_safety_stop=self._on_safety_stop,
         )
 
-    def configure_safety_from_ui(
-        self,
-        failsafe: bool,
-        pause_when_unfocused: bool,
-        on_safety_stop: Callable[[str], None],
-    ) -> None:
+    def configure_safety_from_ui(self, failsafe: bool, pause_when_unfocused: bool) -> None:
         """Reconfigure safety from live UI toggle values."""
-        self._on_safety_stop = on_safety_stop
         self.click_engine.configure_safety(
             failsafe=failsafe,
             max_cps=int(self.settings.get("max_cps_ceiling", 50)),
             pause_when_unfocused=pause_when_unfocused,
-            on_safety_stop=on_safety_stop,
         )
 
     @staticmethod
@@ -95,11 +83,16 @@ class AutoclickerController:
         *,
         failsafe: bool,
         pause_when_unfocused: bool,
-        on_safety_stop: Callable[[str], None],
-        on_click_complete: Callable[[], None],
+        on_finished: Callable[[RunOutcome], None] | None = None,
         screen_bounds: ScreenBounds | None = None,
     ) -> StartClickResult:
-        """Validate settings and start the click engine if valid."""
+        """Validate settings and start the click engine if valid.
+
+        ``on_finished`` runs on the click thread once the run ends, after the
+        session log entry for it has been written.
+        """
+        if self.click_engine.is_running:
+            return StartClickResult(success=False)
         validation_result = self._validate(raw_settings, self.settings, screen_bounds)
 
         if not validation_result["valid"]:
@@ -124,8 +117,7 @@ class AutoclickerController:
             interval_ms = interval
 
         self.settings.update(sanitized)
-        self.apply_safety_from_settings(on_safety_stop)
-        self.configure_safety_from_ui(failsafe, pause_when_unfocused, on_safety_stop)
+        self.configure_safety_from_ui(failsafe, pause_when_unfocused)
 
         if pause_when_unfocused and get_foreground_window_handle() is None:
             return StartClickResult(
@@ -149,7 +141,7 @@ class AutoclickerController:
             auto_stop_minutes=sanitized["auto_stop_minutes"],
             mouse_button=sanitized["mouse_button"],
             click_type=sanitized["click_type"],
-            on_click_complete=on_click_complete,
+            on_finished=lambda outcome: self._run_finished(outcome, on_finished),
         )
 
         if started:
@@ -165,7 +157,26 @@ class AutoclickerController:
             success=started,
             sanitized=sanitized,
             interval_ms=interval_ms,
+            busy=not started,
         )
+
+    @staticmethod
+    def _run_finished(
+        outcome: RunOutcome, on_finished: Callable[[RunOutcome], None] | None
+    ) -> None:
+        """Log the one stop event for a run, then hand the outcome to the UI.
+
+        Runs on the click thread, so the log line is written even when the UI
+        is being torn down (e.g. Stop during quit).
+        """
+        fields: dict[str, Any] = {
+            "reason": outcome.reason,
+            "clicks": outcome.clicks,
+            "detail": outcome.message,
+        }
+        append_session_event("stop", **fields)
+        if on_finished is not None:
+            on_finished(outcome)
 
     @staticmethod
     def _validate(
@@ -179,46 +190,24 @@ class AutoclickerController:
             raw_settings, bounds.width, bounds.height, bounds.left, bounds.top
         )
 
-    def stop_clicking(self, *, reason: str = "user_stop") -> bool:
-        """Stop clicking; log session if it was running. Returns prior running state."""
+    def stop_clicking(self) -> bool:
+        """Stop clicking and wait for the click thread. Returns prior running state.
+
+        The run's outcome (and its session log entry) arrives via on_finished.
+        """
         was_running = self.click_engine.is_running
         self.click_engine.stop_clicking()
-        if was_running:
-            append_session_event(
-                "stop",
-                reason=reason,
-                clicks=self.click_engine.click_count,
-            )
         return was_running
 
     def emergency_stop(self) -> bool:
-        """Emergency halt with session log. Returns prior running state."""
+        """Signal an immediate halt without waiting. Returns prior running state."""
         was_running = self.click_engine.is_running
         self.click_engine.emergency_stop()
-        if was_running:
-            append_session_event(
-                "stop",
-                reason="emergency",
-                clicks=self.click_engine.click_count,
-            )
         return was_running
 
-    def log_safety_stop(self, reason: str) -> None:
-        """Append a safety-triggered stop to the session log."""
-        append_session_event(
-            "safety_stop",
-            reason=reason,
-            clicks=self.click_engine.click_count,
-        )
-
-    def notify_click_complete(self) -> None:
-        """Halt the engine from the UI thread and log a natural completion."""
+    def finish_run(self) -> None:
+        """Reap the finished click thread (called on the UI thread after on_finished)."""
         self.click_engine.stop_clicking()
-        append_session_event(
-            "stop",
-            reason="completed",
-            clicks=self.click_engine.click_count,
-        )
 
     def persist_settings_on_quit(
         self,

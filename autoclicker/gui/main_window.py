@@ -14,6 +14,7 @@ import sv_ttk
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import setup_hotkeys
 from ..app.tray import create_tray_icon
+from ..core.click_engine import STOP_ERROR, RunOutcome
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import field_label
@@ -38,9 +39,7 @@ class AutoclickerApp:
         self.click_engine = self.controller.click_engine
         self.coordinate_picker = self.controller.coordinate_picker
         self.preset_manager = self.controller.preset_manager
-        self.controller.apply_safety_from_settings(
-            on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
-        )
+        self.controller.apply_safety_from_settings()
 
         self.setup_window()
         self.create_gui()
@@ -175,13 +174,7 @@ class AutoclickerApp:
         self.controller.configure_safety_from_ui(
             failsafe=self.failsafe_var.get(),
             pause_when_unfocused=self.pause_unfocused_var.get(),
-            on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
         )
-
-    def _on_safety_stop(self, reason: str) -> None:
-        self.controller.log_safety_stop(reason)
-        self.controller.click_engine.stop_clicking()
-        self._paint_stopped(reason)
 
     def start_coordinate_picker(self) -> None:
         """Start coordinate picking mode."""
@@ -298,8 +291,7 @@ class AutoclickerApp:
                 self._collect_ui_settings(),
                 failsafe=self.failsafe_var.get(),
                 pause_when_unfocused=self.pause_unfocused_var.get(),
-                on_safety_stop=lambda reason: self._ui(self._on_safety_stop, reason),
-                on_click_complete=lambda: self._ui(self._on_clicking_complete),
+                on_finished=lambda outcome: self._ui(self._on_run_finished, outcome),
             )
 
             if result.validation_errors is not None:
@@ -308,6 +300,10 @@ class AutoclickerApp:
                     for field, error in result.validation_errors.items()
                 ]
                 messagebox.showerror("Validation Error", "\n".join(error_messages))
+                return
+
+            if result.busy:
+                self._set_status_message("Still stopping the previous run. Try again.")
                 return
 
             if result.success and result.sanitized is not None:
@@ -329,7 +325,7 @@ class AutoclickerApp:
 
     def stop_clicking(self) -> None:
         """Stop the autoclicking process."""
-        self.controller.stop_clicking(reason="user_stop")
+        self.controller.stop_clicking()
         self._paint_stopped("Stopped")
 
     def emergency_stop(self) -> None:
@@ -338,12 +334,14 @@ class AutoclickerApp:
             self.coordinate_picker.stop_picking(cancelled=True)
             return
         self.controller.emergency_stop()
-        self._paint_stopped("Emergency Stop")
+        self._paint_stopped("Emergency stop")
 
-    def _on_clicking_complete(self) -> None:
-        """Handle clicking completion."""
-        self.controller.notify_click_complete()
-        self._paint_stopped("Stopped")
+    def _on_run_finished(self, outcome: RunOutcome) -> None:
+        """Paint the result of a finished run (exactly once per run)."""
+        self.controller.finish_run()
+        self._paint_stopped(outcome.message)
+        if outcome.reason == STOP_ERROR:
+            messagebox.showerror("Clicking stopped", outcome.message)
 
     def _on_status_update(self) -> None:
         """Handle status updates from click engine."""
