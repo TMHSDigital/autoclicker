@@ -170,6 +170,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
       <ul>
         <li><b>Corner failsafe</b> (on by default): slam the mouse into a corner of any monitor to abort; checked before every click. Corners where two screens meet don't count, so moving between monitors is safe. Turning it off asks for confirmation.</li>
         <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
+        <li><b>Start countdown</b>: the Start button and tray menu wait 3 seconds before clicking (Advanced, Start delay; 0 starts at once), so you can let go of the mouse. Any stop key cancels it. The Start hotkey always starts immediately.</li>
         <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (Advanced, on by default); double-click the icon to bring it back.</li>
       </ul>
     </td>
@@ -226,6 +227,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `auto_stop_minutes` | `0` | Stop after this many minutes; `0` = off |
 | `enable_failsafe` | `true` | Corner failsafe |
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
+| `start_delay_seconds` | `3` | Countdown before a Start-button or tray start, 0 to 60; `0` = start at once. Hotkey starts are immediate |
 | `max_cps_ceiling` | `50` | Runaway guard (Advanced, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |

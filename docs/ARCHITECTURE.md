@@ -60,6 +60,8 @@ Hotkeys use `RegisterHotKey`, which delivers a key only to this app. To avoid ta
 | max_clicks / auto_stop | `completed` | yes (`finally`) | UI reaps via `finish_run` |
 | exception in the loop | `error` (carries the exception) | yes (`finally`) | UI reaps via `finish_run` |
 
+A Start-button or tray start first runs a countdown on the Tk thread (`root.after(1000, ...)`, `start_delay_seconds`). No click thread exists yet, so Stop, Emergency stop and the toggle key just cancel the pending `after` job; nothing is logged because no run started.
+
 The first stop source to fire records the reason; later ones are ignored. The click thread's `finally` builds one `RunOutcome` and calls `on_finished` exactly once per run. The controller writes the single `stop` session-log line from that callback (on the click thread, so it is written even during quit), then the GUI marshals it to the Tk thread to paint the status and, for `error`, show a dialog.
 
 Clicks are only ever issued from the click thread, so once a stop call returns (or, for `emergency_stop`, once the click thread exits) no further clicks happen.

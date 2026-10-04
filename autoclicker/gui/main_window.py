@@ -63,6 +63,7 @@ class AutoclickerApp:
     max_clicks_entry: ttk.Entry
     auto_stop_entry: ttk.Entry
     max_cps_entry: ttk.Entry
+    start_delay_entry: ttk.Entry
     failsafe_var: tk.BooleanVar
     pause_unfocused_var: tk.BooleanVar
     minimize_to_tray_var: tk.BooleanVar
@@ -75,6 +76,9 @@ class AutoclickerApp:
     runtime_var: tk.StringVar
     performance_var: tk.StringVar
     theme_button: ttk.Button
+
+    # Pending root.after id while a Start-button countdown is running.
+    _countdown_job: str | None = None
 
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -101,7 +105,7 @@ class AutoclickerApp:
         self._hotkeys.start(self._saved_hotkeys())
         self.tray_icon = create_tray_icon(
             show_window=lambda: self._ui(self.show_window),
-            start=lambda: self._ui(self.start_clicking),
+            start=lambda: self._ui(self.start_from_button),
             stop=lambda: self._ui(self.stop_clicking),
             quit_app=lambda: self._ui(self.quit_application),
             on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
@@ -266,7 +270,9 @@ class AutoclickerApp:
         self._set_status_message("Hotkeys saved")
 
     def toggle_clicking(self) -> None:
-        """Toggle hotkey: stop if running, otherwise start."""
+        """Toggle hotkey: stop if running (or counting down), otherwise start."""
+        if self._cancel_countdown():
+            return
         if self.click_engine.is_running:
             self.stop_clicking()
         else:
@@ -332,7 +338,7 @@ class AutoclickerApp:
             messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
             return
 
-        if self.coordinate_picker.is_picking():
+        if self.coordinate_picker.is_picking() or self._countdown_job is not None:
             return
 
         self._set_status_message("Click anywhere to pick a location...", "running")
@@ -433,6 +439,7 @@ class AutoclickerApp:
                 "enable_failsafe": self.failsafe_var.get(),
                 "pause_when_unfocused": self.pause_unfocused_var.get(),
                 "max_cps_ceiling": self.max_cps_entry.get(),
+                "start_delay_seconds": self.start_delay_entry.get(),
             }
         )
 
@@ -453,9 +460,69 @@ class AutoclickerApp:
             )
         )
 
-    def start_clicking(self) -> None:
-        """Start the autoclicking process with comprehensive validation."""
+    def _show_validation_errors(self, errors: dict[str, str]) -> None:
+        messagebox.showerror(
+            "Validation Error",
+            "\n".join(f"{field_label(field)}: {error}" for field, error in errors.items()),
+        )
+
+    def start_from_button(self) -> None:
+        """Start button and tray menu: count down first, then start.
+
+        The countdown gives the user time to let go of the mouse and bring the
+        target window to the front. Input is validated before it begins.
+        """
+        if self.click_engine.is_running or self._countdown_job is not None:
+            return
+        errors = self.controller.validation_errors(self._collect_ui_settings())
+        if errors:
+            self._show_validation_errors(errors)
+            return
+        delay = int(float(self.start_delay_entry.get()))
+        if delay <= 0:
+            self.start_clicking()
+            return
         if not self._confirm_guard_off():
+            return
+        self.start_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
+        self._hotkeys.set_running(True)  # Stop, Emergency and Toggle keys cancel it
+        self._countdown_tick(delay)
+
+    def _countdown_tick(self, remaining: int) -> None:
+        if remaining > 0:
+            self._set_status_message(f"Starting in {remaining}...", "alert")
+            self._countdown_job = self.root.after(1000, self._countdown_tick, remaining - 1)
+            return
+        self._countdown_job = None
+        self.start_clicking(confirmed=True)
+        if not self.click_engine.is_running:
+            # Input changed during the countdown and failed, or the engine was busy
+            self._paint_stopped("Not started", "alert")
+
+    def _cancel_countdown(self, message: str | None = "Start cancelled") -> bool:
+        """Cancel a pending countdown. Returns True if one was running."""
+        job = self._countdown_job
+        if job is None:
+            return False
+        self._countdown_job = None
+        try:
+            self.root.after_cancel(job)
+        except Exception:
+            pass
+        if message is not None:
+            self._paint_stopped(message, "alert")
+        return True
+
+    def start_clicking(self, confirmed: bool = False) -> None:
+        """Start the autoclicking process with comprehensive validation.
+
+        ``confirmed`` skips the speed-limit-off question when the countdown
+        already asked it.
+        """
+        # A Start hotkey during a countdown starts right away.
+        self._cancel_countdown(message=None)
+        if not confirmed and not self._confirm_guard_off():
             return
         try:
             result = self.controller.validate_and_start_clicking(
@@ -466,11 +533,7 @@ class AutoclickerApp:
             )
 
             if result.validation_errors is not None:
-                error_messages = [
-                    f"{field_label(field)}: {error}"
-                    for field, error in result.validation_errors.items()
-                ]
-                messagebox.showerror("Validation Error", "\n".join(error_messages))
+                self._show_validation_errors(result.validation_errors)
                 return
 
             if result.busy:
@@ -498,7 +561,9 @@ class AutoclickerApp:
             messagebox.showerror("Unexpected Error", user_message)
 
     def stop_clicking(self) -> None:
-        """Stop the autoclicking process."""
+        """Stop the autoclicking process (or cancel a pending countdown)."""
+        if self._cancel_countdown():
+            return
         self.controller.stop_clicking()
         self._paint_stopped("Stopped")
 
@@ -506,6 +571,8 @@ class AutoclickerApp:
         """Emergency stop: immediate halt. Cancels the picker if it is active."""
         if self.coordinate_picker.is_picking():
             self.coordinate_picker.stop_picking(cancelled=True)
+            return
+        if self._cancel_countdown():
             return
         self.controller.emergency_stop()
         self._paint_stopped("Emergency stop", "error")

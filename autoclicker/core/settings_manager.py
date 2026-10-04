@@ -33,6 +33,7 @@ _INT_FIELDS = frozenset(
         "max_clicks",
         "auto_stop_minutes",
         "max_cps_ceiling",
+        "start_delay_seconds",
     }
 )
 _FLOAT_FIELDS = frozenset({"interval", "burst_pause"})
@@ -62,7 +63,11 @@ FIELD_LABELS: dict[str, str] = {
     "auto_stop_minutes": "Auto-stop",
     "max_cps_ceiling": "Max clicks per second",
     "pause_when_unfocused": "Pause when unfocused",
+    "start_delay_seconds": "Start delay",
 }
+
+# Longest countdown before a Start-button run begins, in seconds.
+MAX_START_DELAY_SECONDS = 60
 
 
 # Settings whose stored value must be of a given JSON type; anything else falls
@@ -116,6 +121,7 @@ class SettingsManager:
         "auto_stop_minutes": 0,
         "enable_failsafe": True,
         "max_cps_ceiling": 50,
+        "start_delay_seconds": 3,
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -488,6 +494,12 @@ class SettingsManager:
             ok, error = self.validate_max_cps(parsed["max_cps_ceiling"])
             if not ok:
                 errors["max_cps_ceiling"] = error
+
+        delay = parsed.get("start_delay_seconds")
+        if delay is not None and not 0 <= delay <= MAX_START_DELAY_SECONDS:
+            errors["start_delay_seconds"] = (
+                f"Must be between 0 and {MAX_START_DELAY_SECONDS} seconds (0 = start at once)"
+            )
 
         return {
             "valid": not errors,

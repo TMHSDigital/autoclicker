@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Start countdown: the Start button and the tray menu wait 3 seconds before clicking (Advanced, Start delay; 0 to 60, 0 starts at once), showing "Starting in N...". Stop, Emergency stop and the toggle key cancel it; the Start hotkey still starts immediately (#74).
 - Speed limit setting under Advanced for the runaway guard (previously only editable in the settings file). Setting it to 0 asks for confirmation (#64).
 - Minimize to tray (Advanced, on by default): minimizing hides the window to the tray icon, with a one-time reminder that clicking continues. Double-clicking the tray icon restores the window, and its tooltip shows the current state and click count (#49).
 - Configurable hotkeys under Advanced, Hotkeys: rebind Start, Stop and Emergency stop, or add a single start/stop toggle key. Buttons and the tray menu show the current keys (#47).

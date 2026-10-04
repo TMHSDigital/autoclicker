@@ -13,7 +13,7 @@ def build_control_section(app, parent: ttk.Frame) -> None:
     app.start_btn = ttk.Button(
         control_frame,
         text="Start",
-        command=app.start_clicking,
+        command=app.start_from_button,
         style="Accent.TButton",
         width=15,
     )

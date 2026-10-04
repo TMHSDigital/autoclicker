@@ -16,7 +16,7 @@ import unittest
 from contextlib import ExitStack
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from autoclicker.app.hotkeys import DEFAULT_HOTKEYS
 
@@ -252,8 +252,8 @@ class TestRunLifecycle(GuiHarness):
         app.start_clicking()
         _settle(app)
         # Cursor mode passes no position, so each click lands where the cursor is
-        for call in self.pyautogui.click.call_args_list:
-            self.assertNotIn("x", call.kwargs)
+        for click in self.pyautogui.click.call_args_list:
+            self.assertNotIn("x", click.kwargs)
         self.assertTrue(self.pyautogui.click.called)
         self.assertEqual(app.coord_var.get(), "Target: current cursor position")
 
@@ -411,3 +411,83 @@ class TestSpeedLimitField(GuiHarness):
         app.start_clicking()
         _title, message = self.messagebox.showerror.call_args.args
         self.assertIn("Max clicks per second", message)
+
+
+class TestStartCountdown(GuiHarness):
+    """#74: Start button and tray starts count down; every stop path cancels it."""
+
+    def begin(self, delay="3"):
+        app = self.app
+        self.set_fields(interval="5", start_delay=delay)
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        app.start_from_button()
+        return app
+
+    def test_counts_down_then_starts(self):
+        app = self.begin("2")
+        self.assertEqual(app.status_var.get(), "Starting in 2...")
+        self.assertFalse(app.click_engine.is_running)
+        self.hotkeys.set_running.assert_called_with(True)
+        app._countdown_tick(1)
+        self.assertEqual(app.status_var.get(), "Starting in 1...")
+        app._countdown_tick(0)
+        self.assertIsNone(app._countdown_job)
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+        self.assertEqual(app.settings.get("start_delay_seconds"), 2)
+
+    def test_zero_delay_starts_at_once(self):
+        app = self.begin("0")
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+
+    def test_stop_cancels(self):
+        app = self.begin()
+        seen = len(app.start_btn.config.call_args_list)
+        app.stop_clicking()
+        self.assertIsNone(app._countdown_job)
+        self.assertEqual(app.status_var.get(), "Start cancelled")
+        self.assertIn(call(state="normal"), app.start_btn.config.call_args_list[seen:])
+        self.hotkeys.set_running.assert_called_with(False)
+        log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log")
+        self.assertFalse(log.exists() and "event=start" in log.read_text("utf-8"))
+
+    def test_emergency_and_toggle_cancel(self):
+        for cancel in ("emergency_stop", "toggle_clicking"):
+            with self.subTest(cancel=cancel):
+                app = self.begin()
+                getattr(app, cancel)()
+                self.assertIsNone(app._countdown_job)
+                self.assertFalse(app.click_engine.is_running)
+                self.assertEqual(app.status_var.get(), "Start cancelled")
+
+    def test_start_hotkey_during_countdown_starts_now(self):
+        app = self.begin()
+        app.start_clicking()
+        self.assertIsNone(app._countdown_job)
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+
+    def test_invalid_input_is_reported_before_counting(self):
+        app = self.app
+        self.set_fields(interval="abc")
+        app.start_from_button()
+        self.assertIsNone(app._countdown_job)
+        self.messagebox.showerror.assert_called_once()
+
+    def test_invalid_delay_is_reported(self):
+        app = self.app
+        self.set_fields(start_delay="90")
+        app.start_from_button()
+        _title, message = self.messagebox.showerror.call_args.args
+        self.assertIn("Start delay", message)
+
+    def test_input_broken_during_countdown_does_not_start(self):
+        app = self.begin()
+        self.set_fields(interval="abc")
+        seen = len(app.start_btn.config.call_args_list)
+        app._countdown_tick(0)
+        self.assertFalse(app.click_engine.is_running)
+        self.assertEqual(app.status_var.get(), "Not started")
+        self.assertIn(call(state="normal"), app.start_btn.config.call_args_list[seen:])

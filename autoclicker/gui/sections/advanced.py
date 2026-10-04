@@ -74,8 +74,19 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
     app.max_cps_entry.insert(0, str(settings.get("max_cps_ceiling", "50")))
     ttk.Label(speed_frame, text="clicks per second max (0 = off)").pack(side=tk.LEFT, padx=(5, 0))
 
+    # Countdown before a Start-button or tray start; hotkey starts are immediate.
+    ttk.Label(body, text="Start delay:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
+    delay_frame = ttk.Frame(body)
+    delay_frame.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    app.start_delay_entry = ttk.Entry(delay_frame, width=6)
+    app.start_delay_entry.pack(side=tk.LEFT)
+    app.start_delay_entry.insert(0, str(settings.get("start_delay_seconds", "3")))
+    ttk.Label(delay_frame, text="seconds after the Start button (hotkeys start at once)").pack(
+        side=tk.LEFT, padx=(5, 0)
+    )
+
     toggles_frame = ttk.Frame(body)
-    toggles_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
+    toggles_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
 
     app.failsafe_var = tk.BooleanVar(value=settings.get("enable_failsafe", True))
     ttk.Checkbutton(

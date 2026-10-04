@@ -75,7 +75,15 @@ class AutoclickerController:
             "enable_failsafe": ui_fields["enable_failsafe"],
             "pause_when_unfocused": ui_fields["pause_when_unfocused"],
             "max_cps_ceiling": ui_fields.get("max_cps_ceiling", 50),
+            "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
         }
+
+    def validation_errors(
+        self, raw_settings: dict[str, Any], screen_bounds: ScreenBounds | None = None
+    ) -> dict[str, str]:
+        """Validation errors for raw UI settings, without starting anything."""
+        result = self._validate(raw_settings, self.settings, screen_bounds)
+        return {} if result["valid"] else dict(result["errors"])
 
     def validate_and_start_clicking(
         self,
