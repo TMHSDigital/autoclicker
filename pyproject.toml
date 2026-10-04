@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "windows-autoclicker"
-version = "1.4.0"
+version = "1.4.1"
 description = "Windows autoclicker with coordinate targeting, burst mode, and safety controls"
 readme = "README.md"
 license = {text = "CC-BY-NC-4.0"}

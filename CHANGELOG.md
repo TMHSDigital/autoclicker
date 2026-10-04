@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-04
+
+### Security
+
+- Bundled Pillow updated to 12.3.0, which fixes several published advisories in 12.2.0.
+
+### Changed
+
+- Bundled pywin32 updated to 312.
+- CI actions updated (checkout v7, setup-python v7, codecov v7, action-gh-release 3.0.3); Dependabot now tracks `sv-ttk`.
+
 ## [1.4.0] - 2026-08-28
 
 ### Fixed
@@ -75,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Baseline release prior to the structured audit and refactor pass.
 
-[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.1
 [1.4.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.0
 [1.3.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.3.0
 [1.2.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.2.0
