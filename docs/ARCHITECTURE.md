@@ -22,8 +22,9 @@ autoclicker/
     settings_paths.py       # AppData path + legacy migration
     click_engine.py         # Click loop, safety guards
     safety.py               # Failsafe + fail-closed foreground window helpers
-    session_log.py          # Append-only session log
+    session_log.py          # Session events, rotated at 1 MB
     single_instance.py      # Named mutex + show event: one running instance
+    app_data.py             # %APPDATA%/WindowsAutoclicker (never CWD-relative)
     screen.py               # Virtual-desktop bounds across monitors
     resources.py            # Frozen/source asset paths
     logging_setup.py        # stderr + AppData rotating log

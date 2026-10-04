@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `sessions.log` is rotated at 1 MB (3 backups) instead of growing forever, and writes from the UI and click threads no longer interleave. If `APPDATA` is not set, settings and logs go to the roaming profile folder instead of the current directory (#54).
 - Only one copy runs at a time. Launching it again brings the running window to the front (even from the tray) instead of starting a second clicker with its own hotkeys, which used to double the click rate (#50).
 - Pick Location no longer sends the pick click to the window underneath. It now shows a dimmed overlay across all monitors with a crosshair and a live X, Y readout; Esc or right-click cancels (#43).
 - Double click now works with the right and middle buttons; it used to send a single click (#51).

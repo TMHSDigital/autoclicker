@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import logging
-import os
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
+
+from .app_data import app_data_dir
 
 _LOG_NAME = "autoclicker"
 
@@ -24,10 +24,7 @@ def configure_logging() -> None:
     stream.setFormatter(formatter)
     logger.addHandler(stream)
 
-    appdata = os.environ.get("APPDATA", "")
-    if not appdata:
-        return
-    log_dir = Path(appdata) / "WindowsAutoclicker"
+    log_dir = app_data_dir()
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
         file_handler = RotatingFileHandler(

@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .app_data import app_data_dir
 from .session_log import append_session_event
 
 LEGACY_FILENAME = "autoclicker_settings.json"
@@ -15,8 +16,7 @@ MIGRATED_MARKER = ".migrated"
 
 
 def appdata_settings_path() -> Path:
-    appdata = os.environ.get("APPDATA", "")
-    return Path(appdata) / "WindowsAutoclicker" / LEGACY_FILENAME
+    return app_data_dir() / LEGACY_FILENAME
 
 
 def legacy_cwd_settings_path() -> Path:
