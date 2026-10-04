@@ -9,9 +9,15 @@ import sys
 import tkinter as tk
 from tkinter import messagebox
 
-from .core.logging_setup import configure_logging
-from .core.single_instance import SingleInstance
-from .gui.main_window import AutoclickerApp
+from .core.dpi import enable_per_monitor_dpi_awareness
+
+# Before anything imports PyAutoGUI, which locks in weaker system-aware DPI
+# handling on import (see core/dpi.py).
+enable_per_monitor_dpi_awareness()
+
+from .core.logging_setup import configure_logging  # noqa: E402
+from .core.single_instance import SingleInstance  # noqa: E402
+from .gui.main_window import AutoclickerApp  # noqa: E402
 
 
 def main():

@@ -83,6 +83,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 ## Design decisions
 
 - **GUI / logic split:** `AutoclickerController` (`app/controller.py`) owns settings, engine, picker, and presets; `gui/sections/*` only build widgets and forward values, keeping the UI replaceable without touching core logic.
+- **DPI:** `main.py` opts the process into per-monitor-v2 DPI awareness (`core/dpi.py`) before PyAutoGUI is imported, so Tk events, `GetCursorPos`, monitor rectangles and clicks all use physical pixels on every monitor. Verified on a single-DPI two-monitor desktop; mixed-DPI (for example 150% next to 100%) still needs a manual pick-and-click check (#67).
 - **Safety defaults:** the corner failsafe is on by default and covers every monitor (the engine checks `GetCursorPos` against the outer corners from `screen.failsafe_corners` before each click; PyAutoGUI's primary-monitor check stays as a backstop), with a runaway clicks-per-second ceiling and an optional pause when the foreground window changes (fail-closed if the HWND cannot be read). All stops are recorded in the session log.
 - **Performance:** O(1) Welford running stats back the 1 Hz status poll instead of recomputing aggregates over the timing history (see [PERFORMANCE.md](PERFORMANCE.md)). A Win32 `SendInput` hot path was evaluated and deferred (no measurable win over `pyautogui` with `PAUSE=0`, plus multi-monitor DPI risk).
 

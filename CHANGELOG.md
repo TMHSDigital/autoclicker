@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The app now declares per-monitor DPI awareness itself, before PyAutoGUI loads, so picked and clicked coordinates use physical pixels on every monitor, including monitors with different scaling (#67).
 - Releases ship a SHA-256 checksum and a GitHub build provenance attestation, release notes contain only that version's changes, and the exe has Windows version details and is no longer UPX-compressed (fewer antivirus false positives). See docs/RELEASING.md (#45).
 - New app icon matching the README logo. Icons now ship inside the package (`autoclicker/assets/`), so `pip`/`pipx` installs show the real window and tray icon instead of a red square. Package metadata uses the SPDX license field (#58).
 - Hotkeys are now exclusive while claimed: a pressed hotkey goes only to the autoclicker. To keep Esc usable in other programs, the Stop and Emergency keys are claimed only while clicking and the Start key only while idle. A key that another program already owns is reported in the status bar.
