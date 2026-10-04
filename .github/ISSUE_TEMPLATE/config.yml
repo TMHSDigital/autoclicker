@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/TMHSDigital/autoclicker/security/advisories/new
+    about: Report vulnerabilities privately, not as a public issue.
+  - name: Troubleshooting guide
+    url: https://github.com/TMHSDigital/autoclicker#troubleshooting
+    about: Common fixes for clicks not registering, hotkeys not responding, and runs stopping early.

@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest something that would make the autoclicker more useful
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task or situation, not the solution yet. "I click three buttons in a row every few minutes" is more useful than "add macros".
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like the app to do?
+      description: How it would work from your side, including any settings or hotkeys.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've tried
+      description: Workarounds, other tools, or settings you already use.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This should keep working with the existing stop paths (hotkeys, corner failsafe, limits, runaway guard)

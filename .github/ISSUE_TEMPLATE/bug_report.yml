@@ -1,0 +1,89 @@
+name: Bug report
+description: Something doesn't work the way the README says it should
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The version, how you run the app and the end of the log are what make a bug fixable, so please fill them in.
+
+        Security problem? Don't file it here; follow the [security policy](https://github.com/TMHSDigital/autoclicker/security/policy) instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        1. Picked a point on my second monitor
+        2. Pressed F6
+        3. Clicks landed on the primary monitor instead
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in the exe's Properties > Details, or `autoclicker.__version__` when running from source.
+      placeholder: "1.5.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: run-method
+    attributes:
+      label: How do you run it?
+      options:
+        - Downloaded WindowsAutoclicker.exe
+        - pipx install
+        - From source (run_autoclicker.bat or python autoclicker.py)
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: input
+    id: displays
+    attributes:
+      label: Monitors and scaling
+      description: How many monitors, and the scaling of each (Settings > System > Display).
+      placeholder: "2 monitors: laptop 150%, external 100% on the left"
+
+  - type: dropdown
+    id: target-mode
+    attributes:
+      label: Target mode
+      options:
+        - Fixed location
+        - Current cursor position
+        - Not relevant
+
+  - type: textarea
+    id: settings
+    attributes:
+      label: Relevant settings
+      description: Interval, burst, limits, and any Advanced options you changed. Settings live in `%APPDATA%\WindowsAutoclicker\autoclicker_settings.json`.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: |
+        Paste the last 30 or so lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`, plus the matching lines from `sessions.log` if a run stopped unexpectedly. Paste `%APPDATA%\WindowsAutoclicker` into Explorer's address bar to open the folder.
+      render: text
+
+  - type: checkboxes
+    id: elevated
+    attributes:
+      label: Context
+      options:
+        - label: The target app runs as administrator
+        - label: I run the autoclicker as administrator
