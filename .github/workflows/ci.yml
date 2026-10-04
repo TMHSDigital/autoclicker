@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     tags: ["v*.*.*"]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -38,13 +38,16 @@ jobs:
           tasks.bat lint
           tasks.bat typecheck
 
+      - name: Audit locked dependencies for known vulnerabilities
+        run: tasks.bat audit
+
   test:
     runs-on: windows-2025
     needs: lint
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout code

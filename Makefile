@@ -1,4 +1,4 @@
-.PHONY: install test coverage lint format typecheck check clean lock smoke
+.PHONY: install test coverage lint format typecheck check clean lock smoke audit
 
 PYTHON ?= python
 VENV ?= .venv
@@ -12,12 +12,8 @@ endif
 install:
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 	$(VENV_PYTHON) -m pip install --upgrade pip
-	@if [ -f requirements-lock.txt ]; then \
-		$(VENV_PYTHON) -m pip install -r requirements-lock.txt; \
-	else \
-		$(VENV_PYTHON) -m pip install -r requirements.txt; \
-	fi
-	$(VENV_PYTHON) -m pip install -e ".[dev,build]"
+	$(VENV_PYTHON) -m pip install -r requirements-lock.txt -r requirements-dev-lock.txt
+	$(VENV_PYTHON) -m pip install -e . --no-deps
 
 test:
 	$(VENV_PYTHON) -m pytest
@@ -26,8 +22,8 @@ coverage:
 	$(VENV_PYTHON) -m pytest --cov=autoclicker --cov-report=term --cov-report=html --cov-report=xml
 
 lint:
-	$(VENV_PYTHON) -m ruff check autoclicker autoclicker.py tests scripts
-	$(VENV_PYTHON) -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py
+	$(VENV_PYTHON) -m ruff check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
+	$(VENV_PYTHON) -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
 
 format:
 	$(VENV_PYTHON) -m ruff format .
@@ -47,3 +43,6 @@ lock:
 
 smoke:
 	$(VENV_PYTHON) scripts/smoke_check.py
+
+audit:
+	$(VENV_PYTHON) -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off

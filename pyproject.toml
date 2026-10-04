@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Utilities",
     "Topic :: Desktop Environment",
     "Topic :: System :: Monitoring",
@@ -156,7 +157,6 @@ module = [
     "pyautogui.*",
     "pystray.*",
     "PIL.*",
-    "win32.*",
     "sv_ttk.*"
 ]
 ignore_missing_imports = true

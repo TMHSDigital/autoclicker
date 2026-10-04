@@ -16,17 +16,15 @@ if /i "%1"=="check" goto check
 if /i "%1"=="clean" goto clean
 if /i "%1"=="lock" goto lock
 if /i "%1"=="smoke" goto smoke
+if /i "%1"=="audit" goto audit
 goto usage
 
 :install
 if not exist "%VENV%\Scripts\python.exe" python -m venv "%VENV%"
 "%PY%" -m pip install --upgrade pip
-if exist requirements-lock.txt (
-  "%PY%" -m pip install -r requirements-lock.txt
-) else (
-  "%PY%" -m pip install -r requirements.txt
-)
-"%PY%" -m pip install -e ".[dev,build]"
+"%PY%" -m pip install -r requirements-lock.txt -r requirements-dev-lock.txt
+if errorlevel 1 exit /b 1
+"%PY%" -m pip install -e . --no-deps
 exit /b %ERRORLEVEL%
 
 :test
@@ -38,9 +36,9 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :lint
-"%PY%" -m ruff check autoclicker autoclicker.py tests scripts
+"%PY%" -m ruff check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
 if errorlevel 1 exit /b 1
-"%PY%" -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py
+"%PY%" -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
 exit /b %ERRORLEVEL%
 
 :format
@@ -76,6 +74,10 @@ exit /b %ERRORLEVEL%
 "%PY%" scripts\smoke_check.py
 exit /b %ERRORLEVEL%
 
+:audit
+"%PY%" -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off
+exit /b %ERRORLEVEL%
+
 :usage
-echo Usage: tasks.bat ^<install^|test^|coverage^|lint^|format^|typecheck^|check^|clean^|lock^|smoke^>
+echo Usage: tasks.bat ^<install^|test^|coverage^|lint^|format^|typecheck^|check^|clean^|lock^|smoke^|audit^>
 exit /b 1

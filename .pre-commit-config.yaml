@@ -15,15 +15,17 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=500"]
 
+  # Keep the ruff and mypy revs in step with requirements-dev-lock.txt so
+  # pre-commit and CI run the same versions.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 73413df07b4ab0bf103ca1ae73c7cec5c0ace593 # v0.9.2
+    rev: f12be1ebaa5351c1fc76472de98db2c3446c8253 # v0.16.10
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: bbc3dc1f890007061f18f17e2334f216ea9e5df7 # v1.14.1
+    rev: 2834ec6639549dd6796205c8f011dedcd587288b # v2.4.0
     hooks:
       - id: mypy
         files: ^autoclicker/

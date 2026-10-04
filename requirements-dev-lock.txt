@@ -1,0 +1,150 @@
+altgraph==0.17.5
+    # via
+    #   macholib
+    #   pyinstaller
+ast-serialize==0.12.1
+    # via mypy
+boolean-py==5.0
+    # via license-expression
+cachecontrol==0.14.4
+    # via pip-audit
+certifi==2026.7.22
+    # via requests
+cfgv==3.5.0
+    # via pre-commit
+charset-normalizer==3.5.2
+    # via requests
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via pytest
+coverage==7.16.2
+    # via
+    #   -r requirements-dev.in
+    #   pytest-cov
+cyclonedx-python-lib==11.12.0
+    # via pip-audit
+defusedxml==0.7.1
+    # via py-serializable
+distlib==0.4.3
+    # via virtualenv
+exceptiongroup==1.3.1 ; python_full_version < '3.11'
+    # via pytest
+filelock==4.0.10
+    # via
+    #   cachecontrol
+    #   python-discovery
+    #   virtualenv
+identify==2.6.20
+    # via pre-commit
+idna==3.20
+    # via requests
+iniconfig==2.3.0
+    # via pytest
+librt==0.16.0 ; platform_python_implementation != 'PyPy'
+    # via mypy
+license-expression==30.4.4
+    # via cyclonedx-python-lib
+macholib==1.16.4 ; sys_platform == 'darwin'
+    # via pyinstaller
+markdown-it-py==4.2.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+msgpack==1.2.3
+    # via cachecontrol
+mypy==2.4.0
+    # via -r requirements-dev.in
+mypy-extensions==1.1.0
+    # via mypy
+nodeenv==1.11.0
+    # via pre-commit
+packageurl-python==0.17.6
+    # via cyclonedx-python-lib
+packaging==26.3
+    # via
+    #   pip-audit
+    #   pip-requirements-parser
+    #   pyinstaller
+    #   pyinstaller-hooks-contrib
+    #   pytest
+    #   virtualenv
+    #   wheel
+pathspec==1.1.1
+    # via mypy
+pefile==2024.8.26 ; sys_platform == 'win32'
+    # via pyinstaller
+pip==26.2.1
+    # via pip-api
+pip-api==0.0.35
+    # via pip-audit
+pip-audit==2.10.1
+    # via -r requirements-dev.in
+pip-requirements-parser==32.0.1
+    # via pip-audit
+platformdirs==4.12.3
+    # via
+    #   pip-audit
+    #   virtualenv
+pluggy==1.6.0
+    # via
+    #   pytest
+    #   pytest-cov
+pre-commit==4.6.2
+    # via -r requirements-dev.in
+py-serializable==2.1.0
+    # via cyclonedx-python-lib
+pygments==2.21.0
+    # via
+    #   pytest
+    #   rich
+pyinstaller==6.22.3
+    # via -r requirements-dev.in
+pyinstaller-hooks-contrib==2026.8
+    # via pyinstaller
+pyparsing==3.3.3
+    # via pip-requirements-parser
+pytest==9.1.1
+    # via
+    #   -r requirements-dev.in
+    #   pytest-cov
+pytest-cov==7.1.0
+    # via -r requirements-dev.in
+python-discovery==1.6.1
+    # via virtualenv
+pywin32-ctypes==0.2.3 ; sys_platform == 'win32'
+    # via pyinstaller
+pyyaml==6.0.3
+    # via pre-commit
+requests==2.34.2
+    # via
+    #   cachecontrol
+    #   pip-audit
+rich==15.0.0
+    # via pip-audit
+ruff==0.16.10
+    # via -r requirements-dev.in
+setuptools==84.0.0
+    # via
+    #   -r requirements-dev.in
+    #   pyinstaller
+sortedcontainers==2.4.0
+    # via cyclonedx-python-lib
+tomli==2.4.1
+    # via
+    #   coverage
+    #   mypy
+    #   pip-audit
+    #   pytest
+tomli-w==1.2.0
+    # via pip-audit
+typing-extensions==4.16.0
+    # via
+    #   cyclonedx-python-lib
+    #   exceptiongroup
+    #   mypy
+    #   virtualenv
+urllib3==2.8.0
+    # via requests
+virtualenv==21.14.5
+    # via pre-commit
+wheel==0.48.0
+    # via -r requirements-dev.in

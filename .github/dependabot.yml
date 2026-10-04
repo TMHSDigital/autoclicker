@@ -19,6 +19,8 @@ updates:
       - dependency-name: "mypy"
       - dependency-name: "coverage"
       - dependency-name: "pre-commit"
+      - dependency-name: "pip-audit"
+      - dependency-name: "pyinstaller"
     groups:
       dev-dependencies:
         patterns:
@@ -27,6 +29,8 @@ updates:
           - "mypy*"
           - "coverage*"
           - "pre-commit*"
+          - "pip-audit*"
+          - "pyinstaller*"
 
   - package-ecosystem: github-actions
     directory: "/"
