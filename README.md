@@ -6,7 +6,7 @@
 
 **A fast, careful autoclicker for Windows: pick a spot, set the pace, press F6.**
 
-Pixel-precise clicking with burst mode, timing variation, named presets and global hotkeys,<br />
+Pixel-precise clicking with burst mode, timing variation, named profiles and global hotkeys,<br />
 built around safety stops that are on by default.
 
 <br />
@@ -55,7 +55,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is. Save spots as named <b>presets</b>.
+      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -201,7 +201,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | File | Contents |
 | :-- | :-- |
-| `autoclicker_settings.json` | Your settings and presets, saved when you start clicking, change the theme or presets, and on exit |
+| `autoclicker_settings.json` | Your settings and profiles, saved when you start clicking, change the theme or profiles, and on exit |
 | `autoclicker.log` | Application log, rotated at 1 MB (keeps 2 backups) |
 | `sessions.log` | One line per run start and stop, with the stop reason and click count; rotated at 1 MB (keeps 3 backups) |
 
@@ -232,7 +232,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
-| `presets` | `{}` | `{"Name": {"x": 800, "y": 600}}` |
+| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks` and `auto_stop_minutes`; older point-only presets still load |
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 

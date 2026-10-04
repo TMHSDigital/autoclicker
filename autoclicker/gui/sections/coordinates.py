@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Target coordinates and presets section."""
+"""Target coordinates and profiles section."""
 
 import tkinter as tk
 from tkinter import ttk
@@ -51,7 +51,7 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
     )
     app.pick_btn.grid(row=1, column=4, padx=(10, 5), sticky=tk.W)
 
-    ttk.Label(coord_frame, text="Presets:").grid(
+    ttk.Label(coord_frame, text="Profiles:").grid(
         row=2, column=0, padx=(0, 5), pady=(10, 0), sticky=tk.W
     )
     app.preset_var = tk.StringVar()
@@ -69,7 +69,7 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
 
     app.save_preset_btn = ttk.Button(
         coord_frame,
-        text="Save Preset",
+        text="Save Profile",
         command=app.save_preset,
     )
     app.save_preset_btn.grid(row=2, column=4, pady=(10, 0), sticky=tk.W)
@@ -80,5 +80,21 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
         command=app.delete_preset,
     )
     app.delete_preset_btn.grid(row=2, column=5, padx=(5, 0), pady=(10, 0), sticky=tk.W)
+
+    # What the selected profile restores, e.g. "(800, 600) · every 100 ms · left single"
+    app.preset_summary_var = tk.StringVar(value="")
+    ttk.Label(
+        coord_frame,
+        textvariable=app.preset_summary_var,
+        foreground="#8b949e",
+    ).grid(row=3, column=1, columnspan=3, padx=(0, 10), pady=(4, 0), sticky=tk.W)
+    io_frame = ttk.Frame(coord_frame)
+    io_frame.grid(row=3, column=4, columnspan=2, pady=(4, 0), sticky=tk.W)
+    ttk.Button(io_frame, text="Import\u2026", style="Toolbutton", command=app.import_profiles).pack(
+        side=tk.LEFT
+    )
+    ttk.Button(io_frame, text="Export\u2026", style="Toolbutton", command=app.export_profiles).pack(
+        side=tk.LEFT, padx=(5, 0)
+    )
 
     app._apply_target_mode_state()

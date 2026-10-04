@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Presets are now profiles: besides the target point they remember the target mode, interval, variation, button, click type, burst and limits, and loading one restores them all. Saving over an existing name asks first, a summary line shows what the selected profile does, and profiles can be exported to and imported from a JSON file. Presets saved by older versions still load (#73).
 - Start countdown: the Start button and the tray menu wait 3 seconds before clicking (Advanced, Start delay; 0 to 60, 0 starts at once), showing "Starting in N...". Stop, Emergency stop and the toggle key cancel it; the Start hotkey still starts immediately (#74).
 - Speed limit setting under Advanced for the runaway guard (previously only editable in the settings file). Setting it to 0 asks for confirmation (#64).
 - Minimize to tray (Advanced, on by default): minimizing hides the window to the tray icon, with a one-time reminder that clicking continues. Double-clicking the tray icon restores the window, and its tooltip shows the current state and click count (#49).

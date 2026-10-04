@@ -7,7 +7,7 @@ Handles user interface and event coordination.
 import threading
 import tkinter as tk
 from collections.abc import Callable
-from tkinter import messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import sv_ttk
 
@@ -24,6 +24,7 @@ from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutc
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import field_label
+from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
 from .hotkeys_dialog import HotkeysDialog
 from .picker import CoordinatePicker
 from .sections import (
@@ -52,6 +53,7 @@ class AutoclickerApp:
     coord_var: tk.StringVar
     preset_var: tk.StringVar
     preset_combo: ttk.Combobox
+    preset_summary_var: tk.StringVar
     button_var: tk.StringVar
     click_type_var: tk.StringVar
     interval_entry: ttk.Entry
@@ -373,47 +375,152 @@ class AutoclickerApp:
         self.pick_btn.config(state=tk.NORMAL)
         self._set_status_message("Coordinate selection cancelled", "alert")
 
+    def _profile_from_ui(self) -> dict | None:
+        """The current target and click settings as a profile, or None if invalid."""
+        result = self.controller.validate(self._collect_ui_settings())
+        if not result["valid"]:
+            self._show_validation_errors(result["errors"])
+            return None
+        sanitized = result["sanitized_settings"]
+        profile = {k: sanitized[k] for k in PROFILE_KEYS if k in sanitized}
+        # Cursor-mode profiles still keep a point, so switching them to Fixed works.
+        for axis, key in (("x", "x_coord"), ("y", "y_coord")):
+            value = sanitized.get(key, self.settings.get(key, 100))
+            try:
+                profile[axis] = int(value)
+            except (TypeError, ValueError):
+                profile[axis] = 100
+        return profile
+
     def save_preset(self) -> None:
-        """Save current coordinates as preset."""
-        try:
-            x = int(self.x_entry.get())
-            y = int(self.y_entry.get())
-
-            preset_name = simpledialog.askstring("Save Preset", "Enter preset name:")
-            if preset_name and self.preset_manager.save_preset(preset_name, x, y):
-                self.update_preset_list()
-                messagebox.showinfo("Success", f"Preset '{preset_name}' saved!")
-            elif preset_name:
-                messagebox.showerror("Error", "Failed to save preset")
-
-        except ValueError:
-            messagebox.showerror("Error", "Invalid coordinates")
+        """Save the target and click settings as a named profile."""
+        profile = self._profile_from_ui()
+        if profile is None:
+            return
+        name = simpledialog.askstring("Save Profile", "Profile name:")
+        name = name.strip() if name else ""
+        if not name:
+            return
+        if self.preset_manager.has_profile(name) and not messagebox.askyesno(
+            "Save Profile", f"Replace the existing profile '{name}'?"
+        ):
+            return
+        if self.preset_manager.save_profile(name, profile):
+            self.update_preset_list()
+            self.preset_var.set(name)
+            self.preset_summary_var.set(describe_profile(profile))
+            self._set_status_message(f"Saved profile '{name}'")
+        else:
+            messagebox.showerror("Error", "Failed to save the profile")
 
     def delete_preset(self) -> None:
         """Delete the selected coordinate preset."""
         preset_name = self.preset_var.get()
         if not preset_name:
-            messagebox.showwarning("Delete Preset", "Select a preset to delete.")
+            messagebox.showwarning("Delete Profile", "Select a profile to delete.")
             return
-        if not messagebox.askokcancel("Delete Preset", f"Delete preset '{preset_name}'?"):
+        if not messagebox.askokcancel("Delete Profile", f"Delete profile '{preset_name}'?"):
             return
         if self.preset_manager.delete_preset(preset_name):
             self.update_preset_list()
             self.preset_var.set("")
-            self._set_status_message(f"Deleted preset '{preset_name}'")
+            self.preset_summary_var.set("")
+            self._set_status_message(f"Deleted profile '{preset_name}'")
         else:
-            messagebox.showerror("Error", "Failed to delete preset")
+            messagebox.showerror("Error", "Failed to delete the profile")
 
     def load_preset(self, event=None) -> None:
-        """Load selected preset."""
-        preset_name = self.preset_var.get()
-        coords = self.preset_manager.load_preset(preset_name)
-        if coords:
-            x, y = coords
-            self.x_entry.delete(0, tk.END)
-            self.x_entry.insert(0, str(x))
-            self.y_entry.delete(0, tk.END)
-            self.y_entry.insert(0, str(y))
+        """Apply the selected profile to the form (only the settings it stores)."""
+        profile = self.preset_manager.load_profile(self.preset_var.get())
+        if profile is None:
+            return
+
+        def put(entry: ttk.Entry, value) -> None:
+            state = str(entry.cget("state"))
+            entry.configure(state=tk.NORMAL)
+            entry.delete(0, tk.END)
+            entry.insert(0, str(value))
+            entry.configure(state=state)
+
+        put(self.x_entry, profile["x"])
+        put(self.y_entry, profile["y"])
+        entries = {
+            "interval": self.interval_entry,
+            "variation": self.variation_entry,
+            "burst_clicks": self.burst_clicks_entry,
+            "burst_pause": self.burst_pause_entry,
+            "auto_stop_minutes": self.auto_stop_entry,
+        }
+        for key, entry in entries.items():
+            if key in profile:
+                put(entry, profile[key])
+        variables = {
+            "interval_unit": self.interval_unit_var,
+            "mouse_button": self.button_var,
+            "click_type": self.click_type_var,
+        }
+        for key, var in variables.items():
+            if key in profile:
+                var.set(profile[key])
+        if "max_clicks" in profile:
+            limited = int(profile["max_clicks"]) > 0
+            self.limit_clicks_var.set(limited)
+            if limited:
+                put(self.max_clicks_entry, profile["max_clicks"])
+            self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
+        if profile.get("target_mode") in ("fixed", "cursor"):
+            self.target_mode_var.set(profile["target_mode"])
+            self._apply_target_mode_state()
+        self.preset_summary_var.set(describe_profile(profile))
+
+    def export_profiles(self) -> None:
+        """Save every profile to a JSON file."""
+        if not self.preset_manager.get_preset_names():
+            messagebox.showinfo("Export Profiles", "There are no profiles to export yet.")
+            return
+        path = filedialog.asksaveasfilename(
+            title="Export Profiles",
+            defaultextension=".json",
+            initialfile="autoclicker-profiles.json",
+            filetypes=[("Profiles", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            count = self.preset_manager.export_profiles(path)
+        except OSError as e:
+            messagebox.showerror("Export Profiles", f"Could not write the file: {e}")
+            return
+        self._set_status_message(f"Exported {count} profile{'s' if count != 1 else ''}")
+
+    def import_profiles(self) -> None:
+        """Add profiles from a file exported by this app."""
+        path = filedialog.askopenfilename(
+            title="Import Profiles",
+            filetypes=[("Profiles", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            profiles = self.preset_manager.read_profiles_file(path)
+        except ValueError as e:
+            messagebox.showerror("Import Profiles", str(e))
+            return
+        clashes = [name for name in profiles if self.preset_manager.has_profile(name)]
+        replace = bool(clashes) and messagebox.askyesno(
+            "Import Profiles",
+            "These profiles already exist:\n\n"
+            + "\n".join(clashes)
+            + "\n\nReplace them with the imported ones?",
+        )
+        result = self.preset_manager.import_profiles(profiles, replace_existing=replace)
+        self.update_preset_list()
+        lines = [f"Added {len(result.added)}, replaced {len(result.replaced)}."]
+        if result.skipped:
+            lines.append(f"Kept existing: {', '.join(result.skipped)}.")
+        if result.invalid:
+            lines.append(f"Skipped invalid: {', '.join(result.invalid)}.")
+        messagebox.showinfo("Import Profiles", "\n".join(lines))
 
     def update_preset_list(self) -> None:
         """Update preset combobox with current presets."""

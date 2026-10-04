@@ -72,7 +72,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 2. **GUI:** Sections bind Tk widgets; `AutoclickerController` validates and starts/stops clicking.
 3. **Click engine:** Coordinates, interval, burst, safety limits; `pyautogui` with `PAUSE=0`. Waits use `_stop_event.wait`.
 4. **Session log:** Start/stop/safety events appended under AppData.
-5. **Pick Location:** `gui/picker.py` shows a borderless, topmost, translucent Tk overlay over the whole virtual desktop. The pick click lands on the overlay (never on the app underneath); Esc or right-click cancels. It runs entirely on the Tk thread. Presets live in `utils/coordinate_picker.py` (`PresetManager`).
+5. **Pick Location:** `gui/picker.py` shows a borderless, topmost, translucent Tk overlay over the whole virtual desktop. The pick click lands on the overlay (never on the app underneath); Esc or right-click cancels. It runs entirely on the Tk thread. Profiles (stored under the `presets` setting) live in `utils/coordinate_picker.py` (`PresetManager`), including JSON import/export.
 
 ## External dependencies
 

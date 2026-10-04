@@ -491,3 +491,85 @@ class TestStartCountdown(GuiHarness):
         self.assertFalse(app.click_engine.is_running)
         self.assertEqual(app.status_var.get(), "Not started")
         self.assertIn(call(state="normal"), app.start_btn.config.call_args_list[seen:])
+
+
+class TestProfilesUi(GuiHarness):
+    """#73: profiles restore the click settings, ask before overwriting, import and export."""
+
+    def setUp(self):
+        super().setUp()
+        self.filedialog = self.stack.enter_context(patch("autoclicker.gui.main_window.filedialog"))
+
+    def test_save_and_load_restores_settings(self):
+        app = self.app
+        self.set_fields(x="640", y="480", interval="250", variation="20")
+        app.button_var.set("right")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="300")
+        self.simpledialog.askstring.return_value = "Work"
+        app.save_preset()
+        self.assertIn("(640, 480)", app.preset_summary_var.get())
+
+        # Change everything, then load the profile back
+        self.set_fields(x="1", y="1", interval="999", variation="0")
+        app.button_var.set("left")
+        app.limit_clicks_var.set(False)
+        app.preset_var.set("Work")
+        app.load_preset()
+        self.assertEqual(app.x_entry.get(), "640")
+        self.assertEqual(app.interval_entry.get(), "250")
+        self.assertEqual(app.variation_entry.get(), "20")
+        self.assertEqual(app.button_var.get(), "right")
+        self.assertTrue(app.limit_clicks_var.get())
+        self.assertEqual(app.max_clicks_entry.get(), "300")
+
+    def test_overwrite_asks_first(self):
+        app = self.app
+        self.simpledialog.askstring.return_value = "Spot"
+        app.save_preset()
+        self.set_fields(x="900")
+        self.messagebox.askyesno.return_value = False
+        app.save_preset()
+        self.messagebox.askyesno.assert_called_once()
+        self.assertEqual(app.preset_manager.load_preset("Spot"), (100, 100))
+
+    def test_invalid_form_is_not_saved(self):
+        app = self.app
+        self.set_fields(interval="soon")
+        app.save_preset()
+        self.simpledialog.askstring.assert_not_called()
+        self.messagebox.showerror.assert_called_once()
+
+    def test_cursor_profile_switches_mode(self):
+        app = self.app
+        app.target_mode_var.set("cursor")
+        self.simpledialog.askstring.return_value = "Hover"
+        app.save_preset()
+        app.target_mode_var.set("fixed")
+        app.preset_var.set("Hover")
+        app.load_preset()
+        self.assertEqual(app.target_mode_var.get(), "cursor")
+        self.assertEqual(app.x_entry.cget("state"), "disabled")
+
+    def test_export_and_import(self):
+        app = self.app
+        self.simpledialog.askstring.return_value = "Spot"
+        app.save_preset()
+        out = str(Path(self._tmp.name, "profiles.json"))
+        self.filedialog.asksaveasfilename.return_value = out
+        app.export_profiles()
+        self.assertTrue(Path(out).exists())
+
+        app.preset_manager.delete_preset("Spot")
+        self.filedialog.askopenfilename.return_value = out
+        app.import_profiles()
+        self.assertEqual(app.preset_manager.get_preset_names(), ["Spot"])
+        self.assertIn("Added 1", self.messagebox.showinfo.call_args.args[1])
+
+    def test_import_of_a_foreign_file_is_reported(self):
+        app = self.app
+        bad = Path(self._tmp.name, "bad.json")
+        bad.write_text("[]", encoding="utf-8")
+        self.filedialog.askopenfilename.return_value = str(bad)
+        app.import_profiles()
+        self.messagebox.showerror.assert_called_once()

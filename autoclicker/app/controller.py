@@ -78,11 +78,20 @@ class AutoclickerController:
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
         }
 
+    def validate(
+        self, raw_settings: dict[str, Any], screen_bounds: ScreenBounds | None = None
+    ) -> dict[str, Any]:
+        """Parse and validate raw UI settings without starting anything.
+
+        Returns ``{"valid", "errors", "sanitized_settings"}``.
+        """
+        return self._validate(raw_settings, self.settings, screen_bounds)
+
     def validation_errors(
         self, raw_settings: dict[str, Any], screen_bounds: ScreenBounds | None = None
     ) -> dict[str, str]:
         """Validation errors for raw UI settings, without starting anything."""
-        result = self._validate(raw_settings, self.settings, screen_bounds)
+        result = self.validate(raw_settings, screen_bounds)
         return {} if result["valid"] else dict(result["errors"])
 
     def validate_and_start_clicking(
