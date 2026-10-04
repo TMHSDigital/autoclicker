@@ -36,6 +36,7 @@ built around safety stops that are on by default.
 <br />
 <br />
 
+[Why this one](#why-this-one) ·
 [Quick start](#quick-start) ·
 [Features](#features) ·
 [How timing works](#how-timing-works) ·
@@ -83,6 +84,13 @@ built around safety stops that are on by default.
     </td>
   </tr>
 </table>
+
+## Why this one
+
+- **Stops when you need it to.** Corner failsafe on every monitor, an emergency key, click and time limits, a runaway-speed guard, pause when your target window loses focus, and an optional "only while this pixel matches" check. All on by default where it makes sense, and a held button is always released.
+- **Builds you can check.** Every release is built by GitHub Actions from this repository and ships with a SHA-256 checksum and a build provenance attestation. The source is right here to read.
+- **Quiet on your system.** One `.exe`: no installer, no ads, no bundled offers. Hotkeys use Windows `RegisterHotKey` instead of a system-wide keyboard hook, and the app makes no network requests unless you turn on the daily update check.
+- **More than one spot.** Click sequences, hold and key actions, profiles you can export and share, and a command line with a headless mode for scripts and shortcuts.
 
 ## Quick start
 
