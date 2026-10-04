@@ -168,7 +168,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
     <td width="50%" valign="top">
       <b>Stop it yourself</b>
       <ul>
-        <li><b>Corner failsafe</b> (on by default): slam the mouse into a screen corner to abort. Turning it off asks for confirmation.</li>
+        <li><b>Corner failsafe</b> (on by default): slam the mouse into a corner of any monitor to abort; checked before every click. Corners where two screens meet don't count, so moving between monitors is safe. Turning it off asks for confirmation.</li>
         <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
         <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (Advanced, on by default); double-click the icon to bring it back.</li>
       </ul>
@@ -190,7 +190,6 @@ An autoclicker that won't stop is worse than none, so every run has more than on
 
 ### Known limitations
 
-- The corner failsafe watches the corners of the **primary monitor** only. On other monitors, use <kbd>Esc</kbd> or <kbd>F7</kbd> to stop.
 - Windows blocks input from normal apps into **elevated (admin) windows**. To click into one, run the autoclicker as administrator too; otherwise there's no need to.
 
 ## Settings and logs

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -74,3 +75,52 @@ def virtual_screen_bounds(primary_size: Callable[[], tuple[int, int]]) -> Screen
         return bounds
     width, height = primary_size()
     return ScreenBounds(0, 0, int(width), int(height))
+
+
+def monitor_rects() -> list[ScreenBounds]:
+    """One rectangle per monitor, or an empty list if they cannot be listed."""
+    try:
+        import win32api
+
+        return [
+            ScreenBounds(left, top, right - left, bottom - top)
+            for _monitor, _dc, (left, top, right, bottom) in win32api.EnumDisplayMonitors()
+        ]
+    except Exception:
+        return []
+
+
+def failsafe_corners(monitors: list[ScreenBounds]) -> frozenset[tuple[int, int]]:
+    """Corner pixels where a cursor slammed into the corner comes to rest.
+
+    A monitor corner counts only when the desktop ends on both of its outer
+    sides. A corner that touches a neighbouring monitor is not one: the cursor
+    slides through it onto the other screen, and moving between screens must
+    never trip the failsafe.
+    """
+    corners: set[tuple[int, int]] = set()
+    for rect in monitors:
+        for cx, cy, dx, dy in (
+            (rect.left, rect.top, -1, -1),
+            (rect.right - 1, rect.top, 1, -1),
+            (rect.left, rect.bottom - 1, -1, 1),
+            (rect.right - 1, rect.bottom - 1, 1, 1),
+        ):
+            beyond = ((cx + dx, cy), (cx, cy + dy))
+            if not any(m.contains(px, py) for m in monitors for px, py in beyond):
+                corners.add((cx, cy))
+    return frozenset(corners)
+
+
+def cursor_position() -> tuple[int, int] | None:
+    """Current cursor position in screen pixels, or None if it cannot be read."""
+    windll = getattr(ctypes, "windll", None)
+    if windll is None:
+        return None
+    try:
+        point = ctypes.wintypes.POINT()
+        if not windll.user32.GetCursorPos(ctypes.byref(point)):
+            return None
+    except Exception:
+        return None
+    return int(point.x), int(point.y)

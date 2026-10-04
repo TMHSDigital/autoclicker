@@ -19,3 +19,9 @@ def _primary_screen_only(monkeypatch):
     ``_query_virtual_screen`` themselves.
     """
     monkeypatch.setattr("autoclicker.core.screen._query_virtual_screen", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _cursor_away_from_corners(monkeypatch):
+    """The real cursor may rest in a corner of the host; tests that need it patch this."""
+    monkeypatch.setattr("autoclicker.core.click_engine.cursor_position", lambda: None)

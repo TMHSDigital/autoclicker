@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The corner failsafe works on every monitor, not just the primary one. Corners where two screens meet are ignored, so moving between monitors never stops a run (#66).
 - An unreadable settings file (for example after a hand edit with a typo) is moved aside as `autoclicker_settings.json.corrupt-<time>` and the status bar says so, instead of being overwritten by defaults on the next save and losing presets and hotkeys. Individual values of the wrong type fall back to their defaults without affecting the rest (#65).
 - The runaway guard counts both presses of a double click, so Double can no longer run at twice the limit, and ceilings above 1,023 clicks per second can now actually trip (#64).
 - Pause when unfocused no longer stalls after one click when a run is started with the Start button or the tray menu. It used to remember the autoclicker's own window as the one that must stay in front; it now uses the window under the target (or, in cursor mode, the next window you bring to the front). While paused, the status bar and tray tooltip say so instead of "Running..." (#63).

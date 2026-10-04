@@ -27,7 +27,13 @@ from .safety import (
     is_own_window,
     root_window_at,
 )
-from .screen import ScreenBounds, virtual_screen_bounds
+from .screen import (
+    ScreenBounds,
+    cursor_position,
+    failsafe_corners,
+    monitor_rects,
+    virtual_screen_bounds,
+)
 from .settings_manager import MAX_CPS_CEILING
 
 # Default PAUSE is 0.1s between every PyAutoGUI call, which caps CPS at about 5 to 10
@@ -35,6 +41,9 @@ pyautogui.PAUSE = 0
 apply_failsafe(True)
 
 _log = logging.getLogger(__name__)
+
+# How close (in pixels) to a monitor corner counts as "in the corner".
+_CORNER_MARGIN = 2
 
 # Why a run ended. Exactly one is reported per run via RunOutcome.
 STOP_COMPLETED = "completed"  # max clicks or auto-stop limit reached
@@ -90,6 +99,9 @@ class ClickEngine:
         self._screen_bounds: ScreenBounds | None = None
 
         self.failsafe_enabled = True
+        # Corner pixels of every monitor that abort a run (PyAutoGUI's own
+        # failsafe only watches the primary monitor). Empty = not checked.
+        self._failsafe_corners: frozenset[tuple[int, int]] = frozenset()
         self.max_cps_ceiling = 50
         self.pause_when_unfocused = False
         # Window that must stay in front while pause_when_unfocused is on.
@@ -113,6 +125,12 @@ class ClickEngine:
         self.max_cps_ceiling = max(0, int(max_cps))
         self.pause_when_unfocused = pause_when_unfocused
         apply_failsafe(failsafe)
+        self._refresh_failsafe_corners()
+
+    def _refresh_failsafe_corners(self) -> None:
+        self._failsafe_corners = (
+            failsafe_corners(monitor_rects()) if self.failsafe_enabled else frozenset()
+        )
 
     def start_clicking(
         self,
@@ -171,6 +189,7 @@ class ClickEngine:
         self._stop_event.clear()
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
+        self._refresh_failsafe_corners()  # the monitor layout may have changed
 
         self.click_thread = threading.Thread(
             target=self._click_loop,
@@ -444,6 +463,9 @@ class ClickEngine:
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
+            if self._cursor_in_failsafe_corner(x, y):
+                raise SafetyError("fail_safe", "detected", "Mouse moved to a screen corner")
+
             # Cursor mode (x and y are None): click wherever the cursor is.
             position: dict[str, int] = {}
             if x is not None and y is not None:
@@ -517,6 +539,20 @@ class ClickEngine:
                 self.performance_metrics["click_error_count"] += 1
             # Wrap unexpected errors
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
+
+    def _cursor_in_failsafe_corner(self, x: int | None, y: int | None) -> bool:
+        """True if the user has moved the cursor into a failsafe corner of any monitor."""
+        if not self.failsafe_enabled or not self._failsafe_corners:
+            return False
+        position = cursor_position()
+        # Resting on a fixed target that happens to be a corner is not a request to stop.
+        if position is None or position == (x, y):
+            return False
+        px, py = position
+        return any(
+            abs(px - cx) <= _CORNER_MARGIN and abs(py - cy) <= _CORNER_MARGIN
+            for cx, cy in self._failsafe_corners
+        )
 
     def _record_timing_sample(self, sample: float) -> None:
         """Update Welford running mean/variance for click timings."""
