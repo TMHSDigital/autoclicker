@@ -373,11 +373,28 @@ class TestMainImport(unittest.TestCase):
     def test_main_starts_app(self):
         from autoclicker import main as main_mod
 
-        with patch.object(main_mod, "AutoclickerApp") as mock_app_cls:
+        with (
+            patch.object(main_mod, "AutoclickerApp") as mock_app_cls,
+            patch.object(main_mod, "SingleInstance") as mock_instance_cls,
+        ):
+            mock_instance_cls.return_value.acquire.return_value = True
             mock_app = MagicMock()
             mock_app_cls.return_value = mock_app
             main_mod.main()
             mock_app.run.assert_called_once()
+            mock_instance_cls.return_value.watch.assert_called_once()
+
+    def test_second_instance_signals_and_exits(self):
+        from autoclicker import main as main_mod
+
+        with (
+            patch.object(main_mod, "AutoclickerApp") as mock_app_cls,
+            patch.object(main_mod, "SingleInstance") as mock_instance_cls,
+        ):
+            mock_instance_cls.return_value.acquire.return_value = False
+            main_mod.main()
+            mock_instance_cls.return_value.signal_existing.assert_called_once()
+            mock_app_cls.assert_not_called()
 
 
 class TestCursorMode(unittest.TestCase):
