@@ -75,6 +75,33 @@ class ClickStep:
     delay_ms: float = 0.0
 
 
+@dataclass(frozen=True)
+class PixelCondition:
+    """Click only while the pixel at (x, y) is within ``tolerance`` of ``rgb``.
+
+    ``on_mismatch`` is "wait" (pause until it matches again) or "stop".
+    """
+
+    x: int
+    y: int
+    rgb: tuple[int, int, int]
+    tolerance: int = 16
+    on_mismatch: str = "wait"
+
+    def matches(self, rgb: tuple[int, int, int]) -> bool:
+        return all(abs(a - b) <= self.tolerance for a, b in zip(rgb, self.rgb, strict=True))
+
+
+# A screen read waits for the next composed frame (~17 ms at 60 Hz), so the
+# watched pixel is polled on its own thread at this interval instead of on the
+# click thread; the click loop only reads the latest result.
+_CONDITION_POLL_SECONDS = 0.05
+# How often a run waiting on the pixel re-checks it.
+_CONDITION_WAIT_SECONDS = 0.02
+PAUSE_FOCUS = "the target window to be in front"
+PAUSE_PIXEL = "the watched pixel to match"
+
+
 @dataclass
 class ClickStats:
     """Per-run click outcomes and timing, updated in O(1) per click.
@@ -142,6 +169,11 @@ class ClickEngine:
         # None during a run means "adopt the next window in front that isn't ours".
         self._foreground_hwnd: int | None = None
         self.is_paused = False
+        self.pause_reason = ""  # what a paused run waits for (PAUSE_FOCUS / PAUSE_PIXEL)
+        self._condition: PixelCondition | None = None
+        # Latest pixel reading for this run: True/False, or None before the first read.
+        self._condition_state: bool | None = None
+        self._run_id = 0  # lets a stale pixel watcher from an earlier run notice and exit
         self._safety_fired = False
         # Sequence mode: the steps of one round and how many rounds to run
         # (0 = until stopped). Empty means a normal single-target run.
@@ -195,6 +227,7 @@ class ClickEngine:
         action: str = "click",
         hold_ms: float = 0.0,
         key: str = "",
+        condition: PixelCondition | None = None,
     ) -> bool:
         """
         Start the clicking process
@@ -219,6 +252,7 @@ class ClickEngine:
             action: "click", "hold" (press mouse_button for ``hold_ms``, then
                 release; released on every stop path) or "key" (press ``key``,
                 such as "f5" or "ctrl+r", wherever the focus is)
+            condition: Only click while this pixel condition holds
 
         Returns:
             True if started successfully, False otherwise
@@ -235,6 +269,8 @@ class ClickEngine:
         self._action = "click" if self._steps else action
         self._hold_ms = max(0.0, float(hold_ms))
         self._key = key
+        self._condition = condition
+        self._condition_state = None
         self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
@@ -258,6 +294,14 @@ class ClickEngine:
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
         self._refresh_failsafe_corners()  # the monitor layout may have changed
+        self._run_id += 1
+        if condition is not None:
+            threading.Thread(
+                target=self._watch_condition,
+                args=(condition, self._run_id),
+                daemon=True,
+                name="PixelWatch",
+            ).start()
 
         self.click_thread = threading.Thread(
             target=self._click_loop,
@@ -366,6 +410,13 @@ class ClickEngine:
                     self._set_stop_reason(STOP_COMPLETED, limit_message)
                     break
 
+                verdict = self._check_condition()
+                if verdict == "stop":
+                    break
+                if verdict == "wait":
+                    self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
+                    continue
+
                 # Perform clicks
                 if self._steps:
                     if not self._perform_sequence(max_clicks, auto_stop_minutes):
@@ -437,7 +488,45 @@ class ClickEngine:
         else:
             paused = not is_foreground_window(self._foreground_hwnd)
         self.is_paused = paused
+        if paused:
+            self.pause_reason = PAUSE_FOCUS
         return paused
+
+    def _check_condition(self) -> str:
+        """Return "go", "wait" or "stop" for the pixel condition (records a stop reason).
+
+        Before the first reading arrives the run waits, whatever the mode.
+        """
+        condition = self._condition
+        if condition is None:
+            return "go"
+        state = self._condition_state
+        if state is True:
+            self.is_paused = False
+            return "go"
+        if state is False and condition.on_mismatch == "stop":
+            self._set_stop_reason(STOP_COMPLETED, "Stopped: the watched pixel changed")
+            return "stop"
+        self.is_paused = True
+        self.pause_reason = PAUSE_PIXEL
+        return "wait"
+
+    def _watch_condition(self, condition: PixelCondition, run_id: int) -> None:
+        """(PixelWatch thread) keep _condition_state current until this run ends."""
+        while run_id == self._run_id and self.is_running and not self._stop_event.is_set():
+            state = self._read_condition(condition)
+            if run_id != self._run_id:
+                return
+            self._condition_state = state
+            self._stop_event.wait(timeout=_CONDITION_POLL_SECONDS)
+
+    @staticmethod
+    def _read_condition(condition: PixelCondition) -> bool:
+        try:
+            rgb = tuple(pyautogui.pixel(condition.x, condition.y))[:3]
+            return condition.matches((int(rgb[0]), int(rgb[1]), int(rgb[2])))
+        except Exception:
+            return False  # can't read the screen: don't click (fail closed)
 
     def _check_runaway_cps(self) -> bool:
         """Detect runaway click rate using a sliding 1-second window.
@@ -496,6 +585,15 @@ class ClickEngine:
             limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
             if limit_message:
                 self._set_stop_reason(STOP_COMPLETED, limit_message)
+                return False
+            while (verdict := self._check_condition()) == "wait":
+                if self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS):
+                    return False
+                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
+                if limit_message:
+                    self._set_stop_reason(STOP_COMPLETED, limit_message)
+                    return False
+            if verdict == "stop":
                 return False
 
             self.current_step = index

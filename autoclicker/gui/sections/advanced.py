@@ -85,8 +85,40 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
         side=tk.LEFT, padx=(5, 0)
     )
 
+    # Only click while a pixel shows an expected color.
+    ttk.Label(body, text="Only when:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
+    cond_frame = ttk.Frame(body)
+    cond_frame.grid(row=4, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    saved = settings.get("condition", "none")
+    app.condition_var = tk.StringVar(value=saved if saved in ("none", "wait", "stop") else "none")
+    ttk.Combobox(
+        cond_frame,
+        textvariable=app.condition_var,
+        values=["none", "wait", "stop"],
+        width=6,
+        state="readonly",
+    ).pack(side=tk.LEFT)
+    app.condition_var.trace_add("write", lambda *_: app._refresh_condition_label())
+    app.condition_label_var = tk.StringVar(value="")
+    ttk.Label(cond_frame, textvariable=app.condition_label_var).pack(side=tk.LEFT, padx=(6, 6))
+    app.condition_swatch = tk.Label(cond_frame, width=2, relief="solid", borderwidth=1)
+    app.condition_swatch.pack(side=tk.LEFT)
+    ttk.Label(cond_frame, text="\u00b1").pack(side=tk.LEFT, padx=(6, 0))
+    app.condition_tolerance_entry = ttk.Entry(cond_frame, width=4)
+    app.condition_tolerance_entry.pack(side=tk.LEFT)
+    app.condition_tolerance_entry.insert(0, str(settings.get("condition_tolerance", "16")))
+    ttk.Button(
+        cond_frame, text="Sample\u2026", style="Toolbutton", command=app.sample_condition_pixel
+    ).pack(side=tk.LEFT, padx=(6, 0))
+    app.condition_point = (
+        settings.get("condition_x", 0),
+        settings.get("condition_y", 0),
+        str(settings.get("condition_color", "#000000")),
+    )
+    app._refresh_condition_label()
+
     toggles_frame = ttk.Frame(body)
-    toggles_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
+    toggles_frame.grid(row=5, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
 
     app.failsafe_var = tk.BooleanVar(value=settings.get("enable_failsafe", True))
     ttk.Checkbutton(

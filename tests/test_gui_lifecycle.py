@@ -128,6 +128,7 @@ class GuiHarness(unittest.TestCase):
         p(patch("tkinter.BooleanVar", FakeVar))
         p(patch("tkinter.Canvas", MagicMock()))
         p(patch("tkinter.Listbox", MagicMock()))
+        p(patch("tkinter.Label", MagicMock()))
         for name in (
             "Frame",
             "LabelFrame",
@@ -697,3 +698,40 @@ class TestKeyTargetSummary(GuiHarness):
         app.action_var.set("key")
         app._apply_action_state()
         self.assertEqual(app.coord_var.get(), "Target: the focused window (press f5)")
+
+
+class TestConditionUi(GuiHarness):
+    """#80: sample a pixel's color, then the run only clicks while it matches."""
+
+    def test_sample_then_run(self):
+        app = self.app
+        self.assertEqual(app.condition_label_var.get(), "off")
+        app.sample_condition_pixel()
+        on_selected = self.picker_cls.return_value.start_picking.call_args.kwargs["on_selected"]
+        with patch.object(app.root, "after") as after:
+            on_selected(300, 400)
+        delay, read, *args = after.call_args.args
+        self.assertEqual(delay, 200)  # waits for the overlay to repaint away
+        with patch("pyautogui.pixel", return_value=(0, 200, 0)):
+            read(*args)
+        self.assertEqual(app.condition_point, (300, 400, "#00c800"))
+        self.assertEqual(app.condition_var.get(), "wait")
+        self.assertIn("(300, 400)", app.condition_label_var.get())
+        self.assertEqual(app.settings.get("condition_color"), "#00c800")
+
+        self.pyautogui.pixel.return_value = (0, 200, 0)
+        self.set_fields(interval="0")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        app.start_clicking()
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+        self.pyautogui.pixel.assert_called_with(300, 400)
+
+    def test_paused_for_pixel_shows_the_reason(self):
+        app = self.app
+        app.click_engine.pause_reason = "the watched pixel to match"
+        app._show_pause_state(True)
+        self.assertEqual(app.status_var.get(), "Paused: waiting for the watched pixel to match")
+        app._show_pause_state(False)
+        self.assertEqual(app.status_var.get(), "Running...")

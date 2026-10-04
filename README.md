@@ -216,6 +216,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
         <li><b>Limit clicks</b>: stop after N clicks (Advanced).</li>
         <li><b>Auto-stop</b>: stop after N minutes (Advanced).</li>
         <li><b>Runaway guard</b>: stops if more than 50 button presses land in any one second (a double click is two). Change it under <b>Advanced, Speed limit</b>; 0 turns it off after a confirmation.</li>
+        <li><b>Only when a pixel matches</b> (Advanced, Only when): <b>Sample...</b> a point's color, then clicking waits (or stops) whenever that pixel changes, so a run doesn't keep clicking after the window it was meant for closes or moves.</li>
         <li><b>Pause when unfocused</b>: pauses whenever the target window isn't in front, and the status bar shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button (in cursor mode, the next window you bring to the front). Paused time counts toward auto-stop. Refuses to start if it can't read the foreground window.</li>
       </ul>
     </td>
@@ -262,6 +263,8 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `action` | `"click"` | `"click"`; `"hold"` presses the button for `hold_ms`, then releases it (always released when a run stops); `"key"` presses `key` in whatever window has focus. Sequences always click |
 | `hold_ms` | `500` | Hold time in milliseconds, 1 to 60 000 |
 | `key` | `""` | Key or combo for the Key action, e.g. `"f5"`, `"space"`, `"ctrl+r"`; can't be one of the app's own hotkeys |
+| `condition` | `"none"` | `"wait"` pauses and `"stop"` ends the run while the pixel at `condition_x`, `condition_y` isn't `condition_color` (within `condition_tolerance` per channel); `"none"` turns it off |
+| `condition_x`, `condition_y`, `condition_color`, `condition_tolerance` | `0`, `0`, `"#000000"`, `16` | The watched pixel, its expected color, and how far each RGB channel may differ (0 to 255) |
 | `burst_clicks` | `1` | Clicks per burst |
 | `burst_pause` | `1000` | Milliseconds between clicks inside a burst |
 | `max_clicks` | `0` | Stop after this many clicks; `0` = no limit |

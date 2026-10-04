@@ -23,7 +23,13 @@ from ..app.hotkeys import (
     validate_bindings,
 )
 from ..app.tray import create_tray_icon
-from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutcome
+from ..core.click_engine import (
+    PAUSE_FOCUS,
+    STOP_EMERGENCY,
+    STOP_ERROR,
+    STOP_SAFETY,
+    RunOutcome,
+)
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
@@ -63,6 +69,12 @@ class AutoclickerApp:
     action_var: tk.StringVar
     hold_entry: ttk.Entry
     key_entry: ttk.Entry
+    condition_var: tk.StringVar
+    condition_label_var: tk.StringVar
+    condition_swatch: tk.Label
+    condition_tolerance_entry: ttk.Entry
+    # (x, y, "#rrggbb") of the watched pixel
+    condition_point: tuple
     interval_entry: ttk.Entry
     interval_unit_var: tk.StringVar
     variation_entry: ttk.Entry
@@ -97,6 +109,8 @@ class AutoclickerApp:
     _countdown_job: str | None = None
     # Release page of a newer version found by the update check.
     _release_url: str | None = None
+    # Pause reason the status line currently shows; None while running normally.
+    _shown_paused: str | None = None
 
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -458,6 +472,52 @@ class AutoclickerApp:
         del self.sequence_steps[index]
         self._sequence_changed(select=min(index, len(self.sequence_steps) - 1))
 
+    # -- pixel condition -----------------------------------------------------
+
+    _CONDITION_TEXT = {
+        "none": "off",
+        "wait": "wait until ({x}, {y}) is",
+        "stop": "stop when ({x}, {y}) isn't",
+    }
+
+    def _refresh_condition_label(self) -> None:
+        x, y, color = self.condition_point
+        template = self._CONDITION_TEXT.get(self.condition_var.get(), "off")
+        self.condition_label_var.set(template.format(x=x, y=y))
+        try:
+            self.condition_swatch.configure(background=color)
+        except Exception:
+            pass
+
+    def sample_condition_pixel(self) -> None:
+        """Pick a point, then read its color once the overlay is gone."""
+        self.start_coordinate_picker(on_selected=self._on_condition_point_picked)
+
+    def _on_condition_point_picked(self, x: int, y: int) -> None:
+        # The overlay was just destroyed; give the screen a moment to repaint
+        # before reading the pixel, and keep our window hidden until then.
+        self.root.after(200, self._read_condition_pixel, x, y)
+
+    def _read_condition_pixel(self, x: int, y: int) -> None:
+        import pyautogui
+
+        try:
+            r, g, b = tuple(pyautogui.pixel(x, y))[:3]
+        except Exception as e:
+            self.show_window()
+            self._apply_target_mode_state()
+            self._set_status_message(f"Could not read that pixel: {e}", "error")
+            return
+        color = f"#{int(r):02x}{int(g):02x}{int(b):02x}"
+        self.condition_point = (x, y, color)
+        if self.condition_var.get() == "none":
+            self.condition_var.set("wait")
+        self._refresh_condition_label()
+        self.settings.update({"condition_x": x, "condition_y": y, "condition_color": color})
+        self.show_window()
+        self._apply_target_mode_state()
+        self._set_status_message(f"Watching ({x}, {y}) for {color}", "alert")
+
     def _apply_action_state(self) -> None:
         """Enable the hold time only for Hold and the key only for Key."""
         action = self.action_var.get()
@@ -625,6 +685,17 @@ class AutoclickerApp:
             if limited:
                 put(self.max_clicks_entry, values["max_clicks"])
             self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
+        if "condition_tolerance" in values:
+            put(self.condition_tolerance_entry, values["condition_tolerance"])
+        if all(k in values for k in ("condition_x", "condition_y", "condition_color")):
+            self.condition_point = (
+                values["condition_x"],
+                values["condition_y"],
+                str(values["condition_color"]),
+            )
+        if values.get("condition") in ("none", "wait", "stop"):
+            self.condition_var.set(values["condition"])
+        self._refresh_condition_label()
         if isinstance(values.get("sequence"), list):
             self.sequence_steps = [dict(step) for step in values["sequence"]]
             self._refresh_sequence_list()
@@ -712,6 +783,11 @@ class AutoclickerApp:
                 "action": self.action_var.get(),
                 "hold_ms": self.hold_entry.get(),
                 "key": self.key_entry.get(),
+                "condition": self.condition_var.get(),
+                "condition_x": self.condition_point[0],
+                "condition_y": self.condition_point[1],
+                "condition_color": self.condition_point[2],
+                "condition_tolerance": self.condition_tolerance_entry.get(),
             }
         )
 
@@ -816,7 +892,7 @@ class AutoclickerApp:
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self._set_status_message("Running...", "running")
-                self._shown_paused = False
+                self._shown_paused = None
                 self._hotkeys.set_running(True)
                 self._refresh_target_summary()
                 self._start_status_timer()
@@ -887,14 +963,15 @@ class AutoclickerApp:
             self._status_timer = self.root.after(1000, self._update_status_loop)
 
     def _show_pause_state(self, paused: bool) -> None:
-        """Switch the status line between Running and Paused (pause when unfocused)."""
-        if paused == getattr(self, "_shown_paused", False):
+        """Switch the status line between Running and Paused (focus or pixel condition)."""
+        reason = str(getattr(self.click_engine, "pause_reason", "") or PAUSE_FOCUS)
+        # What the status line shows: the pause reason, or a falsy value while running.
+        shown = reason if paused else None
+        if shown == (getattr(self, "_shown_paused", None) or None):
             return
-        self._shown_paused = paused
+        self._shown_paused = shown
         if paused:
-            self._set_status_message(
-                "Paused: waiting for the target window to be in front", "alert"
-            )
+            self._set_status_message(f"Paused: waiting for {reason}", "alert")
         else:
             self._set_status_message("Running...", "running")
 

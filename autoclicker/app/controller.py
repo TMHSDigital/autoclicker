@@ -10,7 +10,7 @@ from typing import Any
 
 import pyautogui
 
-from ..core.click_engine import ClickEngine, ClickStep, RunOutcome
+from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -30,6 +30,22 @@ class StartClickResult:
     interval_ms: float | None = None
     # True when Start was refused because the previous run is still shutting down
     busy: bool = False
+
+
+def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
+    """The engine's pixel condition from validated settings, or None when off."""
+    on_mismatch = sanitized.get("condition", "none")
+    if on_mismatch not in ("wait", "stop"):
+        return None
+    color = str(sanitized["condition_color"])
+    rgb = (int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16))
+    return PixelCondition(
+        x=int(sanitized["condition_x"]),
+        y=int(sanitized["condition_y"]),
+        rgb=rgb,
+        tolerance=int(sanitized["condition_tolerance"]),
+        on_mismatch=on_mismatch,
+    )
 
 
 def _hotkey_clash(key: str, bindings: Any) -> str | None:
@@ -100,6 +116,11 @@ class AutoclickerController:
             "action": ui_fields.get("action", "click"),
             "hold_ms": ui_fields.get("hold_ms", 500),
             "key": ui_fields.get("key", ""),
+            "condition": ui_fields.get("condition", "none"),
+            "condition_x": ui_fields.get("condition_x", 0),
+            "condition_y": ui_fields.get("condition_y", 0),
+            "condition_color": ui_fields.get("condition_color", "#000000"),
+            "condition_tolerance": ui_fields.get("condition_tolerance", 16),
         }
 
     def validate(
@@ -200,6 +221,7 @@ class AutoclickerController:
             action=action,
             hold_ms=float(sanitized.get("hold_ms", 0) or 0),
             key=str(sanitized.get("key", "")),
+            condition=_pixel_condition(sanitized),
         )
 
         if started:

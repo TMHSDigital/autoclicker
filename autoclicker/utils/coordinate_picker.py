@@ -33,6 +33,11 @@ PROFILE_KEYS = (
     "action",
     "hold_ms",
     "key",
+    "condition",
+    "condition_x",
+    "condition_y",
+    "condition_color",
+    "condition_tolerance",
 )
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
@@ -76,6 +81,11 @@ def describe_profile(profile: dict[str, Any]) -> str:
     max_clicks = profile.get("max_clicks")
     if isinstance(max_clicks, int) and max_clicks > 0:
         parts.append(f"stop after {max_clicks:,} clicks")
+    if profile.get("condition") in ("wait", "stop"):
+        parts.append(
+            f"only while ({profile.get('condition_x')}, {profile.get('condition_y')})"
+            f" is {profile.get('condition_color')}"
+        )
     minutes = profile.get("auto_stop_minutes")
     if isinstance(minutes, int) and minutes > 0:
         parts.append(f"stop after {minutes} min")

@@ -26,6 +26,10 @@ The script prints `cProfile` top functions before/after for comparison.
 | Win32 `SendInput` click-at-point | Deferred: needs guarded fallback and measurable win vs pyautogui with `PAUSE=0`; risk on multi-monitor DPI |
 | Click queue | Removed in 1.5.0: added latency and let clicks continue after Stop (#38) without a measurable throughput win |
 
+## Pixel condition
+
+Reading one screen pixel (`GetPixel`, or a 1x1 `BitBlt`) waits for the next composed frame: about 17 ms at 60 Hz on the dev machine. Doing that on the click thread would stall every click, so the watched pixel is polled on its own `PixelWatch` thread every 50 ms and the click loop only reads the latest result. Clicks may therefore act on a reading up to about 70 ms old.
+
 ## Targets
 
 - Status polling at 1 Hz should not scale with click history length.

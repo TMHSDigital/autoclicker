@@ -9,6 +9,7 @@ import json
 import logging
 import math
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,9 @@ _INT_FIELDS = frozenset(
         "max_cps_ceiling",
         "start_delay_seconds",
         "sequence_repeat",
+        "condition_x",
+        "condition_y",
+        "condition_tolerance",
     }
 )
 _FLOAT_FIELDS = frozenset({"interval", "burst_pause", "hold_ms"})
@@ -44,6 +48,7 @@ _CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
     "interval_unit": ("ms", "seconds"),
     "target_mode": ("fixed", "cursor", "sequence"),
     "action": ("click", "hold", "key"),
+    "condition": ("none", "wait", "stop"),
 }
 
 # Human-readable names for validation error keys, used in error dialogs.
@@ -71,7 +76,14 @@ FIELD_LABELS: dict[str, str] = {
     "action": "Action",
     "hold_ms": "Hold",
     "key": "Key",
+    "condition": "Only when",
+    "condition_x": "Watched pixel X",
+    "condition_y": "Watched pixel Y",
+    "condition_color": "Watched color",
+    "condition_tolerance": "Color tolerance",
 }
+
+_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # Longest mouse-button hold, in milliseconds.
 MAX_HOLD_MS = 60_000
@@ -101,7 +113,7 @@ _STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click typ
 _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
 _LIST_KEYS = frozenset({"sequence"})
-_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key"})
+_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key", "condition_color"})
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
 
@@ -168,6 +180,11 @@ class SettingsManager:
         "action": "click",
         "hold_ms": 500,
         "key": "",
+        "condition": "none",
+        "condition_x": 0,
+        "condition_y": 0,
+        "condition_color": "#000000",
+        "condition_tolerance": 16,
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -528,6 +545,8 @@ class SettingsManager:
             unused.add("key")
         if action != "hold":
             unused.add("hold_ms")
+        if str(settings.get("condition", "none")).strip() == "none":
+            unused |= {"condition_x", "condition_y", "condition_color", "condition_tolerance"}
         for key, value in settings.items():
             if key in unused:
                 continue
@@ -597,6 +616,18 @@ class SettingsManager:
             errors["sequence_repeat"] = (
                 f"Must be between 0 and {MAX_SEQUENCE_REPEAT:,} (0 = until stopped)"
             )
+
+        if parsed.get("condition") in ("wait", "stop"):
+            cx, cy = parsed.get("condition_x"), parsed.get("condition_y")
+            desktop = ScreenBounds(screen_left, screen_top, screen_width, screen_height)
+            if cx is not None and cy is not None and not desktop.contains(cx, cy):
+                errors["condition_x"] = f"({cx}, {cy}) is off screen"
+            color = parsed.get("condition_color")
+            if color is not None and not _COLOR.match(str(color)):
+                errors["condition_color"] = "Must look like #3a7bd5"
+            tolerance = parsed.get("condition_tolerance")
+            if tolerance is not None and not 0 <= tolerance <= 255:
+                errors["condition_tolerance"] = "Must be between 0 and 255"
 
         if parsed.get("action") in ("hold", "key") and mode == "sequence":
             errors["action"] = "Sequences always click; choose Click"
