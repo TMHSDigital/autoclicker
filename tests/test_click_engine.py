@@ -44,7 +44,7 @@ class TestClickEngineLifecycle(unittest.TestCase):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.is_running = True
         engine.click_count = 5
-        engine.start_time = time.time() - 65
+        engine.start_time = time.monotonic() - 65
 
         status = engine.get_status()
         self.assertTrue(status["is_running"])
@@ -155,12 +155,20 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
         engine.click_count = 10
         self.assertTrue(engine._should_stop(10, 0))
 
-    @patch("autoclicker.core.click_engine.time.time")
+    @patch("autoclicker.core.click_engine.time.monotonic")
     def test_should_stop_auto_stop_minutes(self, mock_time):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.start_time = 1000.0
         mock_time.return_value = 1000.0 + 61 * 60
         self.assertTrue(engine._should_stop(0, 1))
+
+    def test_wall_clock_jump_does_not_affect_auto_stop(self):
+        """#52: elapsed time uses a monotonic clock, not the wall clock."""
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.start_time = time.monotonic()
+        with patch("autoclicker.core.click_engine.time.time", return_value=time.time() + 86400):
+            self.assertFalse(engine._should_stop(0, 1))
+            self.assertEqual(engine.get_status()["runtime"], "00:00:00")
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_click_loop_invokes_callbacks(self, mock_pyautogui):
@@ -234,7 +242,7 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
     def test_safety_stop_skips_complete_callback(self):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.is_running = True
-        engine.start_time = time.time()
+        engine.start_time = time.monotonic()
         complete = MagicMock()
         safety = MagicMock()
         engine.on_safety_stop = safety
@@ -269,7 +277,7 @@ class TestClickEnginePerformance(unittest.TestCase):
     def test_performance_metrics_after_clicks(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=True)
-        engine.start_time = time.time()
+        engine.start_time = time.monotonic()
         engine._perform_click(5, 5, "left", "single")
         engine._perform_click(5, 5, "left", "single")
 
@@ -299,7 +307,7 @@ class TestClickEnginePerformance(unittest.TestCase):
     def test_status_includes_performance_when_enabled(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=True)
-        engine.start_time = time.time()
+        engine.start_time = time.monotonic()
         engine._perform_click(1, 1, "left", "single")
         status = engine.get_status()
         self.assertIn("performance", status)

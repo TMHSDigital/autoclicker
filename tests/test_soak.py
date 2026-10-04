@@ -114,13 +114,13 @@ class TestSoakSustainedClicking(unittest.TestCase):
         mock_pyautogui.size.return_value = (1920, 1080)
 
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine.start_time = time.time() - 60.0  # simulate 60s of warm runtime
+        engine.start_time = time.monotonic() - 60.0  # simulate 60s of warm runtime
         engine.click_count = 60  # 1 cps over the last minute
         engine.max_cps_ceiling = 20
 
         # Lifetime avg is 1 cps; old code would return False here even with a
         # huge spike. Fill recent_click_ts with a burst above ceiling.
-        now = time.time()
+        now = time.monotonic()
         for i in range(40):
             engine._recent_click_ts.append(now - 0.5 + i * 0.01)
 

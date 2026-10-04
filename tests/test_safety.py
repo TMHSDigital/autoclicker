@@ -28,7 +28,7 @@ class TestRunawayGuard(unittest.TestCase):
         engine.max_cps_ceiling = 10
         engine.start_time = 1.0
         # 100 click timestamps within the last 1s
-        with patch("autoclicker.core.click_engine.time.time", return_value=2.0):
+        with patch("autoclicker.core.click_engine.time.monotonic", return_value=2.0):
             for i in range(100):
                 engine._recent_click_ts.append(1.0 + i * 0.005)
             self.assertTrue(engine._check_runaway_cps())
@@ -37,7 +37,7 @@ class TestRunawayGuard(unittest.TestCase):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.max_cps_ceiling = 50
         engine.start_time = 1.0
-        with patch("autoclicker.core.click_engine.time.time", return_value=2.0):
+        with patch("autoclicker.core.click_engine.time.monotonic", return_value=2.0):
             for i in range(10):
                 engine._recent_click_ts.append(1.0 + i * 0.1)
             self.assertFalse(engine._check_runaway_cps())

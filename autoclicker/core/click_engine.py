@@ -132,7 +132,7 @@ class ClickEngine:
         self.is_running = True
         self._safety_fired = False
         self.click_count = 0
-        self.start_time = time.time()
+        self.start_time = time.monotonic()
         self._stop_event.clear()
         self._last_click_xy = None
         self._recent_click_ts.clear()
@@ -182,7 +182,7 @@ class ClickEngine:
 
         # Calculate clicks per second if running
         if self.start_time > 0 and self.click_count > 0:
-            runtime = time.time() - self.start_time
+            runtime = time.monotonic() - self.start_time
             metrics["clicks_per_second"] = self.click_count / runtime if runtime > 0 else 0.0
 
         return metrics
@@ -288,10 +288,10 @@ class ClickEngine:
         """
         if self.max_cps_ceiling <= 0 or self.start_time <= 0:
             return False
-        elapsed = time.time() - self.start_time
+        elapsed = time.monotonic() - self.start_time
         if elapsed < 0.25:
             return False
-        now = time.time()
+        now = time.monotonic()
         # Drop timestamps older than 1s so the window slides
         ts = self._recent_click_ts
         cutoff = now - 1.0
@@ -319,7 +319,7 @@ class ClickEngine:
 
         # Check time limit
         if auto_stop_minutes > 0:
-            elapsed_minutes = (time.time() - self.start_time) / 60
+            elapsed_minutes = (time.monotonic() - self.start_time) / 60
             if elapsed_minutes >= auto_stop_minutes:
                 return True
 
@@ -409,7 +409,7 @@ class ClickEngine:
                     )
 
                 self.click_count += 1
-                self._recent_click_ts.append(time.time())
+                self._recent_click_ts.append(time.monotonic())
 
             except pyautogui.FailSafeException:
                 if self.enable_performance_monitoring:
@@ -460,7 +460,7 @@ class ClickEngine:
 
     def get_status(self) -> dict:
         """Get current clicking status"""
-        elapsed = int(time.time() - self.start_time) if self.start_time > 0 else 0
+        elapsed = int(time.monotonic() - self.start_time) if self.start_time > 0 else 0
         hours = elapsed // 3600
         minutes = (elapsed % 3600) // 60
         seconds = elapsed % 60
