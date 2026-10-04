@@ -404,7 +404,7 @@ class TestMainImport(unittest.TestCase):
             mock_instance_cls.return_value.acquire.return_value = True
             mock_app = MagicMock()
             mock_app_cls.return_value = mock_app
-            main_mod.main()
+            main_mod.main([])
             mock_app.run.assert_called_once()
             mock_instance_cls.return_value.watch.assert_called_once()
 
@@ -416,7 +416,7 @@ class TestMainImport(unittest.TestCase):
             patch.object(main_mod, "SingleInstance") as mock_instance_cls,
         ):
             mock_instance_cls.return_value.acquire.return_value = False
-            main_mod.main()
+            main_mod.main([])
             mock_instance_cls.return_value.signal_existing.assert_called_once()
             mock_app_cls.assert_not_called()
 

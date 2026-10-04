@@ -40,6 +40,7 @@ built around safety stops that are on by default.
 [Features](#features) ·
 [How timing works](#how-timing-works) ·
 [Sequences](#sequences) ·
+[Command line](#command-line) ·
 [Hotkeys](#hotkeys) ·
 [Safety](#safety) ·
 [Settings](#settings-and-logs) ·
@@ -154,6 +155,29 @@ Choose **Sequence** under Target to click several points in order, for example *
 3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Interval** is the wait between rounds; burst settings don't apply.
 
 Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles.
+
+## Command line
+
+Flags override your saved settings for one launch: they fill in the window, and `--start` presses Start for you (with the usual countdown). Handy for desktop shortcuts, Task Scheduler or a macro pad.
+
+```bat
+WindowsAutoclicker.exe --profile Work --start --minimized
+WindowsAutoclicker.exe --at 800,600 --interval 250ms --button right --clicks 100 --start
+autoclicker --cursor --interval 50ms --clicks 200 --headless
+```
+
+| Flag | Meaning |
+| :-- | :-- |
+| `--at X,Y`, `--cursor`, `--sequence` | Target: a point, wherever the cursor is, or the saved sequence |
+| `--profile NAME` | Load a saved profile first (other flags apply on top) |
+| `--interval 100ms` / `2s`, `--variation MS` | Timing |
+| `--button left\|right\|middle`, `--double`, `--single` | What to click |
+| `--burst N:MS`, `--clicks N`, `--minutes N`, `--repeat N` | Bursts, limits and sequence rounds |
+| `--delay SECONDS` | Countdown before clicking starts |
+| `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
+| `--headless` | No window: run once, then exit. Hotkeys, the corner failsafe and every limit still apply, and saved settings are left alone |
+
+A headless run exits with `0` when it finishes or you press Stop, `2` for bad options, `3` after an emergency stop, `4` for the failsafe or runaway guard, `5` on an error and `6` if the app is already running. `--help` lists everything; the `.exe` shows it in a dialog.
 
 ## Hotkeys
 

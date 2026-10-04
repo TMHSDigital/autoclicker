@@ -550,6 +550,15 @@ class AutoclickerApp:
         profile = self.preset_manager.load_profile(self.preset_var.get())
         if profile is None:
             return
+        self.apply_form_values(profile)
+        self.preset_summary_var.set(describe_profile(profile))
+
+    def apply_form_values(self, values: dict) -> None:
+        """Fill the form from profile-shaped values (``x``/``y`` for the point).
+
+        Only keys present are changed. Used for profiles and command-line flags;
+        nothing is validated here, Start reports bad values as usual.
+        """
 
         def put(entry: ttk.Entry, value) -> None:
             state = str(entry.cget("state"))
@@ -558,41 +567,43 @@ class AutoclickerApp:
             entry.insert(0, str(value))
             entry.configure(state=state)
 
-        put(self.x_entry, profile["x"])
-        put(self.y_entry, profile["y"])
         entries = {
+            "x": self.x_entry,
+            "y": self.y_entry,
             "interval": self.interval_entry,
             "variation": self.variation_entry,
             "burst_clicks": self.burst_clicks_entry,
             "burst_pause": self.burst_pause_entry,
             "auto_stop_minutes": self.auto_stop_entry,
+            "sequence_repeat": self.sequence_repeat_entry,
+            "start_delay_seconds": self.start_delay_entry,
         }
         for key, entry in entries.items():
-            if key in profile:
-                put(entry, profile[key])
+            if key in values:
+                put(entry, values[key])
         variables = {
             "interval_unit": self.interval_unit_var,
             "mouse_button": self.button_var,
             "click_type": self.click_type_var,
         }
         for key, var in variables.items():
-            if key in profile:
-                var.set(profile[key])
-        if "max_clicks" in profile:
-            limited = int(profile["max_clicks"]) > 0
+            if key in values:
+                var.set(values[key])
+        if "max_clicks" in values:
+            try:
+                limited = float(values["max_clicks"]) != 0
+            except (TypeError, ValueError):
+                limited = True  # let validation report the bad value
             self.limit_clicks_var.set(limited)
             if limited:
-                put(self.max_clicks_entry, profile["max_clicks"])
+                put(self.max_clicks_entry, values["max_clicks"])
             self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
-        if isinstance(profile.get("sequence"), list):
-            self.sequence_steps = [dict(step) for step in profile["sequence"]]
+        if isinstance(values.get("sequence"), list):
+            self.sequence_steps = [dict(step) for step in values["sequence"]]
             self._refresh_sequence_list()
-        if "sequence_repeat" in profile:
-            put(self.sequence_repeat_entry, profile["sequence_repeat"])
-        if profile.get("target_mode") in ("fixed", "cursor", "sequence"):
-            self.target_mode_var.set(profile["target_mode"])
+        if values.get("target_mode") in ("fixed", "cursor", "sequence"):
+            self.target_mode_var.set(values["target_mode"])
             self._apply_target_mode_state()
-        self.preset_summary_var.set(describe_profile(profile))
         self._refresh_target_summary()
 
     def export_profiles(self) -> None:
@@ -886,6 +897,13 @@ class AutoclickerApp:
 
     def _on_minimize_to_tray_toggle(self) -> None:
         self.settings.set("minimize_to_tray", bool(self.minimize_to_tray_var.get()))
+
+    def hide_to_tray(self) -> None:
+        """Hide the window (to the tray icon if there is one, else minimize it)."""
+        if self.tray_icon is not None:
+            self.root.withdraw()
+        else:
+            self.root.iconify()
 
     def show_window(self) -> None:
         """Show main window."""

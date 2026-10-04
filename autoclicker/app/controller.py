@@ -48,11 +48,13 @@ class AutoclickerController:
             pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
         )
 
-    def configure_safety_from_ui(self, failsafe: bool, pause_when_unfocused: bool) -> None:
-        """Reconfigure safety from live UI toggle values."""
+    def configure_safety_from_ui(
+        self, failsafe: bool, pause_when_unfocused: bool, max_cps: int | None = None
+    ) -> None:
+        """Reconfigure safety from live UI toggle values (speed limit from settings if not given)."""
         self.click_engine.configure_safety(
             failsafe=failsafe,
-            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
+            max_cps=int(self.settings.get("max_cps_ceiling", 50) if max_cps is None else max_cps),
             pause_when_unfocused=pause_when_unfocused,
         )
 
@@ -104,8 +106,11 @@ class AutoclickerController:
         pause_when_unfocused: bool,
         on_finished: Callable[[RunOutcome], None] | None = None,
         screen_bounds: ScreenBounds | None = None,
+        persist: bool = True,
     ) -> StartClickResult:
         """Validate settings and start the click engine if valid.
+
+        ``persist=False`` (command-line headless runs) leaves saved settings alone.
 
         ``on_finished`` runs on the click thread once the run ends, after the
         session log entry for it has been written.
@@ -140,8 +145,11 @@ class AutoclickerController:
         else:
             interval_ms = interval
 
-        self.settings.update(sanitized)
-        self.configure_safety_from_ui(failsafe, pause_when_unfocused)
+        if persist:
+            self.settings.update(sanitized)
+        self.configure_safety_from_ui(
+            failsafe, pause_when_unfocused, sanitized.get("max_cps_ceiling")
+        )
 
         if pause_when_unfocused and get_foreground_window_handle() is None:
             return StartClickResult(

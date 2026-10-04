@@ -8,7 +8,7 @@ import sys
 try:
     from autoclicker.main import main
 
-    main()
+    sys.exit(main())
 except ImportError as e:
     print(f"Failed to import autoclicker package: {e}")
     print("Please ensure all dependencies are installed: pip install -r requirements.txt")
