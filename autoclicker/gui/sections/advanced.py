@@ -16,20 +16,20 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
 
     settings = app.controller.settings
 
-    ttk.Label(body, text="Burst Mode:").grid(row=0, column=0, sticky=tk.W)
+    # Reads as "Burst: [3] clicks, [100] ms apart"; the main Interval is the wait between bursts.
+    ttk.Label(body, text="Burst:").grid(row=0, column=0, sticky=tk.W)
     burst_frame = ttk.Frame(body)
     burst_frame.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 0))
 
-    ttk.Label(burst_frame, text="Clicks:").pack(side=tk.LEFT)
     app.burst_clicks_entry = ttk.Entry(burst_frame, width=5)
-    app.burst_clicks_entry.pack(side=tk.LEFT, padx=(0, 10))
+    app.burst_clicks_entry.pack(side=tk.LEFT)
     app.burst_clicks_entry.insert(0, str(settings.get("burst_clicks", "1")))
+    ttk.Label(burst_frame, text="clicks,").pack(side=tk.LEFT, padx=(5, 10))
 
-    ttk.Label(burst_frame, text="Pause:").pack(side=tk.LEFT, padx=(10, 0))
-    app.burst_pause_entry = ttk.Entry(burst_frame, width=5)
-    app.burst_pause_entry.pack(side=tk.LEFT, padx=(0, 5))
+    app.burst_pause_entry = ttk.Entry(burst_frame, width=6)
+    app.burst_pause_entry.pack(side=tk.LEFT)
     app.burst_pause_entry.insert(0, str(settings.get("burst_pause", "1000")))
-    ttk.Label(burst_frame, text="ms").pack(side=tk.LEFT)
+    ttk.Label(burst_frame, text="ms apart").pack(side=tk.LEFT, padx=(5, 0))
 
     ttk.Label(body, text="Safety:").grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
     safety_frame = ttk.Frame(body)

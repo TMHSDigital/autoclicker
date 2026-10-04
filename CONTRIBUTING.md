@@ -11,88 +11,92 @@ This project is licensed under [Creative Commons Attribution-NonCommercial 4.0 I
 
 ## Development setup
 
-Requirements: Windows, Python 3.10 or newer (3.11 recommended; see `.python-version`).
+Requirements: Windows and Python 3.10 to 3.14 (3.11 recommended; see `.python-version`).
 
 ```bash
-# Git Bash / WSL
+# Git Bash
 make install
 
 # Windows cmd
 tasks.bat install
 ```
 
-`install` creates `.venv`, installs runtime packages from `requirements-lock.txt` when present (otherwise `requirements.txt`), then installs the package in editable mode with dev and build extras.
+`install` creates `.venv`, installs the pinned runtime dependencies (`requirements-lock.txt`) and the pinned dev and build tools (`requirements-dev-lock.txt`), then installs the package in editable mode.
 
-End users installing the application should continue to use `requirements.txt` as documented in the README. Maintainers and CI use `requirements-lock.txt` for reproducible installs.
+End users who run from source can use `requirements.txt` or `requirements-lock.txt` as described in the README.
 
 ## Running checks
 
-```bash
-make check          # lint, typecheck, unit tests
-tasks.bat check     # same on cmd.exe
+Run `make check` (or `tasks.bat check`) before calling a change done.
 
+```bash
+make check          # ruff lint + format check, mypy, pytest
 make test
 make lint
 make typecheck
 make coverage
+make audit          # pip-audit on both lock files
 make smoke          # scripts/smoke_check.py (not pytest)
 ```
 
-Legacy entry point: `python run_tests.py` (wraps pytest). Coverage: `python run_tests.py --coverage`.
-
-## Regenerating the lock file
-
-On Python 3.11:
+Every target exists in `tasks.bat` too. To run a single test without the coverage gate:
 
 ```bash
-make lock
-# or
-tasks.bat lock
-# or
-python tools/refresh_lock.py
+python -m pytest tests/test_click_engine.py::TestRunOutcome::test_user_stop --no-cov
 ```
 
-Commit the updated `requirements-lock.txt` when runtime dependencies change.
+Tests never start a real Tk window: GUI tests build the app with `AutoclickerApp.__new__` and mocks (see `_bare_app()` in `tests/test_gui_callbacks.py`), and engine tests patch `autoclicker.core.click_engine.pyautogui`.
+
+## Lock files
+
+| File | Contents | Regenerate |
+| :-- | :-- | :-- |
+| `requirements-lock.txt` | Runtime dependencies, frozen on Python 3.11 | `make lock` |
+| `requirements-dev-lock.txt` | Dev and build tools from `requirements-dev.in`, one lock for Python 3.10+ (needs [uv](https://docs.astral.sh/uv/)) | `make lock`, or `python tools/refresh_lock.py --dev` |
+
+Commit the updated lock files. When the ruff or mypy version in the dev lock changes, update the matching `rev` in `.pre-commit-config.yaml` so pre-commit and CI run the same versions.
 
 ## Pre-commit (optional)
 
-Not installed automatically.
-
 ```bash
-pip install pre-commit   # or use make install
 pre-commit install
 pre-commit run --all-files
 ```
 
-Hooks run ruff on paths outside `autoclicker/`, ruff-format (excluding `autoclicker/`), standard file hygiene checks, and mypy on `autoclicker/` using `pyproject.toml`. Production lint cleanup is deferred to the audit pass; temporary ignores may apply under `autoclicker/`.
+The hooks run standard file hygiene checks, ruff (lint and format) on all Python files, and mypy on `autoclicker/`.
 
 ## Commit messages
 
-Use one of these prefixes:
+Use [Conventional Commits](https://www.conventionalcommits.org/) with an optional scope:
 
-- `chore:`
-- `docs:`
-- `ci:`
-- `test:`
-- `build:`
+- `feat:` new user-facing behavior, e.g. `feat(gui): ...`
+- `fix:` bug fixes
+- `perf:`, `refactor:`, `test:`, `docs:`, `build:`, `ci:`, `chore:`
+- `chore(release): X.Y.Z` for release commits
+
+Reference the issue in the body (`Closes #123`).
 
 ## Pull requests
 
-1. Fork and branch from `main` or `develop`.
-2. Run `make check` or `tasks.bat check` before opening the PR.
-3. Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
-4. Do not commit `autoclicker_settings.json`, `.env`, keys, or tokens.
+1. Fork and branch from `main`.
+2. Run `make check` (or `tasks.bat check`).
+3. Add user-visible changes to `CHANGELOG.md` under `[Unreleased]`.
+4. Do not commit `autoclicker_settings.json`, `htmlcov/`, `.coverage`, `*.egg-info/`, `.env`, keys, or tokens.
 
 ## Releases
 
 Releases are created when a version tag is pushed, not on every merge to `main`.
 
+1. Set the version in both `pyproject.toml` and `autoclicker/__init__.py`.
+2. Move the `[Unreleased]` notes into a new version section in `CHANGELOG.md`.
+3. Commit as `chore(release): X.Y.Z`, then tag and push:
+
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-CI builds the Windows executable and publishes a GitHub release for that tag. Use semantic versioning tags matching `v*.*.*`.
+CI tests the tag, builds `WindowsAutoclicker.exe` and publishes the GitHub release.
 
 ## Security
 

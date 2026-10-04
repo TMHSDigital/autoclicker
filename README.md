@@ -139,8 +139,8 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 | :-- | :-- | :-: |
 | **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 to 60 000 ms<br /><sub>or 0.001 to 60 s</sub> |
 | **± variation**<br /><sub>Click Settings</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
-| **Burst clicks**<br /><sub>Advanced</sub> | Clicks fired per burst | 1 to 100 |
-| **Burst pause**<br /><sub>Advanced</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
+| **Burst clicks**<br /><sub>Advanced, Burst</sub> | Clicks fired per burst | 1 to 100 |
+| **Burst pause**<br /><sub>Advanced, "ms apart"</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
 
 </div>
 

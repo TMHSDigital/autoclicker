@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- The burst row reads "Burst: N clicks, N ms apart" instead of an ambiguous "Pause", and CONTRIBUTING.md matches the real workflow: commit conventions, lock files, checks and release steps (#46).
 - README redesigned: download-first hero, timing diagram for interval vs. burst pause, accurate safety, settings and troubleshooting sections, and known limitations.
 
 ## [1.4.1] - 2026-10-04
