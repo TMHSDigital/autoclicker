@@ -73,8 +73,6 @@ class ClickEngine:
             "_timing_m2": 0.0,
         }
 
-        self._last_click_xy: tuple[int, int] | None = None
-
         # Windowed CPS tracking (timestamps of recent successful clicks).
         # 1024 samples ≈ 10 s at the 100 cps ceiling we cap at; bounded so a
         # multi-day session never grows this deque.
@@ -160,7 +158,6 @@ class ClickEngine:
         self.click_count = 0
         self.start_time = time.monotonic()
         self._stop_event.clear()
-        self._last_click_xy = None
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
 
@@ -408,6 +405,7 @@ class ClickEngine:
 
         try:
             # Cursor mode (x and y are None): click wherever the cursor is.
+            position: dict[str, int] = {}
             if x is not None and y is not None:
                 # Validate against the cached desktop bounds; query live only if
                 # the cache is empty (e.g. direct unit-test calls).
@@ -421,10 +419,9 @@ class ClickEngine:
                         f"Coordinates ({x}, {y}) are off screen (valid: {bounds.describe()})",
                     )
 
-                # Instant move; skip if already at target (avoids moveTo overhead each click)
-                if self._last_click_xy != (x, y):
-                    pyautogui.moveTo(x, y, duration=0)
-                    self._last_click_xy = (x, y)
+                # Pass the target on every click: the user may have moved the
+                # mouse since the last one, and the click must not follow it.
+                position = {"x": x, "y": y}
 
             if mouse_button not in ("left", "right", "middle"):
                 raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")
@@ -432,7 +429,11 @@ class ClickEngine:
             # One call for every button; a double click counts as one click toward
             # max_clicks and the runaway guard.
             try:
-                pyautogui.click(button=mouse_button, clicks=2 if click_type == "double" else 1)
+                pyautogui.click(
+                    **position,
+                    button=mouse_button,
+                    clicks=2 if click_type == "double" else 1,
+                )
                 # Record performance metrics
                 if self.enable_performance_monitoring:
                     total_time = time.perf_counter() - click_start_time

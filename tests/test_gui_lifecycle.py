@@ -251,7 +251,10 @@ class TestRunLifecycle(GuiHarness):
         self.set_fields(max_clicks="2")
         app.start_clicking()
         _settle(app)
-        self.pyautogui.moveTo.assert_not_called()
+        # Cursor mode passes no position, so each click lands where the cursor is
+        for call in self.pyautogui.click.call_args_list:
+            self.assertNotIn("x", call.kwargs)
+        self.assertTrue(self.pyautogui.click.called)
         self.assertEqual(app.coord_var.get(), "Target: current cursor position")
 
     def test_toggle_starts_then_stops(self):

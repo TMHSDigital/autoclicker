@@ -69,24 +69,25 @@ class TestClickEnginePerformClick(unittest.TestCase):
     def test_left_single_click(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         self.engine._perform_click(100, 200, "left", "single")
-        mock_pyautogui.moveTo.assert_called_once_with(100, 200, duration=0)
-        mock_pyautogui.click.assert_called_once()
+        mock_pyautogui.click.assert_called_once_with(x=100, y=200, button="left", clicks=1)
         self.assertEqual(self.engine.click_count, 1)
-        self.assertEqual(self.engine._last_click_xy, (100, 200))
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_skips_move_when_same_coordinates(self, mock_pyautogui):
+    def test_every_click_targets_the_point_after_the_mouse_moves(self, mock_pyautogui):
+        """#62: a mouse moved mid-run must not drag later clicks with it."""
         mock_pyautogui.size.return_value = (1920, 1080)
-        self.engine._last_click_xy = (50, 50)
         self.engine._perform_click(50, 50, "left", "single")
-        mock_pyautogui.moveTo.assert_not_called()
-        mock_pyautogui.click.assert_called_once()
+        mock_pyautogui.position.return_value = (900, 700)  # user moved the mouse
+        self.engine._perform_click(50, 50, "left", "single")
+        self.assertEqual(mock_pyautogui.click.call_count, 2)
+        for call in mock_pyautogui.click.call_args_list:
+            self.assertEqual((call.kwargs["x"], call.kwargs["y"]), (50, 50))
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_left_double_click(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         self.engine._perform_click(10, 10, "left", "double")
-        mock_pyautogui.click.assert_called_once_with(button="left", clicks=2)
+        mock_pyautogui.click.assert_called_once_with(x=10, y=10, button="left", clicks=2)
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_every_button_and_click_type(self, mock_pyautogui):
@@ -97,7 +98,9 @@ class TestClickEnginePerformClick(unittest.TestCase):
                 with self.subTest(button=button, click_type=click_type):
                     mock_pyautogui.click.reset_mock()
                     self.engine._perform_click(10, 10, button, click_type)
-                    mock_pyautogui.click.assert_called_once_with(button=button, clicks=clicks)
+                    mock_pyautogui.click.assert_called_once_with(
+                        x=10, y=10, button=button, clicks=clicks
+                    )
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_out_of_bounds_raises_coordinate_error(self, mock_pyautogui):
@@ -404,7 +407,6 @@ class TestCursorMode(unittest.TestCase):
     def test_no_move_and_no_bounds_check(self, mock_pyautogui):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine._perform_click(None, None, "left", "single")
-        mock_pyautogui.moveTo.assert_not_called()
         mock_pyautogui.size.assert_not_called()
         mock_pyautogui.click.assert_called_once_with(button="left", clicks=1)
         self.assertEqual(engine.click_count, 1)

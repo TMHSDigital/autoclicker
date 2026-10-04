@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- In Fixed location mode every click now goes to the target. Previously, once the first click had moved the cursor there, moving the mouse during a run made the following clicks land wherever the cursor was (#62).
 - The window opens at the size of its content, so the footer is no longer cut off with a scrollbar on first launch.
 - Saved presets and hotkeys could leak into the built-in defaults, so resetting settings brought deleted presets back. Defaults are now copied, never shared.
 - `sessions.log` is rotated at 1 MB (3 backups) instead of growing forever, and writes from the UI and click threads no longer interleave. If `APPDATA` is not set, settings and logs go to the roaming profile folder instead of the current directory (#54).

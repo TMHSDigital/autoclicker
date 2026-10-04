@@ -80,8 +80,7 @@ class TestEngineMultiMonitor(unittest.TestCase):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine._screen_bounds = LEFT_SECONDARY
         engine._perform_click(-1200, 300, "left", "single")
-        mock_pyautogui.moveTo.assert_called_once_with(-1200, 300, duration=0)
-        mock_pyautogui.click.assert_called_once()
+        mock_pyautogui.click.assert_called_once_with(x=-1200, y=300, button="left", clicks=1)
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_edge_pixel_is_off_screen(self, mock_pyautogui):

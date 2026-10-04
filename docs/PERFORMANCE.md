@@ -2,7 +2,7 @@
 
 ## Hot path
 
-`ClickEngine._click_loop` → `_perform_burst` → `_perform_click` (pyautogui with `PAUSE=0`, skip redundant `moveTo` via `_last_click_xy`).
+`ClickEngine._click_loop` → `_perform_burst` → `_perform_click` (one `pyautogui.click(x, y, ...)` call with `PAUSE=0`; the target is passed on every click so a mouse moved mid-run never drags the clicks with it, #62).
 
 ## Changes in phase 4
 
