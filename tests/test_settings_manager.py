@@ -332,6 +332,19 @@ class TestSettingsManager(unittest.TestCase):
         self.assertNotIn("interval_unit", sanitized)
         self.assertIn("interval_unit", result["errors"])
 
+    def test_defaults_are_not_shared_between_instances(self):
+        """Presets saved by one manager must not leak into another's defaults."""
+        from autoclicker.utils.coordinate_picker import PresetManager
+
+        with tempfile.TemporaryDirectory() as tmp:
+            first = SettingsManager(os.path.join(tmp, "a.json"))
+            PresetManager(first).save_preset("Leaky", 1, 2)
+            second = SettingsManager(os.path.join(tmp, "b.json"))
+            self.assertEqual(second.get("presets"), {})
+            first.reset_to_defaults()
+            self.assertEqual(first.get("presets"), {})
+        self.assertEqual(SettingsManager.DEFAULT_SETTINGS["presets"], {})
+
     def test_non_dict_json_uses_defaults(self):
         with open(self.settings_file, "w", encoding="utf-8") as fh:
             fh.write("[1, 2, 3]")

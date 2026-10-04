@@ -15,7 +15,7 @@ class PresetManager:
     def save_preset(self, name: str, x: int, y: int) -> bool:
         """Save coordinates as a preset"""
         try:
-            presets = self.settings.get("presets", {})
+            presets = dict(self.settings.get("presets", {}))  # never mutate the stored dict
             presets[name] = {"x": x, "y": y}
             self.settings.set("presets", presets)
             return True
@@ -43,7 +43,7 @@ class PresetManager:
     def delete_preset(self, name: str) -> bool:
         """Delete a preset"""
         try:
-            presets = self.settings.get("presets", {})
+            presets = dict(self.settings.get("presets", {}))
             if name in presets:
                 del presets[name]
                 self.settings.set("presets", presets)

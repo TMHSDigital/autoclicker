@@ -4,6 +4,7 @@ Settings management for the autoclicker application
 Handles loading, saving, and validation of user settings
 """
 
+import copy
 import json
 import logging
 import math
@@ -97,6 +98,10 @@ class SettingsManager:
             self.settings_file = settings_file
         self._settings = self._load_settings()
 
+    def _defaults(self) -> dict[str, Any]:
+        """Fresh defaults. Deep copy so nested dicts (presets, hotkeys) are never shared."""
+        return copy.deepcopy(self.DEFAULT_SETTINGS)
+
     def _load_settings(self) -> dict[str, Any]:
         """Load settings from file or return defaults"""
         try:
@@ -105,12 +110,12 @@ class SettingsManager:
                     loaded_settings = json.load(f)
                 if not isinstance(loaded_settings, dict):
                     _log.warning("Settings file is not a JSON object; using defaults")
-                    return self.DEFAULT_SETTINGS.copy()
-                return {**self.DEFAULT_SETTINGS, **loaded_settings}
+                    return self._defaults()
+                return {**self._defaults(), **loaded_settings}
         except (OSError, json.JSONDecodeError) as e:
             _log.warning("Could not load settings file: %s", e)
 
-        return self.DEFAULT_SETTINGS.copy()
+        return self._defaults()
 
     def _save_settings(self) -> None:
         """Save current settings to file atomically"""
@@ -421,5 +426,5 @@ class SettingsManager:
 
     def reset_to_defaults(self) -> None:
         """Reset all settings to defaults"""
-        self._settings = self.DEFAULT_SETTINGS.copy()
+        self._settings = self._defaults()
         self._save_settings()
