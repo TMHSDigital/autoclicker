@@ -20,7 +20,7 @@ built around safety stops that are on by default.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/TMHSDigital/autoclicker/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/TMHSDigital/autoclicker?style=flat-square&color=0078D4)](https://github.com/TMHSDigital/autoclicker/releases)
-[![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](#run-from-source)
+[![Python](https://img.shields.io/badge/python-3.10--3.13-3776AB?style=flat-square&logo=python&logoColor=white)](#run-from-source)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?style=flat-square)](#quick-start)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey?style=flat-square)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%99%A5-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/TMHSDigital)
@@ -54,29 +54,29 @@ built around safety stops that are on by default.
 <table>
   <tr>
     <td width="33%" valign="top">
-      <h3>🎯 Pick and click</h3>
+      <h3>Pick and click</h3>
       Type X/Y or press <b>Pick Location</b> and click anywhere. Save spots as named <b>presets</b> and switch between them from a dropdown.
     </td>
     <td width="33%" valign="top">
-      <h3>⏱️ Precise timing</h3>
+      <h3>Precise timing</h3>
       Intervals in milliseconds or seconds, down to <b>0&nbsp;ms</b>, with optional <b>± variation</b> so the cadence isn't perfectly regular.
     </td>
     <td width="33%" valign="top">
-      <h3>💥 Burst mode</h3>
+      <h3>Burst mode</h3>
       Fire several clicks in quick succession, then wait the interval. Left, right or middle button; single or double click.
     </td>
   </tr>
   <tr>
     <td width="33%" valign="top">
-      <h3>🛡️ Safety on by default</h3>
+      <h3>Safety on by default</h3>
       Corner failsafe, emergency stop, click and time limits, a runaway-speed guard, and an optional pause when your target window loses focus.
     </td>
     <td width="33%" valign="top">
-      <h3>⌨️ Global hotkeys</h3>
+      <h3>Global hotkeys</h3>
       <kbd>F6</kbd> start, <kbd>F7</kbd> stop, <kbd>Esc</kbd> emergency stop. They work while the app is in the background, and a tray menu does the same.
     </td>
     <td width="33%" valign="top">
-      <h3>🌗 Remembers you</h3>
+      <h3>Remembers you</h3>
       Light and dark themes, and every setting is saved to your profile and restored on next launch.
     </td>
   </tr>
@@ -97,7 +97,7 @@ built around safety stops that are on by default.
 > The executable isn't code-signed yet ([#45](https://github.com/TMHSDigital/autoclicker/issues/45)), so Windows SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**. Every release is built from this repository by [CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml) when a version tag is pushed.
 
 <details>
-<summary><b id="run-from-source">Run from source</b> (Python 3.10 – 3.13)</summary>
+<summary><b id="run-from-source">Run from source</b> (Python 3.10 to 3.13)</summary>
 
 <br />
 
@@ -130,10 +130,10 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 
 | Setting | What it controls | Range |
 | :-- | :-- | :-: |
-| **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 – 60 000 ms<br /><sub>or 0.001 – 60 s</sub> |
+| **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 to 60 000 ms<br /><sub>or 0.001 to 60 s</sub> |
 | **± variation**<br /><sub>Click Settings</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
-| **Burst clicks**<br /><sub>Advanced</sub> | Clicks fired per burst | 1 – 100 |
-| **Burst pause**<br /><sub>Advanced</sub> | Wait between the clicks *inside* a burst | 0 – 60 000 ms |
+| **Burst clicks**<br /><sub>Advanced</sub> | Clicks fired per burst | 1 to 100 |
+| **Burst pause**<br /><sub>Advanced</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
 
 </div>
 
@@ -291,7 +291,7 @@ tasks.bat check     # ruff, mypy and pytest             (make check)
   </tr>
 </table>
 
-Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.10 – 3.13, builds the executable and publishes it. See the [changelog](CHANGELOG.md).
+Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.10 to 3.13, builds the executable and publishes it. See the [changelog](CHANGELOG.md).
 
 <br />
 
