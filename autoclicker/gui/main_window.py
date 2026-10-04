@@ -428,6 +428,7 @@ class AutoclickerApp:
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self._set_status_message("Running...", "running")
+                self._shown_paused = False
                 self._hotkeys.set_running(True)
                 if sanitized.get("target_mode") == "cursor":
                     self.coord_var.set("Target: current cursor position")
@@ -468,7 +469,8 @@ class AutoclickerApp:
         self.click_count_var.set(f"Clicks: {status['click_count']}")
         self.runtime_var.set(f"Runtime: {status['runtime']}")
         if status.get("is_running"):
-            self._set_tray_title(f"running, {status['click_count']:,} clicks")
+            state = "paused" if status.get("is_paused") else "running"
+            self._set_tray_title(f"{state}, {status['click_count']:,} clicks")
 
         if "performance" in status:
             perf = status["performance"]
@@ -492,7 +494,20 @@ class AutoclickerApp:
         """Periodic status update loop."""
         if self.click_engine.is_running:
             self._on_status_update()
+            self._show_pause_state(bool(getattr(self.click_engine, "is_paused", False)))
             self._status_timer = self.root.after(1000, self._update_status_loop)
+
+    def _show_pause_state(self, paused: bool) -> None:
+        """Switch the status line between Running and Paused (pause when unfocused)."""
+        if paused == getattr(self, "_shown_paused", False):
+            return
+        self._shown_paused = paused
+        if paused:
+            self._set_status_message(
+                "Paused: waiting for the target window to be in front", "alert"
+            )
+        else:
+            self._set_status_message("Running...", "running")
 
     def _set_tray_title(self, text: str) -> None:
         """Mirror the current state in the tray icon's tooltip."""

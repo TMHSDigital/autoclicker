@@ -117,3 +117,105 @@ class TestSafetyStopReason(unittest.TestCase):
         engine._trigger_safety_stop("runaway")
         engine.stop_clicking()
         self.assertEqual(engine._stop_reason, ("safety", "runaway"))
+
+
+class TestFocusWindowSelection(unittest.TestCase):
+    """#63: a Start-button run must not remember the autoclicker as the target window."""
+
+    OWN = 1
+    TARGET = 200
+    OTHER = 300
+
+    def _own(self, hwnd):
+        return hwnd == self.OWN
+
+    def _engine(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.pause_when_unfocused = True
+        return engine
+
+    def test_hotkey_start_keeps_the_window_in_front(self):
+        with patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own):
+            self.assertEqual(ClickEngine._pick_focus_window(self.TARGET, 10, 10), self.TARGET)
+
+    def test_button_start_uses_the_window_under_the_target(self):
+        with (
+            patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
+            patch("autoclicker.core.click_engine.root_window_at", return_value=self.TARGET),
+        ):
+            self.assertEqual(ClickEngine._pick_focus_window(self.OWN, 10, 10), self.TARGET)
+
+    def test_button_start_adopts_when_our_window_covers_the_target(self):
+        with (
+            patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
+            patch("autoclicker.core.click_engine.root_window_at", return_value=self.OWN),
+        ):
+            self.assertIsNone(ClickEngine._pick_focus_window(self.OWN, 10, 10))
+
+    def test_cursor_mode_button_start_adopts_next_window(self):
+        with patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own):
+            self.assertIsNone(ClickEngine._pick_focus_window(self.OWN, None, None))
+
+    def test_adopt_waits_while_our_window_is_in_front_then_follows_the_next(self):
+        engine = self._engine()
+        engine._foreground_hwnd = None
+        foreground = [self.OWN]
+        with (
+            patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
+            patch(
+                "autoclicker.core.click_engine.get_foreground_window_handle",
+                side_effect=lambda: foreground[0],
+            ),
+            patch(
+                "autoclicker.core.click_engine.is_foreground_window",
+                side_effect=lambda hwnd: hwnd == foreground[0],
+            ),
+        ):
+            self.assertTrue(engine._should_pause_for_foreground())
+            self.assertTrue(engine.is_paused)
+            foreground[0] = self.TARGET
+            self.assertFalse(engine._should_pause_for_foreground())
+            self.assertFalse(engine.is_paused)
+            self.assertEqual(engine._foreground_hwnd, self.TARGET)
+            foreground[0] = self.OTHER  # user switched away: pause, don't re-adopt
+            self.assertTrue(engine._should_pause_for_foreground())
+            self.assertEqual(engine._foreground_hwnd, self.TARGET)
+
+    def test_unreadable_foreground_while_adopting_pauses(self):
+        engine = self._engine()
+        with patch("autoclicker.core.click_engine.get_foreground_window_handle", return_value=None):
+            self.assertTrue(engine._should_pause_for_foreground())
+
+    def test_status_reports_paused(self):
+        engine = self._engine()
+        engine.is_paused = True
+        self.assertTrue(engine.get_status()["is_paused"])
+
+
+class TestWindowHelpers(unittest.TestCase):
+    def test_own_window_lookup_failure_counts_as_ours(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32process") as proc:
+            proc.GetWindowThreadProcessId.side_effect = OSError("gone")
+            self.assertTrue(safety.is_own_window(5))
+
+    def test_own_window_compares_pid(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32process") as proc:
+            proc.GetWindowThreadProcessId.return_value = (1, os.getpid())
+            self.assertTrue(safety.is_own_window(5))
+            proc.GetWindowThreadProcessId.return_value = (1, os.getpid() + 1)
+            self.assertFalse(safety.is_own_window(5))
+
+    def test_root_window_at(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32gui") as gui:
+            gui.WindowFromPoint.return_value = 11
+            gui.GetAncestor.return_value = 22
+            self.assertEqual(safety.root_window_at(1, 2), 22)
+            gui.GetAncestor.assert_called_once_with(11, safety.GA_ROOT)
+            gui.WindowFromPoint.side_effect = OSError("nope")
+            self.assertIsNone(safety.root_window_at(1, 2))

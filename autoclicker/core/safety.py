@@ -3,12 +3,18 @@
 
 from __future__ import annotations
 
+import os
+
 import pyautogui
 
 try:
     import win32gui
+    import win32process
 except ImportError:  # pragma: no cover
     win32gui = None  # type: ignore[assignment, unused-ignore]
+    win32process = None  # type: ignore[assignment, unused-ignore]
+
+GA_ROOT = 2
 
 
 def apply_failsafe(enabled: bool) -> None:
@@ -37,3 +43,30 @@ def is_foreground_window(hwnd: int | None) -> bool:
     if current is None:
         return False
     return current == hwnd
+
+
+def is_own_window(hwnd: int) -> bool:
+    """True if hwnd belongs to this process.
+
+    Fail-closed: a failed lookup counts as ours, so it is never adopted as the
+    target window.
+    """
+    if win32process is None:
+        return True
+    try:
+        _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+    except Exception:
+        return True
+    return int(pid) == os.getpid()
+
+
+def root_window_at(x: int, y: int) -> int | None:
+    """Top-level window under a screen point, or None if it cannot be read."""
+    if win32gui is None:
+        return None
+    try:
+        child = win32gui.WindowFromPoint((x, y))
+        root = win32gui.GetAncestor(child, GA_ROOT) if child else 0
+    except Exception:
+        return None
+    return int(root) or None

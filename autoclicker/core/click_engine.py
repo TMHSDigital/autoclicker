@@ -20,7 +20,13 @@ from .exceptions import (
     SafetyError,
     create_user_friendly_error,
 )
-from .safety import apply_failsafe, get_foreground_window_handle, is_foreground_window
+from .safety import (
+    apply_failsafe,
+    get_foreground_window_handle,
+    is_foreground_window,
+    is_own_window,
+    root_window_at,
+)
 from .screen import ScreenBounds, virtual_screen_bounds
 
 # Default PAUSE is 0.1s between every PyAutoGUI call, which caps CPS at about 5 to 10
@@ -85,7 +91,10 @@ class ClickEngine:
         self.failsafe_enabled = True
         self.max_cps_ceiling = 50
         self.pause_when_unfocused = False
+        # Window that must stay in front while pause_when_unfocused is on.
+        # None during a run means "adopt the next window in front that isn't ours".
         self._foreground_hwnd: int | None = None
+        self.is_paused = False
         self._safety_fired = False
         # First stop source wins; reset on every start.
         self._stop_reason: tuple[str, str] | None = None
@@ -147,9 +156,10 @@ class ClickEngine:
             hwnd = get_foreground_window_handle()
             if hwnd is None:
                 return False
-            self._foreground_hwnd = hwnd
+            self._foreground_hwnd = self._pick_focus_window(hwnd, x, y)
         else:
             self._foreground_hwnd = None
+        self.is_paused = False
 
         # Reset state
         self.is_running = True
@@ -309,6 +319,7 @@ class ClickEngine:
             error = e
             self._set_stop_reason(STOP_ERROR, create_user_friendly_error(e))
         finally:
+            self.is_paused = False
             self._request_stop()
             self._set_stop_reason(STOP_COMPLETED, "Finished")
             reason, message = self._stop_reason or (STOP_COMPLETED, "Finished")
@@ -318,10 +329,38 @@ class ClickEngine:
                 except Exception:
                     _log.exception("on_finished callback failed")
 
+    @staticmethod
+    def _pick_focus_window(foreground: int, x: int | None, y: int | None) -> int | None:
+        """Choose the window that must stay in front for pause_when_unfocused.
+
+        Started from a hotkey, the window in front is the user's target. Started
+        from our own Start button or tray menu it is the autoclicker itself, so
+        use the window under a fixed target instead, or (cursor mode, or our
+        window covers the target) return None to adopt the next window that
+        comes to the front.
+        """
+        if not is_own_window(foreground):
+            return foreground
+        if x is not None and y is not None:
+            under = root_window_at(x, y)
+            if under is not None and not is_own_window(under):
+                return under
+        return None
+
     def _should_pause_for_foreground(self) -> bool:
         if not self.pause_when_unfocused:
+            self.is_paused = False
             return False
-        return not is_foreground_window(self._foreground_hwnd)
+        if self._foreground_hwnd is None:
+            current = get_foreground_window_handle()
+            if current is not None and not is_own_window(current):
+                self._foreground_hwnd = current
+        if self._foreground_hwnd is None:
+            paused = True  # still waiting for a target window (fail closed)
+        else:
+            paused = not is_foreground_window(self._foreground_hwnd)
+        self.is_paused = paused
+        return paused
 
     def _check_runaway_cps(self) -> bool:
         """Detect runaway click rate using a sliding 1-second window.
@@ -507,6 +546,7 @@ class ClickEngine:
 
         status = {
             "is_running": self.is_running,
+            "is_paused": self.is_paused,
             "click_count": self.click_count,
             "runtime": f"{hours:02d}:{minutes:02d}:{seconds:02d}",
             "thread_alive": self.click_thread.is_alive() if self.click_thread else False,

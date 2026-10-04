@@ -179,7 +179,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
         <li><b>Limit clicks</b>: stop after N clicks (Advanced).</li>
         <li><b>Auto-stop</b>: stop after N minutes (Advanced).</li>
         <li><b>Runaway guard</b>: stops if more than 50 clicks land in any one second (<code>max_cps_ceiling</code>, 0 turns it off).</li>
-        <li><b>Pause when unfocused</b>: remembers the window in front when you start and pauses whenever it isn't; refuses to start if it can't tell.</li>
+        <li><b>Pause when unfocused</b>: pauses whenever the target window isn't in front, and the status bar shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button (in cursor mode, the next window you bring to the front). Paused time counts toward auto-stop. Refuses to start if it can't read the foreground window.</li>
       </ul>
     </td>
   </tr>

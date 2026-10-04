@@ -206,3 +206,18 @@ class TestMinimizeToTray(unittest.TestCase):
         app.tray_icon = MagicMock()
         app._set_status_message("Running...", "running")
         self.assertEqual(app.tray_icon.title, "Windows Autoclicker: Running...")
+
+
+class TestPauseStatus(unittest.TestCase):
+    """#63: pause when unfocused shows a distinct Paused state."""
+
+    def test_paused_then_resumed(self):
+        app = _bare_app()
+        app._shown_paused = False
+        app._show_pause_state(True)
+        self.assertIn("Paused", app.status_var.set.call_args.args[0])
+        app.status_var.set.reset_mock()
+        app._show_pause_state(True)  # unchanged: no repaint
+        app.status_var.set.assert_not_called()
+        app._show_pause_state(False)
+        app.status_var.set.assert_called_with("Running...")

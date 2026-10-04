@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Pause when unfocused no longer stalls after one click when a run is started with the Start button or the tray menu. It used to remember the autoclicker's own window as the one that must stay in front; it now uses the window under the target (or, in cursor mode, the next window you bring to the front). While paused, the status bar and tray tooltip say so instead of "Running..." (#63).
 - In Fixed location mode every click now goes to the target. Previously, once the first click had moved the cursor there, moving the mouse during a run made the following clicks land wherever the cursor was (#62).
 - The window opens at the size of its content, so the footer is no longer cut off with a scrollbar on first launch.
 - Saved presets and hotkeys could leak into the built-in defaults, so resetting settings brought deleted presets back. Defaults are now copied, never shared.
