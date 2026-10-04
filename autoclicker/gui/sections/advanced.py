@@ -68,21 +68,13 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
     toggles_frame = ttk.Frame(body)
     toggles_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
 
-    app.click_queuing_var = tk.BooleanVar(value=False)
-    ttk.Checkbutton(
-        toggles_frame,
-        text="Enable click queuing",
-        variable=app.click_queuing_var,
-        command=app._toggle_click_queuing,
-    ).pack(anchor=tk.W)
-
     app.failsafe_var = tk.BooleanVar(value=settings.get("enable_failsafe", True))
     ttk.Checkbutton(
         toggles_frame,
         text="PyAutoGUI failsafe (corner abort)",
         variable=app.failsafe_var,
         command=app._on_failsafe_toggle,
-    ).pack(anchor=tk.W, pady=(4, 0))
+    ).pack(anchor=tk.W)
 
     app.pause_unfocused_var = tk.BooleanVar(value=settings.get("pause_when_unfocused", False))
     ttk.Checkbutton(

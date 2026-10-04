@@ -5,7 +5,7 @@ Long-duration soak for ClickEngine. Opt-in; not run by CI.
 
 Runs the engine for a wall-clock duration at a target rate using a no-op
 mocked click implementation, then reports timing distribution, heap delta,
-and queue/dropped counters. Use this before shipping changes that touch the
+and click counters. Use this before shipping changes that touch the
 click loop or performance metrics.
 
 Usage (PowerShell):
@@ -83,8 +83,6 @@ def run_soak(duration_s: float, target_cps: int, real: bool) -> int:
                 print(
                     f"  t={int(time.time() - start):4d}s  "
                     f"clicks={s['click_count']:>8}  "
-                    f"queue={s['queue_size']:>4}  "
-                    f"dropped={s['dropped_click_count']:>4}  "
                     f"cps={s['performance']['clicks_per_second']:.2f}"
                 )
                 last_report = time.time()
@@ -109,7 +107,6 @@ def run_soak(duration_s: float, target_cps: int, real: bool) -> int:
     print()
     print("===== Soak summary =====")
     print(f"Total clicks:         {status['click_count']}")
-    print(f"Dropped (queue full): {status['dropped_click_count']}")
     print(f"Runtime:              {status['runtime']}")
     print(f"Avg cps:              {perf['clicks_per_second']}")
     print(f"Success rate:         {perf['success_rate']}%")

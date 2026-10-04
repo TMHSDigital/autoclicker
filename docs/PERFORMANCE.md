@@ -24,7 +24,7 @@ The script prints `cProfile` top functions before/after for comparison.
 | Idea | Result |
 |------|--------|
 | Win32 `SendInput` click-at-point | Deferred: needs guarded fallback and measurable win vs pyautogui with `PAUSE=0`; risk on multi-monitor DPI |
-| Remove click queue | Kept: optional high-frequency path; no default-on regression |
+| Click queue | Removed in 1.5.0: added latency and let clicks continue after Stop (#38) without a measurable throughput win |
 
 ## Targets
 

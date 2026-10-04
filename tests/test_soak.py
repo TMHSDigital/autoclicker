@@ -130,21 +130,6 @@ class TestSoakSustainedClicking(unittest.TestCase):
         )
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_overflow_increments_drop_counter(self, mock_pyautogui):
-        mock_pyautogui.size.return_value = (1920, 1080)
-        engine = ClickEngine(enable_performance_monitoring=False)
-        engine.max_queue_size = 3
-        engine.enable_queuing = True  # do not start processor; want overflow
-
-        for _ in range(10):
-            engine._perform_click(50, 50, "left", "single")
-
-        self.assertEqual(len(engine.click_queue), 3)
-        self.assertEqual(engine.dropped_click_count, 7)
-        status = engine.get_status()
-        self.assertEqual(status["dropped_click_count"], 7)
-
-    @patch("autoclicker.core.click_engine.pyautogui")
     def test_screen_size_is_cached_per_session(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=False)

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The "Enable click queuing" option. With it on, Stop could keep clicking for seconds and later runs never clicked (#38). The direct click path is now the only one.
+
 ### Documentation
 
 - README redesigned: download-first hero, timing diagram for interval vs. burst pause, accurate safety, settings and troubleshooting sections, and known limitations.

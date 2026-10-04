@@ -185,7 +185,6 @@ An autoclicker that won't stop is worse than none, so every run has more than on
 
 - Clicking targets the **primary monitor**; coordinates on other monitors aren't supported yet ([#40](https://github.com/TMHSDigital/autoclicker/issues/40)).
 - The **Pick Location** click also reaches the window underneath ([#43](https://github.com/TMHSDigital/autoclicker/issues/43)). Pick over an empty area if that matters.
-- Leave **Advanced → Enable click queuing** off; Stop doesn't reliably halt queued clicks ([#38](https://github.com/TMHSDigital/autoclicker/issues/38)).
 - Windows blocks input from normal apps into **elevated (admin) windows**. To click into one, run the autoclicker as administrator too; otherwise there's no need to.
 
 ## Settings and logs

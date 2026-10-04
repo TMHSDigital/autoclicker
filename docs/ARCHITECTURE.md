@@ -20,7 +20,7 @@ autoclicker/
   core/
     settings_manager.py     # Validation + atomic JSON persistence
     settings_paths.py       # AppData path + legacy migration
-    click_engine.py         # Click loop, queue, safety guards
+    click_engine.py         # Click loop, safety guards
     safety.py               # Failsafe + fail-closed foreground window helpers
     session_log.py          # Append-only session log
     resources.py            # Frozen/source asset paths
@@ -36,7 +36,6 @@ autoclicker/
 |--------------------|-------|------|
 | Main thread | Tkinter | UI event loop, `AutoclickerApp.run()` |
 | Click thread | `ClickEngine.start_clicking` | Daemon thread running `_click_loop` |
-| Queue processor | `ClickEngine` (optional) | Daemon thread when queuing enabled |
 | Tray thread | `app.tray` | Daemon thread running `pystray` icon |
 | Status timer | Tk `root.after(1000, ...)` | Periodic status label updates |
 
@@ -46,18 +45,20 @@ Worker callbacks (hotkeys, tray, picker, click complete, safety stop) are marsha
 
 ## Stop paths
 
-| Path | Clears `is_running` | Joins click thread | Stops queue |
-|------|---------------------|--------------------|-------------|
-| `stop_clicking` | yes | yes, if not the click thread | yes (sentinel) |
-| `emergency_stop` | yes | no | yes (drop pending + sentinel) |
-| runaway / failsafe | yes | UI joins from Tk thread | yes |
-| max_clicks / auto_stop | yes (`finally`) | via `notify_click_complete` | yes |
+| Path | Clears `is_running` | Joins click thread |
+|------|---------------------|--------------------|
+| `stop_clicking` | yes | yes, if not the click thread |
+| `emergency_stop` | yes | no |
+| runaway / failsafe | yes | UI joins from Tk thread |
+| max_clicks / auto_stop | yes (`finally`) | via `notify_click_complete` |
+
+Clicks are only ever issued from the click thread, so once a stop call returns (or, for `emergency_stop`, once the click thread exits) no further clicks happen.
 
 ## Data flow
 
 1. **Settings:** `SettingsManager` atomically writes `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once).
 2. **GUI:** Sections bind Tk widgets; `AutoclickerController` validates and starts/stops clicking.
-3. **Click engine:** Coordinates, interval, burst, safety limits; `pyautogui` with `PAUSE=0`; optional queue path. Waits use `_stop_event.wait`.
+3. **Click engine:** Coordinates, interval, burst, safety limits; `pyautogui` with `PAUSE=0`. Waits use `_stop_event.wait`.
 4. **Session log:** Start/stop/safety events appended under AppData.
 5. **Screen input:** `CoordinatePicker` uses `mouse` + ESC cancel; presets via `PresetManager`.
 

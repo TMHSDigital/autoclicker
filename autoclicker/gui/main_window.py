@@ -374,11 +374,6 @@ class AutoclickerApp:
             self._on_status_update()
             self._status_timer = self.root.after(1000, self._update_status_loop)
 
-    def _toggle_click_queuing(self) -> None:
-        """Toggle click queuing on/off."""
-        enabled = self.click_queuing_var.get()
-        self.click_engine.enable_click_queuing(enabled)
-
     def show_window(self) -> None:
         """Show main window."""
         self.root.deiconify()

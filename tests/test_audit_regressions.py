@@ -3,6 +3,7 @@ Regression tests for audit findings (phase 1).
 Verify fixes from phase 2 correctness pass.
 """
 
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -12,31 +13,38 @@ from autoclicker.core.settings_manager import SettingsManager
 from autoclicker.utils.coordinate_picker import CoordinatePicker
 
 
-class TestClickEngineQueueBugs(unittest.TestCase):
-    """C1, C2: queue mode counter and processor behavior."""
+class TestStopHaltsClicking(unittest.TestCase):
+    """#38: no click may be emitted after a stop call returns."""
 
-    @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_mode_does_not_increment_count_without_executing(self, mock_pyautogui):
+    def _run_and_stop(self, stop_name: str) -> int:
+        clicks: list[int] = []
+        with patch("autoclicker.core.click_engine.pyautogui") as mock_pyautogui:
+            mock_pyautogui.size.return_value = (1920, 1080)
+            mock_pyautogui.click.side_effect = lambda *a, **k: clicks.append(1)
+            engine = ClickEngine(enable_performance_monitoring=False)
+            engine.configure_safety(max_cps=0)
+            self.assertTrue(engine.start_clicking(10, 10, 0, 0, 1, 0, 0, 0, "left", "single"))
+            deadline = time.monotonic() + 2.0
+            while not clicks and time.monotonic() < deadline:
+                time.sleep(0.005)
+            getattr(engine, stop_name)()
+            thread = engine.click_thread
+            if thread is not None:
+                thread.join(timeout=2.0)
+            at_stop = len(clicks)
+            time.sleep(0.2)
+            return len(clicks) - at_stop
+
+    def test_no_clicks_after_stop_clicking(self):
+        self.assertEqual(self._run_and_stop("stop_clicking"), 0)
+
+    def test_no_clicks_after_emergency_stop_thread_exits(self):
+        self.assertEqual(self._run_and_stop("emergency_stop"), 0)
+
+    def test_queue_api_removed(self):
         engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_queuing = True
-        engine.is_running = True
-
-        engine._perform_burst(100, 100, 3, 0.01, "left", "single")
-
-        self.assertEqual(engine.click_count, 0)
-        mock_pyautogui.click.assert_not_called()
-        self.assertEqual(len(engine.click_queue), 3)
-
-    @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_processor_executes_clicks(self, mock_pyautogui):
-        mock_pyautogui.size.return_value = (1920, 1080)
-        engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_queuing = True
-
-        engine._perform_click(50, 50, "left", "single", from_queue=True)
-
-        mock_pyautogui.click.assert_called_once()
-        self.assertEqual(engine.click_count, 1)
+        self.assertFalse(hasattr(engine, "enable_click_queuing"))
+        self.assertNotIn("queue_size", engine.get_status())
 
 
 class TestCoordinatePickerHooks(unittest.TestCase):

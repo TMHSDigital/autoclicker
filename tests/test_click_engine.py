@@ -202,31 +202,16 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
         engine.is_running = False
         self.assertFalse(engine.start_clicking(0, 0, 100, 0, 1, 0, 0, 0, "left", "single"))
 
-    def test_emergency_stop_drops_queue_and_stops_processor(self):
+    def test_emergency_stop_signals_without_joining(self):
         engine = ClickEngine(enable_performance_monitoring=False)
-        started = threading.Event()
-        release = threading.Event()
-
-        def blocking_click(*_args, **_kwargs):
-            started.set()
-            release.wait(timeout=2.0)
-
-        engine.enable_click_queuing(True, max_queue_size=10)
-        with patch.object(engine, "_perform_click", side_effect=blocking_click):
-            engine.click_queue.append((1, 1, "left", "single"))
-            engine.click_queue.append((2, 2, "left", "single"))
-            engine._queue_wake.set()
-            self.assertTrue(started.wait(timeout=1.0))
-            engine.is_running = True
-            engine.emergency_stop()
-            release.set()
-            if engine.queue_processor_thread is not None:
-                engine.queue_processor_thread.join(timeout=1.0)
+        thread = MagicMock()
+        thread.is_alive.return_value = True
+        engine.click_thread = thread
+        engine.is_running = True
+        engine.emergency_stop()
         self.assertFalse(engine.is_running)
         self.assertTrue(engine._stop_event.is_set())
-        pending = [item for item in engine.click_queue if item is not None]
-        self.assertEqual(pending, [])
-        self.assertIsNone(engine.queue_processor_thread)
+        thread.join.assert_not_called()
 
     def test_safety_stop_from_click_thread_does_not_join_self(self):
         engine = ClickEngine(enable_performance_monitoring=False)
@@ -318,39 +303,6 @@ class TestClickEnginePerformance(unittest.TestCase):
         engine._perform_click(1, 1, "left", "single")
         status = engine.get_status()
         self.assertIn("performance", status)
-
-
-class TestClickEngineQueuing(unittest.TestCase):
-    """Queue processor and enable_click_queuing."""
-
-    @patch("autoclicker.core.click_engine.time.sleep")
-    @patch("autoclicker.core.click_engine.pyautogui")
-    def test_enable_click_queuing_starts_processor(self, mock_pyautogui, mock_sleep):
-        mock_pyautogui.size.return_value = (1920, 1080)
-        engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_click_queuing(True, max_queue_size=10)
-        self.assertTrue(engine.enable_queuing)
-        engine.click_queue.append((1, 1, "left", "single"))
-        time.sleep(0.05)
-        engine.enable_click_queuing(False)
-        self.assertGreaterEqual(engine.click_count, 1)
-
-    @patch("autoclicker.core.click_engine.pyautogui")
-    def test_queue_full_counts_as_dropped(self, mock_pyautogui):
-        """Queue saturation must be observable, not silently bypassed.
-
-        Old behavior fell through and clicked directly on overflow, which
-        doubled the effective rate exactly when the user was already over
-        capacity. New contract: drop the click and increment the counter.
-        """
-        mock_pyautogui.size.return_value = (1920, 1080)
-        engine = ClickEngine(enable_performance_monitoring=False)
-        engine.enable_queuing = True
-        engine.max_queue_size = 1
-        engine.click_queue.append((1, 1, "left", "single"))
-        engine._perform_click(2, 2, "left", "single")
-        mock_pyautogui.click.assert_not_called()
-        self.assertEqual(engine.dropped_click_count, 1)
 
 
 class TestMainImport(unittest.TestCase):

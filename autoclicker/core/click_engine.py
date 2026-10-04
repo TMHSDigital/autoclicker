@@ -49,13 +49,6 @@ class ClickEngine:
             "_timing_m2": 0.0,
         }
 
-        # Click queuing for high-frequency operations
-        self.click_queue: deque = deque()
-        self.queue_processor_thread: threading.Thread | None = None
-        self._queue_wake = threading.Event()
-        self.max_queue_size = 1000
-        self.enable_queuing = False
-        self.dropped_click_count = 0  # Long-soak observability for queue-full drops
         self._last_click_xy: tuple[int, int] | None = None
 
         # Windowed CPS tracking (timestamps of recent successful clicks).
@@ -138,7 +131,6 @@ class ClickEngine:
         self.is_running = True
         self._safety_fired = False
         self.click_count = 0
-        self.dropped_click_count = 0
         self.start_time = time.time()
         self._stop_event.clear()
         self._last_click_xy = None
@@ -209,48 +201,10 @@ class ClickEngine:
             "_timing_m2": 0.0,
         }
 
-    def enable_click_queuing(self, enable: bool = True, max_queue_size: int = 1000) -> None:
-        """Enable or disable click queuing for high-frequency operations"""
-        self.enable_queuing = enable
-        self.max_queue_size = max_queue_size
-
-        if enable and not self.queue_processor_thread:
-            self._start_queue_processor()
-        elif not enable and self.queue_processor_thread:
-            self._stop_queue_processor()
-
-    def _start_queue_processor(self) -> None:
-        """Start the click queue processor thread"""
-        if self.queue_processor_thread and self.queue_processor_thread.is_alive():
-            return
-
-        self.queue_processor_thread = threading.Thread(
-            target=self._process_click_queue, daemon=True, name="ClickQueueProcessor"
-        )
-        self.queue_processor_thread.start()
-
     def _request_stop(self) -> None:
         """Signal the click loop to exit without joining threads."""
         self.is_running = False
         self._stop_event.set()
-
-    def _stop_queue_processor(self, *, drop_pending: bool = False) -> None:
-        """Stop the click queue processor thread.
-
-        When drop_pending is True, queued clicks are discarded before the
-        sentinel so emergency stop does not drain leftover work.
-        """
-        if drop_pending:
-            self.click_queue.clear()
-        if not self.queue_processor_thread:
-            return
-        self.click_queue.append(None)  # Sentinel value to stop processor
-        self._queue_wake.set()
-        thread = self.queue_processor_thread
-        if thread is not threading.current_thread() and thread.is_alive():
-            thread.join(timeout=1.0)
-        if thread is not threading.current_thread():
-            self.queue_processor_thread = None
 
     def _join_click_thread(self) -> None:
         """Join the click loop if it is a different, still-alive thread."""
@@ -262,38 +216,14 @@ class ClickEngine:
         if thread is not threading.current_thread():
             self.click_thread = None
 
-    def _process_click_queue(self) -> None:
-        """Process clicks from the queue.
-
-        Blocks on an Event instead of busy-polling so an idle queue costs no CPU.
-        """
-        while True:
-            try:
-                click_data = self.click_queue.popleft()
-            except IndexError:
-                self._queue_wake.wait(timeout=0.05)
-                self._queue_wake.clear()
-                continue
-
-            if click_data is None:  # Sentinel value
-                break
-
-            try:
-                x, y, mouse_button, click_type = click_data
-                self._perform_click(x, y, mouse_button, click_type, from_queue=True)
-            except Exception as e:
-                _log.warning("Queue processor error: %s", e)
-
     def stop_clicking(self) -> None:
         """Stop the clicking process"""
         self._request_stop()
-        self._stop_queue_processor()
         self._join_click_thread()
 
     def emergency_stop(self) -> None:
-        """Emergency stop — halt loop and drop any queued clicks."""
+        """Emergency stop: signal the loop to halt without joining (safe from any thread)."""
         self._request_stop()
-        self._stop_queue_processor(drop_pending=True)
 
     def _click_loop(
         self,
@@ -375,7 +305,6 @@ class ClickEngine:
         already = self._safety_fired
         self._safety_fired = True
         self._request_stop()
-        self._stop_queue_processor()
         if already:
             return
         if self.on_safety_stop:
@@ -427,22 +356,11 @@ class ClickEngine:
         y: int,
         mouse_button: str,
         click_type: str,
-        from_queue: bool = False,
     ) -> None:
         """Perform a single click at coordinates with performance monitoring"""
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
-            # Check if queuing is enabled
-            if not from_queue and self.enable_queuing:
-                if len(self.click_queue) < self.max_queue_size:
-                    self.click_queue.append((x, y, mouse_button, click_type))
-                    self._queue_wake.set()
-                else:
-                    # Backpressure: surface drops instead of swallowing silently
-                    self.dropped_click_count += 1
-                return
-
             # Validate coordinates against cached screen size; falling back to a
             # live query only if cache is empty (e.g. direct unit-test calls).
             if self._screen_size is None:
@@ -551,9 +469,6 @@ class ClickEngine:
             "click_count": self.click_count,
             "runtime": f"{hours:02d}:{minutes:02d}:{seconds:02d}",
             "thread_alive": self.click_thread.is_alive() if self.click_thread else False,
-            "queue_size": len(self.click_queue),
-            "enable_queuing": self.enable_queuing,
-            "dropped_click_count": self.dropped_click_count,
         }
 
         # Add performance metrics if enabled
