@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Configurable hotkeys under Advanced, Hotkeys: rebind Start, Stop and Emergency stop, or add a single start/stop toggle key. Buttons and the tray menu show the current keys (#47).
 - "Current cursor position" target mode: hover over something and press F6 to click wherever the cursor is, with no coordinates to pick (#48).
+
+### Changed
+
+- Hotkeys are now exclusive while claimed: a pressed hotkey goes only to the autoclicker. To keep Esc usable in other programs, the Stop and Emergency keys are claimed only while clicking and the Start key only while idle. A key that another program already owns is reported in the status bar.
 
 ### Fixed
 
@@ -26,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `keyboard` and `mouse` dependencies (unmaintained since 2020). Hotkeys now use Win32 `RegisterHotKey`, so the app no longer installs a system-wide keyboard or mouse hook (#57).
 - The "Enable click queuing" option. With it on, Stop could keep clicking for seconds and later runs never clicked (#38). The direct click path is now the only one.
 
 ### Documentation

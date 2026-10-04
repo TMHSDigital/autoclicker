@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from autoclicker.app.controller import StartClickResult
-from autoclicker.app.hotkeys import setup_hotkeys
+from autoclicker.app.hotkeys import DEFAULT_HOTKEYS
 from autoclicker.core.click_engine import (
     STOP_COMPLETED,
     STOP_EMERGENCY,
@@ -77,24 +77,6 @@ class TestEmergencyVsPicker(unittest.TestCase):
         app.controller.emergency_stop.assert_not_called()
 
 
-class TestHotkeys(unittest.TestCase):
-    def test_partial_register_unwinds(self):
-        with patch("autoclicker.app.hotkeys.keyboard") as kb:
-            kb.add_hotkey.side_effect = [None, RuntimeError("fail")]
-            err = MagicMock()
-            handle = setup_hotkeys(MagicMock(), MagicMock(), MagicMock(), err)
-            err.assert_called_once()
-            kb.remove_hotkey.assert_called()
-            handle.unregister()
-
-    def test_setup_registers_three_keys(self):
-        with patch("autoclicker.app.hotkeys.keyboard") as kb:
-            handle = setup_hotkeys(MagicMock(), MagicMock(), MagicMock(), MagicMock())
-            self.assertEqual(kb.add_hotkey.call_count, 3)
-            handle.unregister()
-            self.assertEqual(kb.remove_hotkey.call_count, 3)
-
-
 class TestRunFinishedUi(unittest.TestCase):
     """#41/#42: the UI paints the run's real outcome and surfaces errors."""
 
@@ -153,3 +135,35 @@ class TestStatusBar(unittest.TestCase):
         app._paint_stopped("Stopped")
         app.click_count_var.set.assert_called_with("Clicks: 1234")
         app.runtime_var.set.assert_called_with("Runtime: 00:01:02")
+
+
+class TestHotkeyWiring(unittest.TestCase):
+    """#47: hotkey keys follow the run state and the saved bindings."""
+
+    def test_stopping_releases_stop_keys(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app._paint_stopped("Stopped")
+        app._hotkeys.set_running.assert_called_with(False)
+
+    def test_toggle_starts_or_stops(self):
+        app = _bare_app()
+        app.start_clicking = MagicMock()
+        app.stop_clicking = MagicMock()
+        app.click_engine.is_running = False
+        app.toggle_clicking()
+        app.start_clicking.assert_called_once()
+        app.click_engine.is_running = True
+        app.toggle_clicking()
+        app.stop_clicking.assert_called_once()
+
+    def test_invalid_saved_hotkeys_fall_back_to_defaults(self):
+        app = _bare_app()
+        app.settings.get.return_value = {"start": "Ctrl+", "emergency": "Esc"}
+        self.assertEqual(app._saved_hotkeys(), DEFAULT_HOTKEYS)
+
+    def test_label_suffix_uses_toggle_when_start_unbound(self):
+        app = _bare_app()
+        app._hotkeys.bindings = {"start": "", "stop": "", "emergency": "Esc", "toggle": "F8"}
+        self.assertEqual(app._hotkey_suffix("start"), " (F8)")
+        self.assertEqual(app._hotkey_suffix("emergency"), " (Esc)")

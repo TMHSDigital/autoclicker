@@ -1,10 +1,8 @@
 # Windows Autoclicker Requirements
 # Core dependencies for the autoclicker application
 
-# Mouse and keyboard automation
+# Mouse automation
 pyautogui>=0.9.53
-keyboard>=0.13.5
-mouse>=0.7.1
 
 # Windows-specific libraries
 pywin32>=227

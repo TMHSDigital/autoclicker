@@ -12,7 +12,7 @@ def build_control_section(app, parent: ttk.Frame) -> None:
 
     app.start_btn = ttk.Button(
         control_frame,
-        text="Start (F6)",
+        text="Start",
         command=app.start_clicking,
         style="Accent.TButton",
         width=15,
@@ -21,7 +21,7 @@ def build_control_section(app, parent: ttk.Frame) -> None:
 
     app.stop_btn = ttk.Button(
         control_frame,
-        text="Stop (F7)",
+        text="Stop",
         command=app.stop_clicking,
         state=tk.DISABLED,
         width=15,
@@ -30,7 +30,7 @@ def build_control_section(app, parent: ttk.Frame) -> None:
 
     app.emergency_btn = ttk.Button(
         control_frame,
-        text="Emergency Stop (ESC)",
+        text="Emergency stop",
         command=app.emergency_stop,
         width=20,
     )

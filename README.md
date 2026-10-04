@@ -73,7 +73,7 @@ built around safety stops that are on by default.
     </td>
     <td width="33%" valign="top">
       <h3>Global hotkeys</h3>
-      <kbd>F6</kbd> start, <kbd>F7</kbd> stop, <kbd>Esc</kbd> emergency stop. They work while the app is in the background, and a tray menu does the same.
+      <kbd>F6</kbd> start, <kbd>F7</kbd> stop, <kbd>Esc</kbd> emergency stop, all rebindable, plus an optional start/stop toggle key. They work while the app is in the background.
     </td>
     <td width="33%" valign="top">
       <h3>Remembers you</h3>
@@ -150,7 +150,7 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
   </tbody>
 </table>
 
-<p align="center"><sub>Hotkeys are global: they work while another window has focus. Configurable keys are tracked in <a href="https://github.com/TMHSDigital/autoclicker/issues/47">#47</a>.</sub></p>
+<p align="center"><sub>Hotkeys are global: they work while another window has focus. Change them, or add a single start/stop <b>toggle</b> key, under <b>Advanced → Hotkeys…</b><br />The Stop and Emergency keys are only claimed while clicking, so <kbd>Esc</kbd> keeps working in other programs the rest of the time.</sub></p>
 
 ## Safety
 
@@ -222,6 +222,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
 | `max_cps_ceiling` | `50` | Runaway guard threshold in clicks per second; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
+| `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | `{"Name": {"x": 800, "y": 600}}` |
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically.
@@ -262,7 +263,7 @@ If that app runs as administrator, Windows blocks input from non-elevated progra
 
 <br />
 
-Another program may already own <kbd>F6</kbd>/<kbd>F7</kbd> (browsers and some games do), or an elevated window has focus. The status bar shows a message if registering the hotkeys failed at startup.
+Another program may already own the key; the status bar names any key that could not be registered. Pick a different one under **Advanced → Hotkeys…**. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
 
 </details>
 

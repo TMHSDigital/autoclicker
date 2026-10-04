@@ -12,12 +12,19 @@ from tkinter import messagebox, simpledialog, ttk
 import sv_ttk
 
 from ..app.controller import AutoclickerController
-from ..app.hotkeys import setup_hotkeys
+from ..app.hotkeys import (
+    DEFAULT_HOTKEYS,
+    HotkeyError,
+    HotkeyManager,
+    callbacks_for,
+    validate_bindings,
+)
 from ..app.tray import create_tray_icon
 from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutcome
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import field_label
+from .hotkeys_dialog import HotkeysDialog
 from .picker import CoordinatePicker
 from .sections import (
     build_advanced_section,
@@ -49,19 +56,26 @@ class AutoclickerApp:
         self.setup_window()
         self.create_gui()
 
-        self._hotkeys = setup_hotkeys(
-            start=lambda: self._ui(self.start_clicking),
-            stop=lambda: self._ui(self.stop_clicking),
-            emergency=lambda: self._ui(self.emergency_stop),
+        self._hotkeys = HotkeyManager(
+            callbacks_for(
+                start=lambda: self._ui(self.start_clicking),
+                stop=lambda: self._ui(self.stop_clicking),
+                emergency=lambda: self._ui(self.emergency_stop),
+                toggle=lambda: self._ui(self.toggle_clicking),
+            ),
             on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
         )
+        self._hotkeys.start(self._saved_hotkeys())
         self.tray_icon = create_tray_icon(
             show_window=lambda: self._ui(self.show_window),
             start=lambda: self._ui(self.start_clicking),
             stop=lambda: self._ui(self.stop_clicking),
             quit_app=lambda: self._ui(self.quit_application),
             on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
+            start_label=lambda: "Start" + self._hotkey_suffix("start"),
+            stop_label=lambda: "Stop" + self._hotkey_suffix("stop"),
         )
+        self._refresh_hotkey_labels()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -150,8 +164,64 @@ class AutoclickerApp:
 
         self.root.after(0, _run)
 
+    def _saved_hotkeys(self) -> dict[str, str]:
+        """Hotkeys from settings, falling back to the defaults if they are invalid."""
+        saved = self.settings.get("hotkeys")
+        try:
+            return validate_bindings(dict(saved or {}))
+        except (HotkeyError, TypeError, ValueError):
+            return dict(DEFAULT_HOTKEYS)
+
+    def _hotkey_suffix(self, action: str) -> str:
+        """' (F6)' style suffix for labels; Start/Stop fall back to the toggle key."""
+        bindings = self._hotkeys.bindings
+        key = bindings.get(action) or (
+            bindings.get("toggle") if action in ("start", "stop") else ""
+        )
+        return f" ({key})" if key else ""
+
+    def _refresh_hotkey_labels(self) -> None:
+        if hasattr(self, "start_btn"):
+            self.start_btn.config(text="Start" + self._hotkey_suffix("start"))
+            self.stop_btn.config(text="Stop" + self._hotkey_suffix("stop"))
+            self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
+        tray = getattr(self, "tray_icon", None)
+        if tray is not None:
+            try:
+                tray.update_menu()
+            except Exception:
+                pass
+
+    def open_hotkeys_dialog(self) -> None:
+        """Rebind hotkeys; global keys are released while the dialog is open."""
+        if self.click_engine.is_running:
+            messagebox.showwarning("Hotkeys", "Stop clicking before changing hotkeys.")
+            return
+        self._hotkeys.set_suspended(True)
+        HotkeysDialog(
+            self.root,
+            self._hotkeys.bindings,
+            on_save=self._save_hotkeys,
+            on_close=lambda: self._hotkeys.set_suspended(False),
+        )
+
+    def _save_hotkeys(self, bindings: dict[str, str]) -> None:
+        self.settings.set("hotkeys", bindings)
+        self._hotkeys.set_bindings(bindings)
+        self._refresh_hotkey_labels()
+        self._set_status_message("Hotkeys saved")
+
+    def toggle_clicking(self) -> None:
+        """Toggle hotkey: stop if running, otherwise start."""
+        if self.click_engine.is_running:
+            self.stop_clicking()
+        else:
+            self.start_clicking()
+
     def _paint_stopped(self, message: str, state: str = "stopped") -> None:
         """Reset start/stop widgets after clicking ends."""
+        if hasattr(self, "_hotkeys"):
+            self._hotkeys.set_running(False)
         if hasattr(self, "start_btn"):
             self.start_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
@@ -338,6 +408,7 @@ class AutoclickerApp:
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self._set_status_message("Running...", "running")
+                self._hotkeys.set_running(True)
                 if sanitized.get("target_mode") == "cursor":
                     self.coord_var.set("Target: current cursor position")
                 else:

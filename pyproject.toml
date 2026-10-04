@@ -33,8 +33,6 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "pyautogui>=0.9.53",
-    "keyboard>=0.13.5",
-    "mouse>=0.7.1",
     "pywin32>=227",
     "Pillow>=9.0.0",
     "pystray>=0.19.4",
@@ -156,8 +154,6 @@ disable_error_code = ["import-untyped"]
 [[tool.mypy.overrides]]
 module = [
     "pyautogui.*",
-    "keyboard.*",
-    "mouse.*",
     "pystray.*",
     "PIL.*",
     "win32.*",

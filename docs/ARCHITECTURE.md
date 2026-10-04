@@ -2,7 +2,7 @@
 
 ## Overview
 
-Windows desktop autoclicker: Tkinter GUI assembly, `AutoclickerController` for lifecycle, background click worker threads, settings in `%APPDATA%/WindowsAutoclicker/`, automation via `pyautogui` / `mouse` / `keyboard`.
+Windows desktop autoclicker: Tkinter GUI assembly, `AutoclickerController` for lifecycle, background click worker threads, settings in `%APPDATA%/WindowsAutoclicker/`, clicking via `pyautogui`, global hotkeys via Win32 `RegisterHotKey`.
 
 ```
 autoclicker.py              # Root shim: imports autoclicker.main:main
@@ -10,7 +10,7 @@ autoclicker/
   main.py                   # Entry: logging setup, AutoclickerApp().run()
   app/
     controller.py           # Settings, engine, picker, start/stop, session log
-    hotkeys.py              # Global F6/F7/ESC registration + unregister
+    hotkeys.py              # RegisterHotKey thread; claims keys by run state
     tray.py                 # pystray icon
   gui/
     main_window.py          # Window shell; marshals worker callbacks via root.after
@@ -36,12 +36,15 @@ autoclicker/
 |--------------------|-------|------|
 | Main thread | Tkinter | UI event loop, `AutoclickerApp.run()` |
 | Click thread | `ClickEngine.start_clicking` | Daemon thread running `_click_loop` |
+| Hotkey thread | `app.hotkeys.HotkeyManager` | Daemon thread owning `RegisterHotKey` and its message loop |
 | Tray thread | `app.tray` | Daemon thread running `pystray` icon |
 | Status timer | Tk `root.after(1000, ...)` | Periodic status label updates |
 
 All worker threads are daemon threads so process exit does not block on them.
 
-Worker callbacks (hotkeys, tray, picker, run finished) are marshaled onto the Tk thread with `root.after(0, ...)`. The click thread never `join()`s itself.
+Worker callbacks (hotkeys, tray, run finished) are marshaled onto the Tk thread with `root.after(0, ...)`. The click thread never `join()`s itself.
+
+Hotkeys use `RegisterHotKey`, which delivers a key only to this app. To avoid taking keys away from other programs, `HotkeyManager` claims the Start (and optional toggle) key while idle and the Stop and Emergency keys only while clicking; the GUI calls `set_running` when a run starts and ends. Bindings live in the `hotkeys` setting and are edited in the Hotkeys dialog, which suspends all keys while it is open.
 
 ## Stop paths
 
@@ -67,7 +70,8 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 
 ## External dependencies
 
-- `pyautogui`, `mouse`, `keyboard`: input automation
+- `pyautogui`: cursor movement and clicks
+- Win32 `RegisterHotKey` (ctypes, `app/hotkeys.py`): global hotkeys without a keyboard hook
 - `pywin32`: foreground window check (`safety.py`)
 - `Pillow`, `pystray`: tray icon
 - `tkinter`: GUI (stdlib)

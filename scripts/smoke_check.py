@@ -41,24 +41,6 @@ def check_imports() -> bool:
         passed = False
 
     try:
-        import mouse
-
-        _ok("mouse available")
-        methods = [m for m in dir(mouse) if not m.startswith("_")]
-        print(f"  Available methods: {methods}")
-    except ImportError as exc:
-        _fail(f"mouse import failed: {exc}")
-        passed = False
-
-    try:
-        import keyboard  # noqa: F401
-
-        _ok("keyboard available")
-    except ImportError as exc:
-        _fail(f"keyboard import failed: {exc}")
-        passed = False
-
-    try:
         import pystray  # noqa: F401
 
         _ok("pystray available")
@@ -81,14 +63,15 @@ def check_mouse_functionality() -> bool:
     """Verify basic mouse and screen queries."""
     print("\nTesting mouse functionality...")
     try:
-        import mouse
         import pyautogui
 
-        x, y = mouse.get_position()
+        from autoclicker.core.screen import virtual_screen_bounds
+
+        x, y = pyautogui.position()
         _ok(f"Current mouse position: ({x}, {y})")
 
-        screen_width, screen_height = pyautogui.size()
-        _ok(f"Screen size: {screen_width}x{screen_height}")
+        bounds = virtual_screen_bounds(pyautogui.size)
+        _ok(f"Desktop: {bounds.width}x{bounds.height} at ({bounds.left}, {bounds.top})")
         return True
     except Exception as exc:
         _fail(f"Mouse functionality check failed: {exc}")

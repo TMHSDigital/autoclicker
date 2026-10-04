@@ -83,3 +83,9 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
         variable=app.pause_unfocused_var,
         command=app._sync_safety_from_ui,
     ).pack(anchor=tk.W, pady=(4, 0))
+
+    ttk.Button(
+        toggles_frame,
+        text="Hotkeys\u2026",
+        command=app.open_hotkeys_dialog,
+    ).pack(anchor=tk.W, pady=(10, 0))

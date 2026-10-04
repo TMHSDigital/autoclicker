@@ -29,8 +29,14 @@ def create_tray_icon(
     stop: Callable[[], None],
     quit_app: Callable[[], None],
     on_error: Callable[[str], None],
+    start_label: Callable[[], str] = lambda: "Start",
+    stop_label: Callable[[], str] = lambda: "Stop",
 ) -> pystray.Icon | None:
-    """Create the system tray icon and menu, or None on failure."""
+    """Create the system tray icon and menu, or None on failure.
+
+    Start/Stop labels are callables so they follow hotkey changes
+    (call ``icon.update_menu()`` after rebinding).
+    """
     try:
         icon_image = _load_tray_image()
         return pystray.Icon(
@@ -39,8 +45,8 @@ def create_tray_icon(
             "Windows Autoclicker",
             menu=pystray.Menu(
                 pystray.MenuItem("Show", show_window),
-                pystray.MenuItem("Start (F6)", start),
-                pystray.MenuItem("Stop (F7)", stop),
+                pystray.MenuItem(lambda _item: start_label(), start),
+                pystray.MenuItem(lambda _item: stop_label(), stop),
                 pystray.MenuItem("Exit", quit_app),
             ),
         )

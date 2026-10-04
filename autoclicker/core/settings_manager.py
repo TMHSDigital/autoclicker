@@ -85,6 +85,7 @@ class SettingsManager:
         "max_cps_ceiling": 50,
         "pause_when_unfocused": False,
         "theme": "light",
+        "hotkeys": {"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""},
         "presets": {},
     }
 

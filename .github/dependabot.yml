@@ -9,8 +9,6 @@ updates:
     # audit/ has been renamed to *.snapshot so dependabot stops scanning it.
     allow:
       - dependency-name: "pyautogui"
-      - dependency-name: "keyboard"
-      - dependency-name: "mouse"
       - dependency-name: "pywin32"
       - dependency-name: "Pillow"
       - dependency-name: "pystray"
