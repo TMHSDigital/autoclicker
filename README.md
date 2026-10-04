@@ -55,7 +55,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y or press <b>Pick Location</b>), or click wherever the <b>cursor</b> is. Save spots as named <b>presets</b>.
+      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is. Save spots as named <b>presets</b>.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -184,7 +184,6 @@ An autoclicker that won't stop is worse than none, so every run has more than on
 ### Known limitations
 
 - The corner failsafe watches the corners of the **primary monitor** only. On other monitors, use <kbd>Esc</kbd> or <kbd>F7</kbd> to stop.
-- The **Pick Location** click also reaches the window underneath ([#43](https://github.com/TMHSDigital/autoclicker/issues/43)). Pick over an empty area if that matters.
 - Windows blocks input from normal apps into **elevated (admin) windows**. To click into one, run the autoclicker as administrator too; otherwise there's no need to.
 
 ## Settings and logs

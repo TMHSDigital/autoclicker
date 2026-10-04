@@ -1,97 +1,96 @@
-"""
-Unit tests for coordinate picker and preset manager
-Tests coordinate selection and preset functionality
-"""
+"""Unit tests for the Pick Location overlay and the preset manager."""
 
 import os
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from autoclicker.core.screen import ScreenBounds
 from autoclicker.core.settings_manager import SettingsManager
-from autoclicker.utils.coordinate_picker import CoordinatePicker, PresetManager
+from autoclicker.gui.picker import CoordinatePicker
+from autoclicker.utils.coordinate_picker import PresetManager
 
 
-class TestCoordinatePicker(unittest.TestCase):
-    """Test cases for CoordinatePicker"""
+class TestOverlayPicker(unittest.TestCase):
+    """#43: Pick Location uses a click-absorbing overlay on the Tk thread."""
 
     def setUp(self):
-        """Set up test fixtures"""
-        self.picker = CoordinatePicker()
-        self.callback_called = False
-        self.callback_coords = None
+        self.windows: list[MagicMock] = []
 
-    def test_initial_state(self):
-        """Test initial state of coordinate picker"""
-        self.assertFalse(self.picker.is_picking())
-        self.assertIsNone(self.picker.on_coordinate_selected)
-        self.assertIsNone(self.picker.on_cancelled)
+        def factory(_root):
+            window = MagicMock()
+            self.windows.append(window)
+            return window
 
-    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
-    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
-    def test_start_picking_success(self, mock_on_button, mock_hotkey):
-        """Test successful start of coordinate picking"""
+        self.label_patch = patch("autoclicker.gui.picker.tk.Label")
+        self.label_patch.start()
+        self.picker = CoordinatePicker(
+            MagicMock(),
+            bounds=lambda: ScreenBounds(-1920, 0, 3840, 1080),
+            toplevel_factory=factory,
+        )
 
-        def on_selected(x, y):
-            self.callback_called = True
-            self.callback_coords = (x, y)
+    def tearDown(self):
+        self.label_patch.stop()
 
-        result = self.picker.start_picking(on_selected)
-        self.assertTrue(result)
+    @staticmethod
+    def _event(x, y):
+        return SimpleNamespace(x_root=x, y_root=y)
+
+    def test_overlay_covers_whole_desktop_and_is_topmost(self):
+        self.assertTrue(self.picker.start_picking(lambda x, y: None))
+        overlay = self.windows[0]
+        overlay.geometry.assert_called_once_with("3840x1080+-1920+0")
+        overlay.overrideredirect.assert_called_once_with(True)
+        overlay.attributes.assert_any_call("-topmost", True)
+        bound = {c.args[0] for c in overlay.bind.call_args_list}
+        self.assertTrue({"<Button-1>", "<Button-3>", "<Escape>", "<Motion>"} <= bound)
         self.assertTrue(self.picker.is_picking())
-        self.assertEqual(self.picker.on_coordinate_selected, on_selected)
 
-    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
-    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
-    def test_start_picking_already_active(self, mock_on_button, mock_hotkey):
-        """Test starting coordinate picking when already active"""
+    def test_click_selects_and_closes(self):
+        selected = []
+        self.picker.start_picking(lambda x, y: selected.append((x, y)))
+        self.picker._on_click(self._event(-1200, 300))
+        self.assertEqual(selected, [(-1200, 300)])
+        self.assertFalse(self.picker.is_picking())
+        for window in self.windows:
+            window.destroy.assert_called_once()
+
+    def test_escape_cancels(self):
+        cancelled = MagicMock()
+        selected = MagicMock()
+        self.picker.start_picking(selected, on_cancelled=cancelled)
+        self.picker._on_cancel()
+        cancelled.assert_called_once()
+        selected.assert_not_called()
+        self.assertFalse(self.picker.is_picking())
+
+    def test_motion_updates_readout(self):
         self.picker.start_picking(lambda x, y: None)
-        self.assertTrue(self.picker.is_picking())
+        self.picker._on_motion(self._event(500, 400))
+        readout = self.windows[1]
+        readout.geometry.assert_called_with("+518+418")
+        text = self.picker._readout_label.configure.call_args.kwargs["text"]
+        self.assertTrue(text.startswith("500, 400"))
 
-        # Try to start again
-        result = self.picker.start_picking(lambda x, y: None)
-        self.assertFalse(result)
-
-    @patch("autoclicker.utils.coordinate_picker.keyboard.remove_hotkey")
-    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
-    @patch("autoclicker.utils.coordinate_picker.mouse.unhook")
-    @patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock())
-    def test_stop_picking(self, mock_on_button, mock_unhook, mock_hotkey, mock_remove):
-        """Test stopping coordinate picking"""
-        cancelled_called = False
-
-        def on_cancelled():
-            nonlocal cancelled_called
-            cancelled_called = True
-
-        self.picker.start_picking(lambda x, y: None, on_cancelled)
-        self.assertTrue(self.picker.is_picking())
-
-        self.picker.stop_picking()
+    def test_second_start_rejected_and_stop_without_cancel(self):
+        self.assertTrue(self.picker.start_picking(lambda x, y: None))
+        self.assertFalse(self.picker.start_picking(lambda x, y: None))
+        cancelled = MagicMock()
+        self.picker.on_cancelled = cancelled
+        self.picker.stop_picking(cancelled=False)
+        cancelled.assert_not_called()
         self.assertFalse(self.picker.is_picking())
-        self.assertTrue(cancelled_called)
 
-    def test_coordinate_selection_callback(self):
-        """Test coordinate selection callback"""
-        callback_coords = None
-
-        def on_selected(x, y):
-            nonlocal callback_coords
-            callback_coords = (x, y)
-
-        with (
-            patch("autoclicker.utils.coordinate_picker.mouse.on_button", return_value=MagicMock()),
-            patch(
-                "autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock()
-            ),
-        ):
-            self.picker.start_picking(on_selected)
-
-        # Simulate coordinate selection
-        self.picker._on_mouse_click = MagicMock()
-        self.picker.on_coordinate_selected(100, 200)
-
-        self.assertEqual(callback_coords, (100, 200))
+    def test_overlay_failure_returns_false(self):
+        picker = CoordinatePicker(
+            MagicMock(),
+            bounds=lambda: ScreenBounds(0, 0, 100, 100),
+            toplevel_factory=MagicMock(side_effect=RuntimeError("no display")),
+        )
+        self.assertFalse(picker.start_picking(lambda x, y: None))
+        self.assertFalse(picker.is_picking())
 
 
 class TestPresetManager(unittest.TestCase):
@@ -177,57 +176,6 @@ class TestPresetManager(unittest.TestCase):
         # Load preset with new manager
         coords = new_preset_manager.load_preset("Persistent")
         self.assertEqual(coords, (123, 456))
-
-
-class TestCoordinatePickerIntegration(unittest.TestCase):
-    """Integration tests for coordinate picker"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.temp_file = tempfile.NamedTemporaryFile(delete=False)
-        self.temp_file.close()
-        self.settings_file = self.temp_file.name
-        self.settings = SettingsManager(self.settings_file)
-        self.preset_manager = PresetManager(self.settings)
-        self.picker = CoordinatePicker()
-
-    def tearDown(self):
-        """Clean up test fixtures"""
-        if os.path.exists(self.settings_file):
-            os.unlink(self.settings_file)
-
-    @patch("autoclicker.utils.coordinate_picker.keyboard.add_hotkey", return_value=MagicMock())
-    @patch("autoclicker.utils.coordinate_picker.mouse")
-    def test_full_coordinate_workflow(self, mock_mouse, mock_hotkey):
-        """Test full coordinate picking workflow"""
-        # Mock mouse module
-        mock_mouse.get_position.return_value = (150, 250)
-        mock_mouse.on_button = MagicMock()
-        mock_mouse.unhook = MagicMock()
-
-        selected_coords = None
-        selection_completed = False
-
-        def on_selected(x, y):
-            nonlocal selected_coords, selection_completed
-            selected_coords = (x, y)
-            selection_completed = True
-
-        # Start coordinate picking
-        result = self.picker.start_picking(on_selected)
-        self.assertTrue(result)
-
-        # Simulate mouse click
-        self.picker._on_mouse_click()
-
-        # Check that coordinates were captured
-        self.assertTrue(selection_completed)
-        self.assertEqual(selected_coords, (150, 250))
-        self.assertFalse(self.picker.is_picking())
-
-        # Check that mouse hooks were managed
-        mock_mouse.on_button.assert_called_once()
-        mock_mouse.unhook.assert_called_once()
 
 
 if __name__ == "__main__":

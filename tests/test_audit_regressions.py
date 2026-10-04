@@ -10,7 +10,6 @@ from unittest.mock import MagicMock, patch
 from autoclicker.core.click_engine import ClickEngine
 from autoclicker.core.exceptions import CoordinateError, create_user_friendly_error
 from autoclicker.core.settings_manager import SettingsManager
-from autoclicker.utils.coordinate_picker import CoordinatePicker
 
 
 class TestStopHaltsClicking(unittest.TestCase):
@@ -45,33 +44,6 @@ class TestStopHaltsClicking(unittest.TestCase):
         engine = ClickEngine(enable_performance_monitoring=False)
         self.assertFalse(hasattr(engine, "enable_click_queuing"))
         self.assertNotIn("queue_size", engine.get_status())
-
-
-class TestCoordinatePickerHooks(unittest.TestCase):
-    """C7, C8: hook API and cancel paths."""
-
-    def test_stop_picking_unhooks_by_handle_not_callback(self):
-        mock_hook = MagicMock()
-        picker = CoordinatePicker()
-
-        with (
-            patch("mouse.on_button", return_value=mock_hook) as mock_on_button,
-            patch("mouse.unhook") as mock_unhook,
-            patch("keyboard.add_hotkey", return_value=MagicMock()),
-        ):
-            picker.start_picking(lambda x, y: None)
-            mock_on_button.assert_called_once()
-            picker.stop_picking(cancelled=True)
-            mock_unhook.assert_called_once_with(mock_hook)
-
-    def test_keyboard_cancel_handler_registered_on_start(self):
-        picker = CoordinatePicker()
-        with (
-            patch("mouse.on_button", return_value=MagicMock()),
-            patch("keyboard.add_hotkey", return_value=MagicMock()) as mock_hotkey,
-        ):
-            picker.start_picking(lambda x, y: None, on_cancelled=lambda: None)
-        mock_hotkey.assert_called_once_with("esc", picker._on_cancel_hotkey)
 
 
 class TestQuitPersistence(unittest.TestCase):

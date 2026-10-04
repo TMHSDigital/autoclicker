@@ -18,6 +18,7 @@ from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutc
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import field_label
+from .picker import CoordinatePicker
 from .sections import (
     build_advanced_section,
     build_click_settings_section,
@@ -41,7 +42,7 @@ class AutoclickerApp:
         self.controller = AutoclickerController()
         self.settings = self.controller.settings
         self.click_engine = self.controller.click_engine
-        self.coordinate_picker = self.controller.coordinate_picker
+        self.coordinate_picker = CoordinatePicker(self.root)
         self.preset_manager = self.controller.preset_manager
         self.controller.apply_safety_from_settings()
 
@@ -63,7 +64,6 @@ class AutoclickerApp:
         )
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.controller.coordinate_picker.on_coordinate_selected = self._on_coordinates_selected
 
     def setup_window(self) -> None:
         """Configure main window properties."""
@@ -210,12 +210,13 @@ class AutoclickerApp:
         if self.coordinate_picker.is_picking():
             return
 
-        self._set_status_message("Click anywhere to select coordinates...", "running")
+        self._set_status_message("Click anywhere to pick a location...", "running")
         self.pick_btn.config(state=tk.DISABLED)
 
+        # The overlay runs on the Tk thread, so its callbacks can touch widgets directly.
         started = self.coordinate_picker.start_picking(
-            on_selected=lambda x, y: self._ui(self._on_coordinates_selected, x, y),
-            on_cancelled=lambda: self._ui(self._on_coordinate_picker_cancelled),
+            on_selected=self._on_coordinates_selected,
+            on_cancelled=self._on_coordinate_picker_cancelled,
         )
         if not started:
             self.pick_btn.config(state=tk.NORMAL)
