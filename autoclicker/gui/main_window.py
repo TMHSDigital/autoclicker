@@ -5,12 +5,15 @@ Handles user interface and event coordination.
 """
 
 import threading
+import time
 import tkinter as tk
+import webbrowser
 from collections.abc import Callable
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import sv_ttk
 
+from .. import __version__
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import (
     DEFAULT_HOTKEYS,
@@ -24,6 +27,7 @@ from ..core.click_engine import STOP_EMERGENCY, STOP_ERROR, STOP_SAFETY, RunOutc
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
+from ..core.updates import RELEASES_PAGE, Release, check_due, newer_release
 from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
 from .hotkeys_dialog import HotkeysDialog
 from .picker import CoordinatePicker
@@ -69,6 +73,8 @@ class AutoclickerApp:
     failsafe_var: tk.BooleanVar
     pause_unfocused_var: tk.BooleanVar
     minimize_to_tray_var: tk.BooleanVar
+    check_updates_var: tk.BooleanVar
+    update_button: ttk.Button
     start_btn: ttk.Button
     stop_btn: ttk.Button
     emergency_btn: ttk.Button
@@ -86,6 +92,8 @@ class AutoclickerApp:
 
     # Pending root.after id while a Start-button countdown is running.
     _countdown_job: str | None = None
+    # Release page of a newer version found by the update check.
+    _release_url: str | None = None
 
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -127,6 +135,7 @@ class AutoclickerApp:
         self.root.bind("<Unmap>", self._on_unmap)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.root.after(1500, self._maybe_check_for_updates)
 
     def setup_window(self) -> None:
         """Configure main window properties."""
@@ -894,6 +903,53 @@ class AutoclickerApp:
                 )
             except Exception:
                 pass
+
+    # -- update check (opt-in) ----------------------------------------------
+
+    def _maybe_check_for_updates(self) -> None:
+        """Ask once whether to check, then check at most daily, never while clicking."""
+        choice = self.settings.get("check_for_updates")
+        if choice is None:
+            choice = bool(
+                messagebox.askyesno(
+                    "Check for updates",
+                    "Check GitHub once a day for new versions of Windows Autoclicker?\n\n"
+                    "Only the public release page is contacted, and nothing is downloaded. "
+                    "You can change this under Advanced.",
+                )
+            )
+            self.settings.set("check_for_updates", choice)
+            self.check_updates_var.set(choice)
+        if choice is not True or self.click_engine.is_running:
+            return
+        if not check_due(self.settings.get("last_update_check")):
+            return
+        self.settings.set("last_update_check", time.time())
+        threading.Thread(target=self._check_for_updates, daemon=True, name="UpdateCheck").start()
+
+    def _check_for_updates(self) -> None:
+        """(Worker thread) look for a newer release and report it on the Tk thread."""
+        release = newer_release(__version__)
+        if release is not None:
+            self._ui(self._show_update, release)
+
+    def _show_update(self, release: Release) -> None:
+        self._release_url = release.url
+        self.update_button.configure(text=f"Update to {release.version}")
+        self.update_button.grid()
+        if self.tray_icon is not None:
+            try:
+                self.tray_icon.notify(
+                    f"Version {release.version} is available.", "Windows Autoclicker"
+                )
+            except Exception:
+                pass
+
+    def open_release_page(self) -> None:
+        webbrowser.open(self._release_url or RELEASES_PAGE)
+
+    def _on_check_updates_toggle(self) -> None:
+        self.settings.set("check_for_updates", bool(self.check_updates_var.get()))
 
     def _on_minimize_to_tray_toggle(self) -> None:
         self.settings.set("minimize_to_tray", bool(self.minimize_to_tray_var.get()))

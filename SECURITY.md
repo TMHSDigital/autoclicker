@@ -31,3 +31,7 @@ This is an input-automation tool. Reports of unsafe defaults, privilege issues, 
 ## Automated checks
 
 Every push and pull request runs `pip-audit` against the locked dependencies and CodeQL (Python and the GitHub Actions workflows); CodeQL also runs weekly. Dependabot tracks dependency and action updates, and actions are pinned to commit SHAs.
+
+## Network use
+
+The app makes no network requests unless the user turns on the update check. When it is on, the app sends one anonymous HTTPS GET to `https://api.github.com/repos/TMHSDigital/autoclicker/releases/latest` at most once a day and only compares version numbers; it never downloads or runs anything.

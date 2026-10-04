@@ -268,8 +268,12 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `max_cps_ceiling` | `50` | Runaway guard (Advanced, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
+| `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (Advanced) |
+| `last_update_check` | `0` | When the last update check ran (Unix time) |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks` and `auto_stop_minutes`; older point-only presets still load |
+
+**Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under Advanced). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 

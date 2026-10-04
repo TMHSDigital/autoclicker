@@ -148,6 +148,9 @@ class SettingsManager:
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
+        # None until the user has been asked once; then True or False.
+        "check_for_updates": None,
+        "last_update_check": 0,
         "hotkeys": {"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""},
         "presets": {},
     }

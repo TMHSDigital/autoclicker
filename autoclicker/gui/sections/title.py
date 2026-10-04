@@ -37,7 +37,17 @@ def build_title_section(app, parent: ttk.Frame) -> None:
         width=10,
         command=app.toggle_theme,
     )
-    app.theme_button.grid(row=0, column=2, sticky=tk.E)
+    app.theme_button.grid(row=0, column=3, sticky=tk.E)
+
+    # Shown only when the opt-in update check finds a newer release.
+    app.update_button = ttk.Button(
+        header,
+        text="Update available",
+        style="Toolbutton",
+        command=app.open_release_page,
+    )
+    app.update_button.grid(row=0, column=2, sticky=tk.E, padx=(0, 6))
+    app.update_button.grid_remove()
 
 
 def _theme_label(app) -> str:

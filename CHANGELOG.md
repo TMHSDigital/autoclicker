@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Opt-in update check: asked once on first launch (and changeable under Advanced), the app checks GitHub at most once a day and shows an "Update to X" button plus a tray notification when a newer release exists. It never checks while clicking, never downloads anything, and makes no network requests when off (#79).
 - Command line: flags such as `--profile`, `--at X,Y`, `--cursor`, `--interval 100ms`, `--clicks N`, `--start` and `--minimized` set up the window for one launch, and `--headless` runs once without a window (hotkeys, failsafe and limits still apply) and exits with a code that says how the run ended. Saved settings are left alone (#75).
 - Sequence target mode: click several points in order, each with its own button, click type and wait before the next step, repeated N times or until stopped. Points are added with Pick Location and can be reordered or removed; every stop path and limit is checked before each step, and sequences are saved in settings and profiles (#72).
 - Presets are now profiles: besides the target point they remember the target mode, interval, variation, button, click type, burst and limits, and loading one restores them all. Saving over an existing name asks first, a summary line shows what the selected profile does, and profiles can be exported to and imported from a JSON file. Presets saved by older versions still load (#73).

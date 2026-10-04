@@ -112,6 +112,14 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
         command=app._on_minimize_to_tray_toggle,
     ).pack(anchor=tk.W, pady=(4, 0))
 
+    app.check_updates_var = tk.BooleanVar(value=settings.get("check_for_updates") is True)
+    ttk.Checkbutton(
+        toggles_frame,
+        text="Check GitHub for new versions once a day",
+        variable=app.check_updates_var,
+        command=app._on_check_updates_toggle,
+    ).pack(anchor=tk.W, pady=(4, 0))
+
     ttk.Button(
         toggles_frame,
         text="Hotkeys\u2026",
