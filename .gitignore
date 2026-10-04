@@ -84,3 +84,6 @@ config.local.json
 *.key
 *.crt
 CLAUDE.md
+
+# Playwright MCP previews
+.playwright-mcp/

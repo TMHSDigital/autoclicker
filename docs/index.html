@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windows Autoclicker</title>
+  <meta name="description" content="A fast, careful autoclicker for Windows: fixed points, sequences, hold and key actions, profiles and a command line, with safety stops on by default. Single free .exe, no installer." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/" />
+  <link rel="icon" href="images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Windows Autoclicker" />
+  <meta property="og:description" content="Pick a spot, set the pace, press F6. Safety stops on by default. Single free .exe." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --text: #1b2330;
+      --muted: #5b6676;
+      --line: #e1e6ee;
+      --accent: #0067d6;
+      --accent-strong: #0050a8;
+      --accent-text: #ffffff;
+      --hero-a: #3b8cff;
+      --hero-b: #0058c9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f141b;
+        --surface: #171e27;
+        --text: #e6ebf2;
+        --muted: #9aa6b6;
+        --line: #26303c;
+        --accent: #4aa3ff;
+        --accent-strong: #7bbcff;
+        --accent-text: #08111c;
+        --hero-a: #1d4f9a;
+        --hero-b: #0b2d62;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+    header.hero {
+      background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+      color: #fff;
+      padding: 56px 0 64px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 40px;
+      align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; opacity: 0.95; }
+    .brand img { width: 40px; height: 40px; }
+    h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; margin: 20px 0 14px; }
+    .lede { font-size: 1.2rem; color: #dce9ff; margin: 0 0 28px; max-width: 34ch; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .button {
+      display: inline-block;
+      padding: 13px 22px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .button.primary { background: #fff; color: #0050a8; }
+    .button.primary:hover { background: #e8f1ff; }
+    .button.ghost { color: #fff; border: 1px solid rgba(255, 255, 255, 0.55); }
+    .button.ghost:hover { background: rgba(255, 255, 255, 0.12); }
+    .fine { font-size: 0.9rem; color: #cfe0ff; margin-top: 14px; }
+    .shot { width: 100%; max-width: 440px; justify-self: center; }
+    .shot img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: 0 24px 60px rgba(0, 20, 60, 0.45);
+    }
+    section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+    h2 { font-size: 1.8rem; margin: 0 0 8px; }
+    .sub { color: var(--muted); margin: 0 0 32px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
+    .card p { margin: 0; color: var(--muted); }
+    .steps { counter-reset: step; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      display: grid;
+      place-items: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    kbd {
+      font: 600 0.85em "Cascadia Mono", Consolas, monospace;
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 1px 6px;
+      background: var(--surface);
+    }
+    code, pre { font-family: "Cascadia Mono", Consolas, monospace; }
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 0.9rem;
+    }
+    details {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+    }
+    summary { cursor: pointer; font-weight: 600; }
+    details p { color: var(--muted); margin: 10px 0 0; }
+    footer { padding: 36px 0 48px; color: var(--muted); font-size: 0.92rem; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+    @media (max-width: 860px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .steps { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .grid, .steps { grid-template-columns: 1fr; }
+      header.hero { padding: 40px 0 48px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="brand"><img src="images/logo.svg" alt="" /> Windows Autoclicker</div>
+        <h1>Pick a spot, set the pace, press F6.</h1>
+        <p class="lede">A fast, careful autoclicker for Windows, with safety stops that are on by default.</p>
+        <div class="cta">
+          <a class="button primary" href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download for Windows</a>
+          <a class="button ghost" href="https://github.com/TMHSDigital/autoclicker">View on GitHub</a>
+        </div>
+        <p class="fine">Free single <code>.exe</code>. No installer, no Python, no ads. Windows 10 and 11.</p>
+      </div>
+      <div class="shot">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="images/screenshot-dark.png" />
+          <img src="images/screenshot-light.png" width="539" height="745" alt="Windows Autoclicker main window with target, click settings and start controls" />
+        </picture>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="wrap">
+        <h2>Everything a clicker should do</h2>
+        <p class="sub">From one spot clicked every second to a multi-step routine run from a shortcut.</p>
+        <div class="grid">
+          <div class="card"><h3>Pick and click</h3><p>Type X and Y, or Pick Location with a live readout on any monitor. Or click wherever the cursor is.</p></div>
+          <div class="card"><h3>Sequences</h3><p>Click several points in order, each with its own wait, repeated a set number of times or until you stop it.</p></div>
+          <div class="card"><h3>Precise timing</h3><p>Intervals from 0 ms to 60 s, random variation, and bursts of quick clicks between waits.</p></div>
+          <div class="card"><h3>Hold and key actions</h3><p>Hold a mouse button for a set time, or press a key such as F5 or Ctrl+R instead of clicking.</p></div>
+          <div class="card"><h3>Profiles</h3><p>Save a target and all its click settings by name. Export them to a file and share them.</p></div>
+          <div class="card"><h3>Command line</h3><p>Start a profile from a shortcut or Task Scheduler, or run headless with an exit code.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Stops when you need it to</h2>
+        <p class="sub">An autoclicker that won't stop is worse than none, so every run has several ways out.</p>
+        <div class="grid">
+          <div class="card"><h3>Corner failsafe</h3><p>Slam the mouse into a corner of any monitor to abort. Corners between screens are ignored.</p></div>
+          <div class="card"><h3>Emergency stop</h3><p><kbd>Esc</kbd> halts immediately from anywhere. Every hotkey can be rebound.</p></div>
+          <div class="card"><h3>Limits and speed guard</h3><p>Stop after N clicks or N minutes, and stop automatically if clicks run faster than your speed limit.</p></div>
+          <div class="card"><h3>Pause when unfocused</h3><p>Clicking pauses whenever the target window isn't in front, and resumes when it is.</p></div>
+          <div class="card"><h3>Only while a pixel matches</h3><p>Sample a color, and clicking waits or stops as soon as that spot on screen changes.</p></div>
+          <div class="card"><h3>Start countdown</h3><p>The Start button waits 3 seconds so you can let go of the mouse. Any stop key cancels it.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Up and running in a minute</h2>
+        <p class="sub">No setup, nothing to install.</p>
+        <ol class="steps">
+          <li><strong>Download</strong><br />the single <code>WindowsAutoclicker.exe</code>.</li>
+          <li><strong>Run it.</strong><br />Choose More info, Run anyway if SmartScreen asks.</li>
+          <li><strong>Pick a target</strong><br />with Pick Location, or use the cursor.</li>
+          <li><strong>Press <kbd>F6</kbd>.</strong><br /><kbd>F7</kbd> or <kbd>Esc</kbd> stops it.</li>
+        </ol>
+        <pre><code>WindowsAutoclicker.exe --profile Work --start --minimized
+WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Questions</h2>
+        <p class="sub">The short answers. The <a href="https://github.com/TMHSDigital/autoclicker#readme">README</a> has the details.</p>
+        <details>
+          <summary>Is it safe to download?</summary>
+          <p>Every release is built by GitHub Actions from the public repository and ships with a SHA-256 checksum and a build provenance attestation, so you can confirm the file came from that build. <a href="https://github.com/TMHSDigital/autoclicker/blob/main/docs/RELEASING.md#verifying-a-download">How to verify a download</a>.</p>
+        </details>
+        <details>
+          <summary>Why does Windows SmartScreen warn about it?</summary>
+          <p>The executable isn't code-signed yet, and SmartScreen warns about unsigned programs it hasn't seen often. Choose More info, then Run anyway, or verify the checksum first.</p>
+        </details>
+        <details>
+          <summary>Does it send any data?</summary>
+          <p>No. It makes no network requests unless you turn on the daily update check, which only reads the public latest-release page on GitHub.</p>
+        </details>
+        <details>
+          <summary>Will it work in my game or app?</summary>
+          <p>It works with most Windows programs. Apps running as administrator need the autoclicker to run as administrator too, and some games ignore synthetic input. Only automate software whose terms allow it.</p>
+        </details>
+        <details>
+          <summary>Can I use it at work?</summary>
+          <p>It's free for non-commercial use under CC BY-NC 4.0. For commercial licensing, contact <a href="mailto:info@tmhsdigital.com">TM Hospitality Strategies</a>.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker by <a href="https://github.com/TMHSDigital">TMHSDigital</a></span>
+      <span>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases">Releases</a> ·
+        <a href="https://github.com/TMHSDigital/autoclicker/blob/main/CHANGELOG.md">Changelog</a> ·
+        <a href="https://github.com/TMHSDigital/autoclicker/issues">Issues</a> ·
+        <a href="https://github.com/sponsors/TMHSDigital">Sponsor</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
