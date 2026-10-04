@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Security reports go through GitHub private vulnerability reporting (email still works), and CodeQL now scans the Python code and the workflows on every push and weekly (#70).
 - Bug and feature reports use GitHub issue forms that ask for the app version, how the app is run, monitor scaling and the log tail; blank issues are off and security reports are routed to private reporting (#69).
 - The burst row reads "Burst: N clicks, N ms apart" instead of an ambiguous "Pause", and CONTRIBUTING.md matches the real workflow: commit conventions, lock files, checks and release steps (#46).
 - README redesigned: download-first hero, timing diagram for interval vs. burst pause, accurate safety, settings and troubleshooting sections, and known limitations.
