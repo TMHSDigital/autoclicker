@@ -108,8 +108,8 @@ class ClickEngine:
 
     def start_clicking(
         self,
-        x: int,
-        y: int,
+        x: int | None,
+        y: int | None,
         interval: float,
         variation: int,
         burst_clicks: int,
@@ -124,7 +124,8 @@ class ClickEngine:
         Start the clicking process
 
         Args:
-            x, y: Target coordinates
+            x, y: Target coordinates, or None for both to click wherever the
+                cursor is (cursor mode)
             interval: Base interval between clicks (ms)
             variation: Random variation range (±ms)
             burst_clicks: Number of clicks per burst
@@ -263,8 +264,8 @@ class ClickEngine:
 
     def _click_loop(
         self,
-        x: int,
-        y: int,
+        x: int | None,
+        y: int | None,
         interval: float,
         variation: int,
         burst_clicks: int,
@@ -371,8 +372,8 @@ class ClickEngine:
 
     def _perform_burst(
         self,
-        x: int,
-        y: int,
+        x: int | None,
+        y: int | None,
         burst_clicks: int,
         burst_pause: float,
         mouse_button: str,
@@ -397,8 +398,8 @@ class ClickEngine:
 
     def _perform_click(
         self,
-        x: int,
-        y: int,
+        x: int | None,
+        y: int | None,
         mouse_button: str,
         click_type: str,
     ) -> None:
@@ -406,22 +407,24 @@ class ClickEngine:
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
-            # Validate against the cached desktop bounds; query live only if the
-            # cache is empty (e.g. direct unit-test calls).
-            if self._screen_bounds is None:
-                self._screen_bounds = virtual_screen_bounds(pyautogui.size)
-            bounds = self._screen_bounds
-            if not bounds.contains(x, y):
-                raise CoordinateError(
-                    x,
-                    y,
-                    f"Coordinates ({x}, {y}) are off screen (valid: {bounds.describe()})",
-                )
+            # Cursor mode (x and y are None): click wherever the cursor is.
+            if x is not None and y is not None:
+                # Validate against the cached desktop bounds; query live only if
+                # the cache is empty (e.g. direct unit-test calls).
+                if self._screen_bounds is None:
+                    self._screen_bounds = virtual_screen_bounds(pyautogui.size)
+                bounds = self._screen_bounds
+                if not bounds.contains(x, y):
+                    raise CoordinateError(
+                        x,
+                        y,
+                        f"Coordinates ({x}, {y}) are off screen (valid: {bounds.describe()})",
+                    )
 
-            # Instant move; skip if already at target (avoids moveTo overhead each click)
-            if self._last_click_xy != (x, y):
-                pyautogui.moveTo(x, y, duration=0)
-                self._last_click_xy = (x, y)
+                # Instant move; skip if already at target (avoids moveTo overhead each click)
+                if self._last_click_xy != (x, y):
+                    pyautogui.moveTo(x, y, duration=0)
+                    self._last_click_xy = (x, y)
 
             if mouse_button not in ("left", "right", "middle"):
                 raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")

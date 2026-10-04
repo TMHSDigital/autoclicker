@@ -55,7 +55,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Type X/Y or press <b>Pick Location</b> and click anywhere. Save spots as named <b>presets</b> and switch between them from a dropdown.
+      Click a fixed spot (type X/Y or press <b>Pick Location</b>), or click wherever the <b>cursor</b> is. Save spots as named <b>presets</b>.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -88,7 +88,7 @@ built around safety stops that are on by default.
   <tr>
     <td align="center" width="25%"><h3>1</h3><b>Download</b><br /><sub><a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe"><code>WindowsAutoclicker.exe</code></a></sub></td>
     <td align="center" width="25%"><h3>2</h3><b>Run it</b><br /><sub>no installer, no Python</sub></td>
-    <td align="center" width="25%"><h3>3</h3><b>Pick a target</b><br /><sub><b>Pick Location</b>, then click</sub></td>
+    <td align="center" width="25%"><h3>3</h3><b>Pick a target</b><br /><sub><b>Pick Location</b>, or use the cursor</sub></td>
     <td align="center" width="25%"><h3>4</h3><b>Press <kbd>F6</kbd></b><br /><sub><kbd>F7</kbd> or <kbd>Esc</kbd> to stop</sub></td>
   </tr>
 </table>
@@ -208,6 +208,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | Key | Default | Meaning |
 | :-- | :-: | :-- |
+| `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |
 | `interval` | `1000` | Wait between bursts, in `interval_unit` |
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |

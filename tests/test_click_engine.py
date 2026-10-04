@@ -378,3 +378,16 @@ class TestMainImport(unittest.TestCase):
             mock_app_cls.return_value = mock_app
             main_mod.main()
             mock_app.run.assert_called_once()
+
+
+class TestCursorMode(unittest.TestCase):
+    """#48: click wherever the cursor is when no target is given."""
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_no_move_and_no_bounds_check(self, mock_pyautogui):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine._perform_click(None, None, "left", "single")
+        mock_pyautogui.moveTo.assert_not_called()
+        mock_pyautogui.size.assert_not_called()
+        mock_pyautogui.click.assert_called_once_with(button="left", clicks=1)
+        self.assertEqual(engine.click_count, 1)

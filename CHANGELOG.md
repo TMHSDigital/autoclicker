@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- "Current cursor position" target mode: hover over something and press F6 to click wherever the cursor is, with no coordinates to pick (#48).
+
 ### Fixed
 
 - Double click now works with the right and middle buttons; it used to send a single click (#51).

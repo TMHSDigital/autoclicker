@@ -189,6 +189,18 @@ class AutoclickerApp:
             pause_when_unfocused=self.pause_unfocused_var.get(),
         )
 
+    def _apply_target_mode_state(self) -> None:
+        """Enable X/Y and Pick Location only when targeting a fixed location."""
+        fixed = self.target_mode_var.get() != "cursor"
+        state = tk.NORMAL if fixed else tk.DISABLED
+        for widget in (self.x_entry, self.y_entry, self.pick_btn):
+            widget.configure(state=state)
+
+    def _on_target_mode_change(self) -> None:
+        """Apply and remember the chosen target mode."""
+        self._apply_target_mode_state()
+        self.settings.set("target_mode", self.target_mode_var.get())
+
     def start_coordinate_picker(self) -> None:
         """Start coordinate picking mode."""
         if self.click_engine.is_running:
@@ -280,6 +292,7 @@ class AutoclickerApp:
         """Collect current values from UI fields."""
         return AutoclickerController.collect_raw_settings(
             {
+                "target_mode": self.target_mode_var.get(),
                 "x_coord": self.x_entry.get(),
                 "y_coord": self.y_entry.get(),
                 "interval": self.interval_entry.get(),
@@ -321,12 +334,13 @@ class AutoclickerApp:
 
             if result.success and result.sanitized is not None:
                 sanitized = result.sanitized
-                x = sanitized["x_coord"]
-                y = sanitized["y_coord"]
                 self.start_btn.config(state=tk.DISABLED)
                 self.stop_btn.config(state=tk.NORMAL)
                 self._set_status_message("Running...", "running")
-                self.coord_var.set(f"Target: ({x}, {y})")
+                if sanitized.get("target_mode") == "cursor":
+                    self.coord_var.set("Target: current cursor position")
+                else:
+                    self.coord_var.set(f"Target: ({sanitized['x_coord']}, {sanitized['y_coord']})")
                 self._start_status_timer()
 
         except AutoclickerError as e:

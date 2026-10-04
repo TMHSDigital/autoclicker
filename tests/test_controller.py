@@ -150,3 +150,43 @@ class TestRunFinishedLogging(unittest.TestCase):
         )
         self.assertFalse(result.success)
         controller.settings.validate_all_settings.assert_not_called()
+
+
+class TestCursorModeStart(unittest.TestCase):
+    """#48: cursor mode starts the engine without a fixed target."""
+
+    def test_passes_none_target_and_logs_cursor(self):
+        controller = AutoclickerController.__new__(AutoclickerController)
+        controller.settings = SettingsManager.__new__(SettingsManager)
+        controller.settings._settings = {}
+        controller.settings._save_settings = MagicMock()
+        controller.click_engine = MagicMock()
+        controller.click_engine.is_running = False
+        controller.click_engine.start_clicking.return_value = True
+        raw = {
+            "target_mode": "cursor",
+            "x_coord": "",
+            "y_coord": "",
+            "interval": "100",
+            "interval_unit": "ms",
+            "variation": "0",
+            "mouse_button": "left",
+            "click_type": "single",
+            "burst_clicks": "1",
+            "burst_pause": "0",
+            "max_clicks": "0",
+            "auto_stop_minutes": "0",
+            "max_cps_ceiling": 50,
+        }
+        with patch("autoclicker.app.controller.append_session_event") as log:
+            result = controller.validate_and_start_clicking(
+                raw,
+                failsafe=True,
+                pause_when_unfocused=False,
+                screen_bounds=ScreenBounds(0, 0, 1920, 1080),
+            )
+        self.assertTrue(result.success, result.validation_errors)
+        kwargs = controller.click_engine.start_clicking.call_args.kwargs
+        self.assertIsNone(kwargs["x"])
+        self.assertIsNone(kwargs["y"])
+        self.assertEqual(log.call_args.kwargs["target"], "cursor")

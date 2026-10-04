@@ -35,6 +35,7 @@ _CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
     "mouse_button": ("left", "right", "middle"),
     "click_type": ("single", "double"),
     "interval_unit": ("ms", "seconds"),
+    "target_mode": ("fixed", "cursor"),
 }
 
 # Human-readable names for validation error keys, used in error dialogs.
@@ -42,6 +43,7 @@ FIELD_LABELS: dict[str, str] = {
     "x_coord": "X",
     "y_coord": "Y",
     "coordinates": "Coordinates",
+    "target_mode": "Target",
     "interval": "Interval",
     "interval_unit": "Interval unit",
     "variation": "Variation",
@@ -67,6 +69,7 @@ class SettingsManager:
     """Manages application settings with validation and persistence"""
 
     DEFAULT_SETTINGS = {
+        "target_mode": "fixed",
         "x_coord": 100,
         "y_coord": 100,
         "interval": 1000,
@@ -347,7 +350,11 @@ class SettingsManager:
         """
         errors: dict[str, str] = {}
         parsed: dict[str, Any] = {}
+        # In cursor mode the X/Y fields are unused, so they are not validated.
+        cursor_mode = str(settings.get("target_mode", "fixed")).strip() == "cursor"
         for key, value in settings.items():
+            if cursor_mode and key in ("x_coord", "y_coord"):
+                continue
             result, error = self.parse_input(key, value)
             if error is not None:
                 errors[key] = error

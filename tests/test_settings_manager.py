@@ -271,6 +271,19 @@ class TestSettingsManager(unittest.TestCase):
                     self.assertFalse(result["valid"])
                     self.assertTrue(result["errors"])
 
+    def test_cursor_mode_ignores_coordinate_fields(self):
+        """#48: X/Y are unused in cursor mode, so bad values there are fine."""
+        result = self.manager.validate_all_settings(
+            self._ui_settings(target_mode="cursor", x_coord="", y_coord="-99999"), 1920, 1080
+        )
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertEqual(result["sanitized_settings"]["target_mode"], "cursor")
+        self.assertNotIn("x_coord", result["sanitized_settings"])
+
+    def test_unknown_target_mode_rejected(self):
+        result = self.manager.validate_all_settings(self._ui_settings(target_mode="nope"))
+        self.assertIn("target_mode", result["errors"])
+
     def test_valid_ui_strings_parse_to_numbers(self):
         result = self.manager.validate_all_settings(self._ui_settings(interval="0"), 1920, 1080)
         self.assertTrue(result["valid"], result["errors"])

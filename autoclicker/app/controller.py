@@ -61,6 +61,7 @@ class AutoclickerController:
     def collect_raw_settings(ui_fields: dict[str, Any]) -> dict[str, Any]:
         """Build a raw settings dict from UI field values passed in."""
         return {
+            "target_mode": ui_fields.get("target_mode", "fixed"),
             "x_coord": ui_fields["x_coord"],
             "y_coord": ui_fields["y_coord"],
             "interval": ui_fields["interval"],
@@ -103,8 +104,9 @@ class AutoclickerController:
 
         sanitized = validation_result["sanitized_settings"]
 
-        x = sanitized["x_coord"]
-        y = sanitized["y_coord"]
+        cursor_mode = sanitized.get("target_mode") == "cursor"
+        x = None if cursor_mode else sanitized["x_coord"]
+        y = None if cursor_mode else sanitized["y_coord"]
         interval = sanitized["interval"]
         interval_unit = sanitized["interval_unit"]
         variation = sanitized["variation"]
@@ -145,10 +147,10 @@ class AutoclickerController:
         )
 
         if started:
+            target = "cursor" if cursor_mode else f"{x},{y}"
             append_session_event(
                 "start",
-                x=x,
-                y=y,
+                target=target,
                 interval_ms=interval_ms,
                 button=sanitized["mouse_button"],
             )
