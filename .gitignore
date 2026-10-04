@@ -80,3 +80,4 @@ config.local.json
 *.pem
 *.key
 *.crt
+CLAUDE.md
