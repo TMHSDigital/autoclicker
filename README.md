@@ -213,7 +213,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |
 | `variation` | `0` | ± random milliseconds added to each interval |
 | `mouse_button` | `"left"` | `"left"`, `"right"` or `"middle"` |
-| `click_type` | `"single"` | `"single"` or `"double"` (double applies to the left button; see [#51](https://github.com/TMHSDigital/autoclicker/issues/51)) |
+| `click_type` | `"single"` | `"single"` or `"double"`, for any button. A double click counts as one click toward limits |
 | `burst_clicks` | `1` | Clicks per burst |
 | `burst_pause` | `1000` | Milliseconds between clicks inside a burst |
 | `max_clicks` | `0` | Stop after this many clicks; `0` = no limit |

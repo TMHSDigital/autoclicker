@@ -423,21 +423,13 @@ class ClickEngine:
                 pyautogui.moveTo(x, y, duration=0)
                 self._last_click_xy = (x, y)
 
-            # Perform click based on button and type
+            if mouse_button not in ("left", "right", "middle"):
+                raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")
+
+            # One call for every button; a double click counts as one click toward
+            # max_clicks and the runaway guard.
             try:
-                if mouse_button == "left":
-                    if click_type == "double":
-                        pyautogui.doubleClick()
-                    else:
-                        pyautogui.click()
-                elif mouse_button == "right":
-                    pyautogui.rightClick()
-                elif mouse_button == "middle":
-                    pyautogui.middleClick()
-                else:
-                    raise ClickEngineError(
-                        "perform_click", f"Unsupported mouse button: {mouse_button}"
-                    )
+                pyautogui.click(button=mouse_button, clicks=2 if click_type == "double" else 1)
                 # Record performance metrics
                 if self.enable_performance_monitoring:
                     total_time = time.perf_counter() - click_start_time

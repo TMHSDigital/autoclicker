@@ -86,15 +86,18 @@ class TestClickEnginePerformClick(unittest.TestCase):
     def test_left_double_click(self, mock_pyautogui):
         mock_pyautogui.size.return_value = (1920, 1080)
         self.engine._perform_click(10, 10, "left", "double")
-        mock_pyautogui.doubleClick.assert_called_once()
+        mock_pyautogui.click.assert_called_once_with(button="left", clicks=2)
 
     @patch("autoclicker.core.click_engine.pyautogui")
-    def test_right_and_middle_click(self, mock_pyautogui):
+    def test_every_button_and_click_type(self, mock_pyautogui):
+        """#51: double click works for right and middle too."""
         mock_pyautogui.size.return_value = (1920, 1080)
-        self.engine._perform_click(10, 10, "right", "single")
-        mock_pyautogui.rightClick.assert_called_once()
-        self.engine._perform_click(10, 10, "middle", "single")
-        mock_pyautogui.middleClick.assert_called_once()
+        for button in ("left", "right", "middle"):
+            for click_type, clicks in (("single", 1), ("double", 2)):
+                with self.subTest(button=button, click_type=click_type):
+                    mock_pyautogui.click.reset_mock()
+                    self.engine._perform_click(10, 10, button, click_type)
+                    mock_pyautogui.click.assert_called_once_with(button=button, clicks=clicks)
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_out_of_bounds_raises_coordinate_error(self, mock_pyautogui):
