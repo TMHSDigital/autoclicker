@@ -377,3 +377,66 @@ class TestSettingsManager(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestUnreadableSettingsFile(unittest.TestCase):
+    """#65: a bad settings file is moved aside, never silently overwritten."""
+
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self._dir.name, "autoclicker_settings.json")
+
+    def tearDown(self):
+        self._dir.cleanup()
+
+    def _write(self, text):
+        with open(self.path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
+    def _backups(self):
+        return [n for n in os.listdir(self._dir.name) if ".corrupt-" in n]
+
+    def test_invalid_json_is_preserved_and_reported(self):
+        original = '{"presets": {"Home": {"x": 1, "y": 2}},'  # trailing comma, truncated
+        self._write(original)
+        manager = SettingsManager(self.path)
+        self.assertEqual(manager.get("presets"), {})
+        backups = self._backups()
+        self.assertEqual(len(backups), 1)
+        with open(os.path.join(self._dir.name, backups[0]), encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), original)
+        self.assertIn(backups[0], manager.load_warning)
+        manager.set("theme", "dark")  # a later save must not touch the backup
+        self.assertEqual(len(self._backups()), 1)
+
+    def test_non_object_json_is_preserved(self):
+        self._write("[1, 2, 3]")
+        manager = SettingsManager(self.path)
+        self.assertEqual(len(self._backups()), 1)
+        self.assertIn("not a JSON object", manager.load_warning)
+
+    def test_empty_file_is_not_quarantined(self):
+        self._write("")
+        manager = SettingsManager(self.path)
+        self.assertEqual(self._backups(), [])
+        self.assertIsNone(manager.load_warning)
+
+    def test_wrong_typed_values_fall_back_per_key(self):
+        self._write(
+            '{"presets": [], "hotkeys": "F6", "enable_failsafe": "no",'
+            ' "interval": 250, "mouse_button": 3, "custom": 1}'
+        )
+        manager = SettingsManager(self.path)
+        self.assertEqual(manager.get("presets"), {})
+        self.assertEqual(manager.get("hotkeys")["start"], "F6")
+        self.assertIs(manager.get("enable_failsafe"), True)
+        self.assertEqual(manager.get("mouse_button"), "left")
+        self.assertEqual(manager.get("interval"), 250)  # good values are kept
+        self.assertEqual(manager.get("custom"), 1)  # unknown keys are kept
+        self.assertEqual(self._backups(), [])
+        self.assertIsNone(manager.load_warning)
+
+    def test_malformed_presets_are_dropped(self):
+        self._write('{"presets": {"ok": {"x": 5, "y": 6}, "bad": {"x": "a"}, "worse": 7}}')
+        manager = SettingsManager(self.path)
+        self.assertEqual(manager.get("presets"), {"ok": {"x": 5, "y": 6}})

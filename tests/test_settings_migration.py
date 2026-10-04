@@ -72,3 +72,28 @@ class TestSettingsMigration(unittest.TestCase):
         ):
             mgr = SettingsManager()
             self.assertEqual(mgr.get("x_coord"), 100)
+
+
+class TestNoMigrationOverUnreadablePrimary(unittest.TestCase):
+    """#65: a legacy file must not be copied over an unreadable AppData file."""
+
+    def test_unreadable_primary_is_left_for_quarantine(self):
+        from autoclicker.core import settings_paths
+
+        with tempfile.TemporaryDirectory() as tmp:
+            primary = Path(tmp, "appdata", "autoclicker_settings.json")
+            primary.parent.mkdir()
+            primary.write_text("{broken", encoding="utf-8")
+            legacy = Path(tmp, "autoclicker_settings.json")
+            legacy.write_text('{"x_coord": 5}', encoding="utf-8")
+            with (
+                patch.object(settings_paths, "appdata_settings_path", return_value=primary),
+                patch.object(settings_paths, "legacy_cwd_settings_path", return_value=legacy),
+                patch.object(
+                    settings_paths,
+                    "legacy_migrated_marker_path",
+                    return_value=Path(tmp, ".migrated"),
+                ),
+            ):
+                self.assertEqual(settings_paths.resolve_settings_file(), str(primary))
+            self.assertEqual(primary.read_text(encoding="utf-8"), "{broken")

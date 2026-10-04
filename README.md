@@ -233,7 +233,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | `{"Name": {"x": 800, "y": 600}}` |
 
-An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically.
+An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 
 </details>
 

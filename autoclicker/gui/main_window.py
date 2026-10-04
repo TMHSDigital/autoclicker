@@ -77,6 +77,9 @@ class AutoclickerApp:
             stop_label=lambda: "Stop" + self._hotkey_suffix("stop"),
         )
         self._refresh_hotkey_labels()
+        warning = getattr(self.settings, "load_warning", None)
+        if warning:
+            self._set_status_message(warning, "alert")
         self._tray_hint_shown = False
         self.root.bind("<Unmap>", self._on_unmap)
 

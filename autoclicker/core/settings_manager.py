@@ -9,6 +9,7 @@ import json
 import logging
 import math
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,34 @@ FIELD_LABELS: dict[str, str] = {
 }
 
 
+# Settings whose stored value must be of a given JSON type; anything else falls
+# back to the default for that key on load. Numeric fields also accept strings
+# because the UI stores what was typed, and validation reports bad values.
+_BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
+_DICT_KEYS = frozenset({"hotkeys", "presets"})
+_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme"})
+_NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
+
+
+def _has_valid_type(key: str, value: Any) -> bool:
+    if key in _BOOL_KEYS:
+        return isinstance(value, bool)
+    if key in _DICT_KEYS:
+        return isinstance(value, dict)
+    if key in _STR_KEYS:
+        return isinstance(value, str)
+    if key in _NUMERIC_KEYS:
+        return isinstance(value, (int, float, str)) and not isinstance(value, bool)
+    return True
+
+
+def _is_valid_preset(value: Any) -> bool:
+    return isinstance(value, dict) and all(
+        isinstance(value.get(axis), int) and not isinstance(value.get(axis), bool)
+        for axis in ("x", "y")
+    )
+
+
 def field_label(key: str) -> str:
     """Return the display name for a settings or validation-error key."""
     return FIELD_LABELS.get(key, key.replace("_", " ").capitalize())
@@ -99,6 +128,8 @@ class SettingsManager:
             self.settings_file = resolve_settings_file()
         else:
             self.settings_file = settings_file
+        # Set when the settings file could not be used; shown once in the UI.
+        self.load_warning: str | None = None
         self._settings = self._load_settings()
 
     def _defaults(self) -> dict[str, Any]:
@@ -106,19 +137,60 @@ class SettingsManager:
         return copy.deepcopy(self.DEFAULT_SETTINGS)
 
     def _load_settings(self) -> dict[str, Any]:
-        """Load settings from file or return defaults"""
-        try:
-            if os.path.exists(self.settings_file):
-                with open(self.settings_file, encoding="utf-8") as f:
-                    loaded_settings = json.load(f)
-                if not isinstance(loaded_settings, dict):
-                    _log.warning("Settings file is not a JSON object; using defaults")
-                    return self._defaults()
-                return {**self._defaults(), **loaded_settings}
-        except (OSError, json.JSONDecodeError) as e:
-            _log.warning("Could not load settings file: %s", e)
+        """Load settings from file or return defaults.
 
-        return self._defaults()
+        An unreadable file is moved aside (never overwritten by the next save),
+        and individual values of the wrong type fall back to their defaults.
+        """
+        try:
+            # A missing or empty file holds nothing worth keeping.
+            if not os.path.exists(self.settings_file) or os.path.getsize(self.settings_file) == 0:
+                return self._defaults()
+            with open(self.settings_file, encoding="utf-8") as f:
+                loaded_settings = json.load(f)
+        except json.JSONDecodeError as e:
+            _log.warning("Settings file is not valid JSON: %s", e)
+            self._quarantine("is not valid JSON")
+            return self._defaults()
+        except (OSError, UnicodeDecodeError) as e:
+            _log.warning("Could not load settings file: %s", e)
+            return self._defaults()
+        if not isinstance(loaded_settings, dict):
+            _log.warning("Settings file is not a JSON object; using defaults")
+            self._quarantine("is not a JSON object")
+            return self._defaults()
+        return self._merge_with_defaults(loaded_settings)
+
+    def _merge_with_defaults(self, loaded: dict[str, Any]) -> dict[str, Any]:
+        """Defaults overlaid with loaded values, dropping wrong-typed ones per key."""
+        merged = self._defaults()
+        for key, value in loaded.items():
+            if not _has_valid_type(key, value):
+                _log.warning("Ignoring setting %r with unexpected value %r", key, value)
+                continue
+            if key == "presets":
+                bad = [name for name, preset in value.items() if not _is_valid_preset(preset)]
+                for name in bad:
+                    _log.warning("Ignoring malformed preset %r", name)
+                value = {k: v for k, v in value.items() if k not in bad}
+            merged[key] = value
+        return merged
+
+    def _quarantine(self, problem: str) -> None:
+        """Move an unusable settings file aside so the next save cannot destroy it."""
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        source = Path(self.settings_file)
+        backup = source.with_name(f"{source.name}.corrupt-{stamp}")
+        try:
+            os.replace(source, backup)
+        except OSError as e:
+            _log.warning("Could not move the unreadable settings file aside: %s", e)
+            self.load_warning = f"Settings file {problem}; using defaults"
+            return
+        _log.warning("Moved unreadable settings file to %s", backup)
+        self.load_warning = (
+            f"Settings file {problem}; using defaults. Saved a copy as {backup.name}"
+        )
 
     def _save_settings(self) -> None:
         """Save current settings to file atomically"""

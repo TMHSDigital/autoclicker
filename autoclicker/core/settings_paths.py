@@ -82,7 +82,9 @@ def resolve_settings_file(explicit: str | None = None) -> str:
             )
         return str(primary)
 
-    if legacy_data is not None and not marker.exists():
+    # Never migrate over an existing (even unreadable) AppData file: SettingsManager
+    # moves an unreadable one aside instead of losing it.
+    if legacy_data is not None and not marker.exists() and not primary.exists():
         try:
             atomic_write_json(primary, legacy_data)
             marker.write_text("migrated\n", encoding="utf-8")
