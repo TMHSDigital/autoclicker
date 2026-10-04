@@ -92,8 +92,7 @@ class TestQuitPersistence(unittest.TestCase):
         app.tray_icon = None
         app._collect_ui_settings = MagicMock(return_value={"x_coord": 321, "y_coord": 654})
 
-        with patch("autoclicker.gui.main_window.pyautogui.size", return_value=(1920, 1080)):
-            app.quit_application()
+        app.quit_application()
 
         app.controller.persist_settings_on_quit.assert_called_once()
         kwargs = app.controller.persist_settings_on_quit.call_args

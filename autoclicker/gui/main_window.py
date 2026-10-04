@@ -9,7 +9,6 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import messagebox, simpledialog, ttk
 
-import pyautogui
 import sv_ttk
 
 from ..app.controller import AutoclickerController
@@ -413,12 +412,9 @@ class AutoclickerApp:
         self.coordinate_picker.stop_picking(cancelled=False)
         if hasattr(self, "_hotkeys") and self._hotkeys:
             self._hotkeys.unregister()
-        raw_settings = self._collect_ui_settings()
-        screen_size = pyautogui.size()
         self.controller.persist_settings_on_quit(
-            raw_settings,
+            self._collect_ui_settings(),
             settings_manager=self.settings,
-            screen_size=screen_size,
         )
 
         if hasattr(self, "tray_icon") and self.tray_icon:

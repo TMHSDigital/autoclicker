@@ -15,6 +15,7 @@ import pyautogui
 
 from .exceptions import ClickEngineError, CoordinateError, SafetyError
 from .safety import apply_failsafe, get_foreground_window_handle, is_foreground_window
+from .screen import ScreenBounds, virtual_screen_bounds
 
 # Default PAUSE is 0.1s between every PyAutoGUI call — caps CPS at ~5–10/s
 pyautogui.PAUSE = 0
@@ -56,9 +57,9 @@ class ClickEngine:
         # multi-day session never grows this deque.
         self._recent_click_ts: deque = deque(maxlen=1024)
 
-        # Cached screen size; refreshed on start. Calling pyautogui.size() per
+        # Cached desktop bounds (all monitors); refreshed on start. Querying per
         # click is a Win32 syscall and noticeably hot at high CPS.
-        self._screen_size: tuple[int, int] | None = None
+        self._screen_bounds: ScreenBounds | None = None
 
         self.failsafe_enabled = True
         self.max_cps_ceiling = 50
@@ -135,7 +136,7 @@ class ClickEngine:
         self._stop_event.clear()
         self._last_click_xy = None
         self._recent_click_ts.clear()
-        self._screen_size = pyautogui.size()
+        self._screen_bounds = virtual_screen_bounds(pyautogui.size)
 
         self.click_thread = threading.Thread(
             target=self._click_loop,
@@ -361,16 +362,16 @@ class ClickEngine:
         click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
 
         try:
-            # Validate coordinates against cached screen size; falling back to a
-            # live query only if cache is empty (e.g. direct unit-test calls).
-            if self._screen_size is None:
-                self._screen_size = pyautogui.size()
-            screen_width, screen_height = self._screen_size
-            if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            # Validate against the cached desktop bounds; query live only if the
+            # cache is empty (e.g. direct unit-test calls).
+            if self._screen_bounds is None:
+                self._screen_bounds = virtual_screen_bounds(pyautogui.size)
+            bounds = self._screen_bounds
+            if not bounds.contains(x, y):
                 raise CoordinateError(
                     x,
                     y,
-                    f"Coordinates ({x}, {y}) are outside screen bounds ({screen_width}x{screen_height})",
+                    f"Coordinates ({x}, {y}) are off screen (valid: {bounds.describe()})",
                 )
 
             # Instant move; skip if already at target (avoids moveTo overhead each click)

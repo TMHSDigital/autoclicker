@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .exceptions import ValidationError
+from .screen import ScreenBounds
 from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
 
 _log = logging.getLogger(__name__)
@@ -128,15 +129,27 @@ class SettingsManager:
         self._save_settings()
 
     def validate_coordinate(
-        self, x: int, y: int, screen_width: int, screen_height: int
+        self,
+        x: int,
+        y: int,
+        screen_width: int,
+        screen_height: int,
+        screen_left: int = 0,
+        screen_top: int = 0,
     ) -> tuple[bool, str]:
-        """Validate that coordinates are within screen bounds"""
+        """Validate that coordinates fall on the desktop.
+
+        The desktop is the half-open rectangle starting at (screen_left,
+        screen_top); left/top are negative for monitors left of or above the
+        primary one.
+        """
         try:
-            if not (0 <= x <= screen_width and 0 <= y <= screen_height):
+            bounds = ScreenBounds(screen_left, screen_top, screen_width, screen_height)
+            if not bounds.contains(x, y):
                 raise ValidationError(
                     "coordinates",
                     f"({x}, {y})",
-                    f"Coordinates ({x}, {y}) are outside screen bounds ({screen_width}x{screen_height})",
+                    f"({x}, {y}) is off screen. Valid range: {bounds.describe()}",
                 )
             return True, ""
         except ValidationError as e:
@@ -318,7 +331,12 @@ class SettingsManager:
         return value, None
 
     def validate_all_settings(
-        self, settings: dict[str, Any], screen_width: int = 1920, screen_height: int = 1080
+        self,
+        settings: dict[str, Any],
+        screen_width: int = 1920,
+        screen_height: int = 1080,
+        screen_left: int = 0,
+        screen_top: int = 0,
     ) -> dict[str, Any]:
         """Parse and validate settings.
 
@@ -338,7 +356,12 @@ class SettingsManager:
 
         if "x_coord" in parsed and "y_coord" in parsed:
             ok, error = self.validate_coordinate(
-                parsed["x_coord"], parsed["y_coord"], screen_width, screen_height
+                parsed["x_coord"],
+                parsed["y_coord"],
+                screen_width,
+                screen_height,
+                screen_left,
+                screen_top,
             )
             if not ok:
                 errors["coordinates"] = error

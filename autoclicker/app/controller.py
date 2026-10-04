@@ -12,6 +12,7 @@ import pyautogui
 
 from ..core.click_engine import ClickEngine
 from ..core.safety import get_foreground_window_handle
+from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
 from ..core.settings_manager import SettingsManager
 from ..utils.coordinate_picker import CoordinatePicker, PresetManager
@@ -96,16 +97,10 @@ class AutoclickerController:
         pause_when_unfocused: bool,
         on_safety_stop: Callable[[str], None],
         on_click_complete: Callable[[], None],
-        screen_size: tuple[int, int] | None = None,
+        screen_bounds: ScreenBounds | None = None,
     ) -> StartClickResult:
         """Validate settings and start the click engine if valid."""
-        if screen_size is None:
-            screen_size = pyautogui.size()
-        screen_width, screen_height = screen_size
-
-        validation_result = self.settings.validate_all_settings(
-            raw_settings, screen_width, screen_height
-        )
+        validation_result = self._validate(raw_settings, self.settings, screen_bounds)
 
         if not validation_result["valid"]:
             return StartClickResult(
@@ -172,6 +167,18 @@ class AutoclickerController:
             interval_ms=interval_ms,
         )
 
+    @staticmethod
+    def _validate(
+        raw_settings: dict[str, Any],
+        settings: SettingsManager,
+        screen_bounds: ScreenBounds | None,
+    ) -> dict[str, Any]:
+        """Validate against the desktop spanning every monitor."""
+        bounds = screen_bounds or virtual_screen_bounds(pyautogui.size)
+        return settings.validate_all_settings(
+            raw_settings, bounds.width, bounds.height, bounds.left, bounds.top
+        )
+
     def stop_clicking(self, *, reason: str = "user_stop") -> bool:
         """Stop clicking; log session if it was running. Returns prior running state."""
         was_running = self.click_engine.is_running
@@ -218,16 +225,11 @@ class AutoclickerController:
         raw_settings: dict[str, Any],
         *,
         settings_manager: SettingsManager | None = None,
-        screen_size: tuple[int, int] | None = None,
+        screen_bounds: ScreenBounds | None = None,
     ) -> None:
         """Validate and persist settings when the application exits."""
         settings = settings_manager or self.settings
-        if screen_size is None:
-            screen_size = pyautogui.size()
-        screen_width, screen_height = screen_size
-        validation_result = settings.validate_all_settings(
-            raw_settings, screen_width, screen_height
-        )
+        validation_result = self._validate(raw_settings, settings, screen_bounds)
         if validation_result["valid"]:
             settings.update(validation_result["sanitized_settings"])
         else:

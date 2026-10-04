@@ -183,7 +183,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
 
 ### Known limitations
 
-- Clicking targets the **primary monitor**; coordinates on other monitors aren't supported yet ([#40](https://github.com/TMHSDigital/autoclicker/issues/40)).
+- The corner failsafe watches the corners of the **primary monitor** only. On other monitors, use <kbd>Esc</kbd> or <kbd>F7</kbd> to stop.
 - The **Pick Location** click also reaches the window underneath ([#43](https://github.com/TMHSDigital/autoclicker/issues/43)). Pick over an empty area if that matters.
 - Windows blocks input from normal apps into **elevated (admin) windows**. To click into one, run the autoclicker as administrator too; otherwise there's no need to.
 
@@ -208,7 +208,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | Key | Default | Meaning |
 | :-- | :-: | :-- |
-| `x_coord`, `y_coord` | `100` | Target position in screen pixels |
+| `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |
 | `interval` | `1000` | Wait between bursts, in `interval_unit` |
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |
 | `variation` | `0` | ± random milliseconds added to each interval |
@@ -235,7 +235,7 @@ An `autoclicker_settings.json` left next to the app by older versions is migrate
 
 <br />
 
-A dialog lists any field that failed validation. Check that the coordinates are on your primary screen and that ± variation is smaller than the interval. If no dialog appears, look at the last lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`.
+A dialog lists any field that failed validation. Check that the coordinates are on one of your screens and that ± variation is smaller than the interval. If no dialog appears, look at the last lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`.
 
 </details>
 

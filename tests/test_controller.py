@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from autoclicker.app.controller import AutoclickerController
+from autoclicker.core.screen import ScreenBounds
 from autoclicker.core.settings_manager import SettingsManager
 
 
@@ -34,7 +35,7 @@ class TestPersistSettingsOnQuit(unittest.TestCase):
             controller.persist_settings_on_quit(
                 raw,
                 settings_manager=settings,
-                screen_size=(1920, 1080),
+                screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
             reloaded = SettingsManager(path)
             self.assertEqual(reloaded.get("x_coord"), 250)
@@ -65,7 +66,7 @@ class TestPersistSettingsOnQuit(unittest.TestCase):
             controller.persist_settings_on_quit(
                 raw,
                 settings_manager=settings,
-                screen_size=(1920, 1080),
+                screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
             reloaded = SettingsManager(path)
             self.assertEqual(reloaded.get("x_coord"), 321)
@@ -111,7 +112,7 @@ class TestStartClickForegroundGate(unittest.TestCase):
                 pause_when_unfocused=True,
                 on_safety_stop=MagicMock(),
                 on_click_complete=MagicMock(),
-                screen_size=(1920, 1080),
+                screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
         self.assertFalse(result.success)
         self.assertIn("pause_when_unfocused", result.validation_errors)
