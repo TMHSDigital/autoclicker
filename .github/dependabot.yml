@@ -14,6 +14,7 @@ updates:
       - dependency-name: "pywin32"
       - dependency-name: "Pillow"
       - dependency-name: "pystray"
+      - dependency-name: "sv-ttk"
       - dependency-name: "pytest*"
       - dependency-name: "pytest-cov"
       - dependency-name: "ruff"
