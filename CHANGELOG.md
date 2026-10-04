@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-04
+
 ### Added
 
 - Only click while a pixel matches (Advanced, Only when): sample a point's color with the picker, then clicking either waits (shown as Paused) or stops whenever that pixel no longer matches within a tolerance. Checked before every burst and sequence step; the screen is read on a separate thread so clicking isn't slowed down (#80).
@@ -145,7 +147,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Baseline release prior to the structured audit and refactor pass.
 
-[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.5.0
 [1.4.1]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.1
 [1.4.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.0
 [1.3.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.3.0

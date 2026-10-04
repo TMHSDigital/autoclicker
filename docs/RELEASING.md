@@ -10,6 +10,8 @@ Pushing a `vX.Y.Z` tag runs the CI workflow on GitHub Actions:
 
 Maintainer steps are in [CONTRIBUTING.md](../CONTRIBUTING.md#releases).
 
+**Policy:** when a fix labelled `safety` lands on `main`, cut a patch release promptly. The README download button always serves the latest release, so a safety fix only reaches most users once it is released.
+
 ## Verifying a download
 
 Checksum (Command Prompt or PowerShell), compared with `WindowsAutoclicker.exe.sha256` from the same release:
