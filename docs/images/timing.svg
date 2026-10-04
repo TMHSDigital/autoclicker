@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="170" viewBox="0 0 760 170" role="img"
+     aria-label="Timing diagram: a burst of 3 clicks separated by the burst pause, then the interval, then the next burst">
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #8b949e; }
+    .lbl { font-size: 13px; }
+    .strong { font-size: 13px; font-weight: 600; }
+    .burst { fill: #2f81f7; }
+    .gap { fill: #d29922; }
+  </style>
+
+  <!-- time axis -->
+  <line x1="20" y1="96" x2="740" y2="96" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="2 4"/>
+  <path d="M740 91 L750 96 L740 101 Z" fill="#8b949e"/>
+  <text x="750" y="122" class="lbl" text-anchor="end">time</text>
+
+  <!-- burst 1 -->
+  <rect x="40"  y="72" width="14" height="48" rx="4" class="burst"/>
+  <rect x="104" y="72" width="14" height="48" rx="4" class="burst"/>
+  <rect x="168" y="72" width="14" height="48" rx="4" class="burst"/>
+  <!-- burst 2 -->
+  <rect x="512" y="72" width="14" height="48" rx="4" class="burst"/>
+  <rect x="576" y="72" width="14" height="48" rx="4" class="burst"/>
+  <rect x="640" y="72" width="14" height="48" rx="4" class="burst"/>
+
+  <!-- burst brackets (above) -->
+  <path d="M40 58 V50 H182 V58" fill="none" stroke="#2f81f7" stroke-width="2"/>
+  <text x="111" y="40" class="strong" text-anchor="middle" style="fill:#2f81f7">burst · 3 clicks</text>
+  <path d="M512 58 V50 H654 V58" fill="none" stroke="#2f81f7" stroke-width="2"/>
+  <text x="583" y="40" class="strong" text-anchor="middle" style="fill:#2f81f7">next burst</text>
+
+  <!-- burst pauses (below) -->
+  <path d="M56 132 H102" stroke="#8b949e" stroke-width="1.5"/>
+  <path d="M120 132 H166" stroke="#8b949e" stroke-width="1.5"/>
+  <text x="111" y="152" class="lbl" text-anchor="middle">burst pause</text>
+  <text x="111" y="167" class="lbl" text-anchor="middle" style="font-size:11px">(between clicks in a burst)</text>
+
+  <!-- interval -->
+  <rect x="190" y="90" width="314" height="12" rx="6" class="gap" opacity="0.85"/>
+  <text x="347" y="76" class="strong" text-anchor="middle" style="fill:#d29922">interval ± variation</text>
+  <text x="347" y="130" class="lbl" text-anchor="middle">(between bursts)</text>
+</svg>

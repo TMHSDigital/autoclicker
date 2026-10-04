@@ -1,446 +1,307 @@
+<div align="center">
+
+<img src="docs/images/logo.svg" alt="Windows Autoclicker logo" width="112" />
+
 # Windows Autoclicker
 
-[![CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml/badge.svg)](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml)
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
-[![Windows](https://img.shields.io/badge/Windows-10+-0078D4.svg)](https://www.microsoft.com/windows/)
-[![License](https://img.shields.io/badge/license-CC_BY--NC_4.0-green.svg)](LICENSE)
+**A fast, careful autoclicker for Windows: pick a spot, set the pace, press F6.**
 
-A fast, configurable autoclicker for Windows with a modern light/dark interface, precise coordinate targeting, burst mode, presets, and built-in safety controls.
+Pixel-precise clicking with burst mode, timing variation, named presets and global hotkeys,<br />
+built around safety stops that are on by default.
 
-<p align="center">
-  <img src="docs/images/screenshot-light.png" alt="Windows Autoclicker (light theme)" width="49%">
-  <img src="docs/images/screenshot-dark.png" alt="Windows Autoclicker (dark theme)" width="49%">
-</p>
+<br />
 
-### Highlights
+[![Download for Windows](https://img.shields.io/github/v/release/TMHSDigital/autoclicker?style=for-the-badge&logo=windows&logoColor=white&label=Download%20for%20Windows&color=0078D4&labelColor=005A9E)](https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe)
 
-- Pixel-precise clicking at a fixed point, with single/double and left/right/middle support
-- Click-to-pick coordinate selection and named presets
-- Burst mode and randomized timing variation to vary cadence
-- Safety first: failsafe on by default, optional click/time limits, runaway-speed guard, fail-closed pause-when-unfocused
-- Global hotkeys (F6/F7/ESC), system tray, settings in `%APPDATA%\WindowsAutoclicker`
-- Modern themed UI with a one-click light/dark toggle
+<sub>Single <code>.exe</code> · no install, no Python · Windows 10 and 11 · <a href="https://github.com/TMHSDigital/autoclicker/releases">all releases</a></sub>
 
-## Table of Contents
+<br />
+<br />
 
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Safety & Compliance](#safety--compliance)
-- [Technical Details](#technical-details)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+[![CI](https://img.shields.io/github/actions/workflow/status/TMHSDigital/autoclicker/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/TMHSDigital/autoclicker?style=flat-square&color=0078D4)](https://github.com/TMHSDigital/autoclicker/releases)
+[![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](#run-from-source)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?style=flat-square)](#quick-start)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey?style=flat-square)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%99%A5-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/TMHSDigital)
 
----
+<br />
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/screenshot-light.png" />
+  <img src="docs/images/screenshot-light.png" alt="Windows Autoclicker main window: target coordinates, click settings, start and stop controls, and a status bar" width="440" />
+</picture>
+
+<br />
+<br />
+
+[Quick start](#quick-start) ·
+[Features](#features) ·
+[How timing works](#how-timing-works) ·
+[Hotkeys](#hotkeys) ·
+[Safety](#safety) ·
+[Settings](#settings-and-logs) ·
+[Troubleshooting](#troubleshooting) ·
+[Contributing](#contributing)
+
+</div>
+
+<br />
 
 ## Features
 
-### Core Functionality
-- **Precise Coordinate Targeting**: Click at exact screen coordinates with pixel-perfect accuracy
-- **Flexible Timing Control**: Adjustable click intervals with millisecond precision
-- **Multi-Button Support**: Left, right, and middle mouse button options
-- **Click Pattern Modes**: Single click or double click with customizable patterns
-- **Global Hotkey Control**: Start/stop with F6/F7, emergency stop with ESC
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🎯 Pick and click</h3>
+      Type X/Y or press <b>Pick Location</b> and click anywhere. Save spots as named <b>presets</b> and switch between them from a dropdown.
+    </td>
+    <td width="33%" valign="top">
+      <h3>⏱️ Precise timing</h3>
+      Intervals in milliseconds or seconds, down to <b>0&nbsp;ms</b>, with optional <b>± variation</b> so the cadence isn't perfectly regular.
+    </td>
+    <td width="33%" valign="top">
+      <h3>💥 Burst mode</h3>
+      Fire several clicks in quick succession, then wait the interval. Left, right or middle button; single or double click.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🛡️ Safety on by default</h3>
+      Corner failsafe, emergency stop, click and time limits, a runaway-speed guard, and an optional pause when your target window loses focus.
+    </td>
+    <td width="33%" valign="top">
+      <h3>⌨️ Global hotkeys</h3>
+      <kbd>F6</kbd> start, <kbd>F7</kbd> stop, <kbd>Esc</kbd> emergency stop. They work while the app is in the background, and a tray menu does the same.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🌗 Remembers you</h3>
+      Light and dark themes, and every setting is saved to your profile and restored on next launch.
+    </td>
+  </tr>
+</table>
 
-### Advanced Automation Features
-- **Interactive Coordinate Picker**: Click-to-select target locations with visual feedback
-- **Preset Management System**: Save, load, and delete named coordinate presets
-- **Random Variation Engine**: Optional jitter around the click interval for a less metronomic cadence
-- **Burst Mode Automation**: Multiple clicks with configurable pause intervals
-- **Safety Control Systems**: Maximum click limits and automatic time-based shutdown
+## Quick start
 
-### User Interface
-- **Modern Themed GUI**: tkinter with the Sun Valley (sv-ttk) theme and a light/dark toggle (remembered between sessions)
-- **Minimal by Default**: Burst, safety limits, and advanced toggles tuck into a collapsible "Advanced" section
-- **Compact Status Bar**: Colored state indicator with inline click counter, runtime, and performance
-- **System Tray Integration**: Minimize to tray (using the app icon) for background operation
-- **Persistent Settings**: Automatic save/load of user preferences
-- **Input Validation**: Comprehensive validation with user-friendly error messages
+<table align="center">
+  <tr>
+    <td align="center" width="25%"><h3>1</h3><b>Download</b><br /><sub><a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe"><code>WindowsAutoclicker.exe</code></a></sub></td>
+    <td align="center" width="25%"><h3>2</h3><b>Run it</b><br /><sub>no installer, no Python</sub></td>
+    <td align="center" width="25%"><h3>3</h3><b>Pick a target</b><br /><sub><b>Pick Location</b>, then click</sub></td>
+    <td align="center" width="25%"><h3>4</h3><b>Press <kbd>F6</kbd></b><br /><sub><kbd>F7</kbd> or <kbd>Esc</kbd> to stop</sub></td>
+  </tr>
+</table>
 
-### Safety & Control Features
-- **Emergency Stop System**: Instant halt capability with dedicated hotkey
-- **Enhanced Input Validation**: Comprehensive validation with intelligent sanitization
-- **Structured Error Handling**: Custom exception hierarchy with user-friendly error messages
-- **Screen Bounds Validation**: Prevents clicks outside display boundaries
-- **Session logging**: Append-only log under `%APPDATA%/WindowsAutoclicker/sessions.log` (start/stop/safety events)
-- **Resource Management**: Low CPU usage with optimized threading
-- **Error Recovery**: Graceful handling of system interruptions and validation failures
+> [!NOTE]
+> The executable isn't code-signed yet ([#45](https://github.com/TMHSDigital/autoclicker/issues/45)), so Windows SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**. Every release is built from this repository by [CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml) when a version tag is pushed.
 
-## Installation
+<details>
+<summary><b id="run-from-source">Run from source</b> (Python 3.10 – 3.13)</summary>
 
-### System Requirements
-- **Operating System**: Windows 10 or Windows 11 (64-bit recommended)
-- **Python Version**: Python 3.10 or higher
-- **System Memory**: 100 MB RAM minimum
-- **Disk Space**: 50 MB free space
-- **Display**: 1024x768 minimum resolution
+<br />
 
-### Prerequisites
-- Python 3.10+ ([Download from python.org](https://python.org/downloads/))
-- Windows 10/11 with administrator privileges for full functionality
-
-### Installation Steps
-
-#### Option 1: Direct Installation
 ```bash
-# Clone the repository
 git clone https://github.com/TMHSDigital/autoclicker.git
 cd autoclicker
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### Option 2: Virtual Environment (Recommended)
-```bash
-# Clone the repository
-git clone https://github.com/TMHSDigital/autoclicker.git
-cd autoclicker
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-.venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-#### Option 3: Automated Setup
-```bash
-# Use the provided setup script
 run_autoclicker.bat
 ```
 
-## Quick Start
+`run_autoclicker.bat` creates a `.venv`, installs the pinned dependencies from `requirements-lock.txt` and starts the app. To do it by hand:
 
-1. **Launch the Application**
-   ```bash
-   python autoclicker.py
-   ```
-
-2. **Set Target Coordinates**
-   - Enter X,Y coordinates manually in the input fields
-   - Or click "Pick Location" and click anywhere on screen
-
-3. **Configure Click Settings**
-   - Select mouse button (Left/Right/Middle)
-   - Choose click type (Single/Double)
-   - Set interval timing in milliseconds
-   - Expand **Advanced** for burst mode, safety limits, and failsafe toggles
-
-4. **Start Automation**
-   - Press the "Start" button or use F6 hotkey
-   - Monitor progress in the status panel
-
-5. **Stop When Complete**
-   - Press "Stop" button or use F7 hotkey
-   - Use ESC for emergency stop
-
-## Usage
-
-### Basic Operation
-
-#### Manual Coordinate Entry
-1. Enter the X coordinate in the first field
-2. Enter the Y coordinate in the second field
-3. Verify coordinates are within screen bounds
-
-#### Interactive Coordinate Selection
-1. Click the "Pick Location" button
-2. The application window will minimize
-3. Click anywhere on screen to select coordinates
-4. The window will restore with selected coordinates
-
-### Advanced Configuration
-
-#### Burst Mode Setup
-```json
-{
-  "burst_clicks": 5,
-  "burst_pause": 1000
-}
-```
-- **burst_clicks**: Number of clicks per burst (default: 1)
-- **burst_pause**: Pause between bursts in milliseconds
-
-#### Random Variation Configuration
-```json
-{
-  "interval": 1000,
-  "variation": 100
-}
-```
-- **interval**: Base interval in milliseconds
-- **variation**: Random variation range (± milliseconds)
-
-#### Safety Limits
-```json
-{
-  "max_clicks": 1000,
-  "auto_stop_minutes": 30
-}
-```
-- **max_clicks**: Maximum clicks before auto-stop (0 = unlimited)
-- **auto_stop_minutes**: Auto-stop after X minutes (0 = disabled)
-
-### Hotkey Reference
-| Hotkey | Function | Description |
-|--------|----------|-------------|
-| F6 | Start Clicking | Begin automation sequence |
-| F7 | Stop Clicking | End automation sequence |
-| ESC | Emergency Stop | Immediate halt (cancels coordinate pick if picking) |
-| Alt+F4 | Close Application | Standard window close |
-
-## Configuration
-
-### Settings File Structure
-The application automatically creates `autoclicker_settings.json`:
-
-```json
-{
-  "x_coord": 100,
-  "y_coord": 100,
-  "interval": 1000,
-  "interval_unit": "ms",
-  "variation": 50,
-  "mouse_button": "left",
-  "click_type": "single",
-  "burst_clicks": 1,
-  "burst_pause": 1000,
-  "max_clicks": 0,
-  "auto_stop_minutes": 0,
-  "theme": "light",
-  "presets": {
-    "Game Target": {"x": 800, "y": 600},
-    "Browser Click": {"x": 450, "y": 300}
-  }
-}
-```
-
-### Configuration Options
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| x_coord | integer | 100 | Target X coordinate |
-| y_coord | integer | 100 | Target Y coordinate |
-| interval | integer | 1000 | Click interval in milliseconds |
-| interval_unit | string | "ms" | Time unit ("ms" or "seconds") |
-| variation | integer | 0 | Random variation range |
-| mouse_button | string | "left" | Mouse button to use |
-| click_type | string | "single" | Click type ("single" or "double") |
-| burst_clicks | integer | 1 | Clicks per burst |
-| burst_pause | integer | 1000 | Pause between bursts (ms) |
-| max_clicks | integer | 0 | Maximum clicks (0 = unlimited) |
-| auto_stop_minutes | integer | 0 | Auto-stop timer (0 = disabled) |
-| theme | string | "light" | UI theme ("light" or "dark") |
-
-## Safety & Compliance
-
-### Important Warnings
-
-**READ CAREFULLY BEFORE USE**
-
-#### Legal Compliance Requirements
-Your usage must comply with:
-- Application and website terms of service
-- Local, state, and federal laws and regulations
-- Platform-specific automation policies
-- Industry-specific automation restrictions
-
-#### Intended Use Cases
-This tool is designed for:
-- Legitimate automation of repetitive tasks
-- Accessibility assistance and accommodation
-- Software development and testing
-- Educational and research purposes
-
-#### Prohibited Activities
-Do not use for:
-- Game cheating or exploitation
-- Spam generation or harassment
-- Bypassing security measures
-- Unauthorized access or control
-- Commercial use without proper licensing
-
-### Built-in Safety Features
-
-#### Emergency Control Systems
-- **ESC Key**: Instant emergency stop (or cancel Pick Location)
-- **PyAutoGUI failsafe**: On by default; moving the mouse to a screen corner aborts clicking
-- **Pause when unfocused**: Optional; refuses to start if the foreground window cannot be read
-- **Screen Bounds Checking**: Prevents invalid coordinates
-- **Resource Limits**: Configurable click and time limits plus a runaway CPS ceiling
-- **Status Monitoring**: Real-time operation visibility
-
-#### Session log
-- Append-only log in `%APPDATA%/WindowsAutoclicker/sessions.log`
-- Records start, stop reason, click count, and coordinates (no secrets)
-
-## Technical Details
-
-### Dependencies
-- **pyautogui** (0.9.53+): GUI automation (Windows target)
-- **keyboard** (0.13.5+): Global hotkey support
-- **mouse** (0.7.1+): Advanced mouse event handling
-- **pywin32** (227+): Windows API integration
-- **Pillow** (9.0.0+): Image processing and icon handling
-- **pystray** (0.19.4+): System tray functionality
-- **sv-ttk** (2.6.0+): Sun Valley ttk theme (light/dark UI)
-
-### Architecture Overview
-
-#### Application Structure
-```
-autoclicker.py
-autoclicker/
-├── main.py
-├── app/                  # controller, hotkeys, tray
-├── gui/                  # main_window + sections/ (incl. collapsible.py, advanced.py)
-├── core/                 # engine, settings, safety, session_log
-└── utils/
-    └── coordinate_picker.py
-```
-
-Settings file: `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-#### Threading Model
-- **Main Thread**: GUI event handling; worker callbacks marshaled with `root.after`
-- **Click Thread**: Isolated automation execution
-- **Queue Processor Thread**: Optional thread for high-frequency click queuing
-
-### Design Notes
-- Threaded click loop keeps the GUI responsive
-- Click queuing available for high-frequency operations
-- Daemon threads ensure clean exit on window close
-
-## Testing
-
-The application includes comprehensive unit tests for all core functionality.
-
-### Running Tests
 ```bash
-# Run all unit tests (pytest)
-python run_tests.py
-
-# Run tests with coverage reporting
-python run_tests.py --coverage
-
-# Smoke check: dependencies and project layout (not part of pytest)
-python scripts/smoke_check.py
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements-lock.txt
+python autoclicker.py
 ```
 
-### Test modules
-- `test_settings_manager.py`, `test_settings_migration.py`
-- `test_click_engine.py` (mocked pyautogui)
-- `test_exceptions.py`, `test_safety.py`, `test_audit_regressions.py`
-- `test_coordinate_picker.py`, `test_gui_callbacks.py`, `test_controller.py`
-- Coverage gate: `autoclicker` package, `--cov-fail-under=65`
+</details>
+
+## How timing works
+
+Three settings control the rhythm. With **Burst clicks** left at 1 (the default), only the interval matters: one click, wait, repeat.
+
+<p align="center">
+  <img src="docs/images/timing.svg" alt="Timing diagram: three clicks separated by the burst pause form a burst; the interval plus or minus variation separates one burst from the next" width="760" />
+</p>
+
+<div align="center">
+
+| Setting | What it controls | Range |
+| :-- | :-- | :-: |
+| **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 – 60 000 ms<br /><sub>or 0.001 – 60 s</sub> |
+| **± variation**<br /><sub>Click Settings</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
+| **Burst clicks**<br /><sub>Advanced</sub> | Clicks fired per burst | 1 – 100 |
+| **Burst pause**<br /><sub>Advanced</sub> | Wait between the clicks *inside* a burst | 0 – 60 000 ms |
+
+</div>
+
+## Hotkeys
+
+<table align="center">
+  <thead>
+    <tr><th align="center">Key</th><th align="left">Action</th><th align="left">Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td align="center"><kbd>F6</kbd></td><td>Start clicking</td><td>Same as the <b>Start</b> button</td></tr>
+    <tr><td align="center"><kbd>F7</kbd></td><td>Stop clicking</td><td>Same as the <b>Stop</b> button</td></tr>
+    <tr><td align="center"><kbd>Esc</kbd></td><td>Emergency stop</td><td>Halts immediately; cancels <b>Pick Location</b> if picking</td></tr>
+  </tbody>
+</table>
+
+<p align="center"><sub>Hotkeys are global: they work while another window has focus. Configurable keys are tracked in <a href="https://github.com/TMHSDigital/autoclicker/issues/47">#47</a>.</sub></p>
+
+## Safety
+
+An autoclicker that won't stop is worse than none, so every run has more than one way out.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <b>Stop it yourself</b>
+      <ul>
+        <li><b>Corner failsafe</b> (on by default): slam the mouse into a screen corner to abort. Turning it off asks for confirmation.</li>
+        <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
+        <li><b>Tray menu</b>: Show, Start, Stop and Exit from the notification area.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <b>Let it stop itself</b>
+      <ul>
+        <li><b>Limit clicks</b>: stop after N clicks (Advanced).</li>
+        <li><b>Auto-stop</b>: stop after N minutes (Advanced).</li>
+        <li><b>Runaway guard</b>: stops if more than 50 clicks land in any one second (<code>max_cps_ceiling</code>, 0 turns it off).</li>
+        <li><b>Pause when unfocused</b>: remembers the window in front when you start and pauses whenever it isn't; refuses to start if it can't tell.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+> [!IMPORTANT]
+> Use it only on software and systems you're allowed to automate, and within their terms of service. Many online games and services forbid automated input. Responsibility for how it's used rests with the user.
+
+### Known limitations
+
+- Clicking targets the **primary monitor**; coordinates on other monitors aren't supported yet ([#40](https://github.com/TMHSDigital/autoclicker/issues/40)).
+- The **Pick Location** click also reaches the window underneath ([#43](https://github.com/TMHSDigital/autoclicker/issues/43)). Pick over an empty area if that matters.
+- Leave **Advanced → Enable click queuing** off; Stop doesn't reliably halt queued clicks ([#38](https://github.com/TMHSDigital/autoclicker/issues/38)).
+- Windows blocks input from normal apps into **elevated (admin) windows**. To click into one, run the autoclicker as administrator too; otherwise there's no need to.
+
+## Settings and logs
+
+Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explorer's address bar to open it.
+
+<div align="center">
+
+| File | Contents |
+| :-- | :-- |
+| `autoclicker_settings.json` | Your settings and presets, saved when you start clicking, change the theme or presets, and on exit |
+| `autoclicker.log` | Application log, rotated at 1 MB (keeps 2 backups) |
+| `sessions.log` | One line per start, stop and safety event, with reason and click count |
+
+</div>
+
+<details>
+<summary><b>All settings keys</b></summary>
+
+<br />
+
+| Key | Default | Meaning |
+| :-- | :-: | :-- |
+| `x_coord`, `y_coord` | `100` | Target position in screen pixels |
+| `interval` | `1000` | Wait between bursts, in `interval_unit` |
+| `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |
+| `variation` | `0` | ± random milliseconds added to each interval |
+| `mouse_button` | `"left"` | `"left"`, `"right"` or `"middle"` |
+| `click_type` | `"single"` | `"single"` or `"double"` (double applies to the left button; see [#51](https://github.com/TMHSDigital/autoclicker/issues/51)) |
+| `burst_clicks` | `1` | Clicks per burst |
+| `burst_pause` | `1000` | Milliseconds between clicks inside a burst |
+| `max_clicks` | `0` | Stop after this many clicks; `0` = no limit |
+| `auto_stop_minutes` | `0` | Stop after this many minutes; `0` = off |
+| `enable_failsafe` | `true` | Corner failsafe |
+| `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
+| `max_cps_ceiling` | `50` | Runaway guard threshold in clicks per second; `0` = off |
+| `theme` | `"light"` | `"light"` or `"dark"` |
+| `presets` | `{}` | `{"Name": {"x": 800, "y": 600}}` |
+
+An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically.
+
+</details>
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+<details>
+<summary><b>Nothing happens when I press Start</b></summary>
 
-#### Application Startup Problems
-**Issue**: Application fails to launch
-**Solutions**:
-- Verify Python 3.10+ installation
-- Run as administrator: `right-click > Run as administrator`
-- Install dependencies: `pip install -r requirements.txt`
-- Check Windows Event Viewer for error details
+<br />
 
-#### Click Registration Issues
-**Issue**: Clicks not registering at target location
-**Solutions**:
-- Verify coordinates are within screen bounds
-- Ensure target window is active and not minimized
-- Try different click intervals (increase if too fast)
-- Check for overlay applications interfering
+A dialog lists any field that failed validation. Check that the coordinates are on your primary screen and that ± variation is smaller than the interval. If no dialog appears, look at the last lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`.
 
-#### Hotkey Recognition Problems
-**Issue**: Hotkeys (F6, F7, ESC) not working
-**Solutions**:
-- Run application as administrator
-- Close conflicting applications using same hotkeys
-- Restart the application
-- Check keyboard driver updates
+</details>
 
-#### System Tray Issues
-**Issue**: System tray icon not appearing
-**Solutions**:
-- Verify pystray installation
-- Check Windows notification settings
-- Restart Windows Explorer
-- Run with administrator privileges
+<details>
+<summary><b>It stops after a few clicks</b></summary>
 
-#### Input Validation Errors
-**Issue**: "Validation Error" messages when starting
-**Solutions**:
-- Check that all numeric fields contain valid numbers
-- Ensure coordinates are within screen bounds
-- Verify interval values are reasonable (1ms to 1 minute)
-- Check that variation is not larger than the interval
-- Use the coordinate picker to avoid manual entry errors
+<br />
 
-### Error Reporting
-For persistent issues:
-1. Check Windows Event Viewer (eventvwr.msc)
-2. Create an issue with full error details
-3. Include system information and reproduction steps
+Check the status bar and `sessions.log` for the reason: a click limit or auto-stop in **Advanced**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second), or **Pause when unfocused** if another window came to the front.
+
+</details>
+
+<details>
+<summary><b>Clicks don't register in one particular app</b></summary>
+
+<br />
+
+If that app runs as administrator, Windows blocks input from non-elevated programs; run the autoclicker as administrator as well. Some games ignore synthetic input entirely, and fast intervals may be faster than an app can react to, so try a longer interval.
+
+</details>
+
+<details>
+<summary><b>The hotkeys don't respond</b></summary>
+
+<br />
+
+Another program may already own <kbd>F6</kbd>/<kbd>F7</kbd> (browsers and some games do), or an elevated window has focus. The status bar shows a message if registering the hotkeys failed at startup.
+
+</details>
+
+<p align="center"><sub>Still stuck? <a href="https://github.com/TMHSDigital/autoclicker/issues/new/choose">Open an issue</a> with your Windows version, the app version and the end of <code>autoclicker.log</code>.</sub></p>
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup (`make install` or `tasks.bat install`), tests, lint, pre-commit, licensing (CC BY-NC 4.0), and the tag-based release flow.
-
-Quick start:
+Bug reports, fixes and docs improvements are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [open issues](https://github.com/TMHSDigital/autoclicker/issues).
 
 ```bash
-tasks.bat install
-tasks.bat check
+tasks.bat install   # .venv + pinned deps + dev tools   (make install in Git Bash)
+tasks.bat check     # ruff, mypy and pytest             (make check)
 ```
 
-CI and maintainers use pinned dependencies in `requirements-lock.txt` (regenerate with `tasks.bat lock` on Python 3.11).
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <b><a href="docs/ARCHITECTURE.md">Architecture →</a></b><br />
+      Threads, the start/stop paths and why they differ, and where state lives.
+    </td>
+    <td width="50%" valign="top">
+      <b><a href="docs/PERFORMANCE.md">Performance →</a></b><br />
+      Hot-path measurements and the soak and profiling scripts.
+    </td>
+  </tr>
+</table>
 
-### Pull Request Process
-1. **Fork** the repository
-2. **Create** a feature branch
-3. **Make** your changes following the modular architecture:
-   - Core functionality → `autoclicker/core/`
-   - GUI components → `autoclicker/gui/`
-   - Utilities → `autoclicker/utils/`
-4. **Add comprehensive tests** to the `tests/` directory
-5. **Update documentation** in README.md for any new features
-6. **Test** thoroughly on multiple systems
-7. **Submit** pull request with detailed description
-8. **Respond** to review feedback
+Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.10 – 3.13, builds the executable and publishes it. See the [changelog](CHANGELOG.md).
 
-### Areas for Contribution
-- **Performance Enhancements**: Improve monitoring, queuing, or timing systems
-- **UI/UX Improvements**: Enhance user interface design and user experience
-- **Advanced Automation**: Pattern recognition, conditional clicking, macro recording
-- **Safety Features**: Failsafe default-on, rate limiting, input validation
-- **Cross-platform Support**: Linux/macOS compatibility and mobile companions
-- **Testing & Quality**: Add tests, type hints, linting, and code quality improvements
-- **Documentation**: Improve guides, examples, and user help systems
-- **Analytics**: Performance dashboards, usage metrics, and optimization tools
+<br />
 
-## License
-
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License** (CC BY-NC 4.0). See the [LICENSE](LICENSE) file for details.
-
-You are free to share and adapt this software for non-commercial purposes, with appropriate attribution. For commercial licensing inquiries, contact TM Hospitality Strategies.
+<div align="center">
 
 ---
 
-## Disclaimer
+**[CC BY-NC 4.0](LICENSE)**: free to use, share and adapt for non-commercial purposes with attribution.<br />
+For commercial licensing, contact [TM Hospitality Strategies](mailto:info@tmhsdigital.com).
 
-This software is provided "as is" without warranty of any kind. The authors and contributors assume no responsibility for any damages, legal issues, or consequences arising from the use or misuse of this application.
+<sub>Built by <a href="https://github.com/TMHSDigital">TMHSDigital</a> · <a href="https://github.com/sponsors/TMHSDigital">Sponsor</a> · <a href="SECURITY.md">Security</a> · Provided as is, without warranty.</sub>
 
-Automation tools can be abused. Use only on systems and software you are authorized to control.
-
-**Use at your own risk and ensure compliance with all applicable laws, regulations, and terms of service.**
+</div>
