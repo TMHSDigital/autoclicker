@@ -114,7 +114,7 @@ class TestSettingsValidationGaps(unittest.TestCase):
             screen_height=1080,
         )
         self.assertFalse(result["valid"])
-        self.assertIn("interval", result["errors"])
+        self.assertIn("interval_unit", result["errors"])
 
 
 class TestUserFriendlyErrors(unittest.TestCase):

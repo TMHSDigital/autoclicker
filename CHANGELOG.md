@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Invalid input is now reported instead of silently rewritten. Previously an interval of `-500` ran at maximum speed, `1OO` ran at 1000 ms, and a negative X clicked at the left edge of the screen (#39). Validation errors name the field in plain words.
+
 ### Removed
 
 - The "Enable click queuing" option. With it on, Stop could keep clicking for seconds and later runs never clicked (#38). The direct click path is now the only one.

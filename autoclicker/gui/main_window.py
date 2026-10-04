@@ -17,6 +17,7 @@ from ..app.hotkeys import setup_hotkeys
 from ..app.tray import create_tray_icon
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
+from ..core.settings_manager import field_label
 from .sections import (
     build_advanced_section,
     build_click_settings_section,
@@ -304,7 +305,8 @@ class AutoclickerApp:
 
             if result.validation_errors is not None:
                 error_messages = [
-                    f"{field.title()}: {error}" for field, error in result.validation_errors.items()
+                    f"{field_label(field)}: {error}"
+                    for field, error in result.validation_errors.items()
                 ]
                 messagebox.showerror("Validation Error", "\n".join(error_messages))
                 return

@@ -6,6 +6,7 @@ Handles loading, saving, and validation of user settings
 
 import json
 import logging
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,51 @@ from .exceptions import ValidationError
 from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
 
 _log = logging.getLogger(__name__)
+
+# Fields parsed from free-text UI entries. Values are parsed, never clamped or
+# defaulted: a value that does not parse, or is out of range, is an error.
+_INT_FIELDS = frozenset(
+    {
+        "x_coord",
+        "y_coord",
+        "variation",
+        "burst_clicks",
+        "max_clicks",
+        "auto_stop_minutes",
+        "max_cps_ceiling",
+    }
+)
+_FLOAT_FIELDS = frozenset({"interval", "burst_pause"})
+_CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
+    "mouse_button": ("left", "right", "middle"),
+    "click_type": ("single", "double"),
+    "interval_unit": ("ms", "seconds"),
+}
+
+# Human-readable names for validation error keys, used in error dialogs.
+FIELD_LABELS: dict[str, str] = {
+    "x_coord": "X",
+    "y_coord": "Y",
+    "coordinates": "Coordinates",
+    "interval": "Interval",
+    "interval_unit": "Interval unit",
+    "variation": "Variation",
+    "mouse_button": "Mouse button",
+    "click_type": "Click type",
+    "burst": "Burst",
+    "burst_clicks": "Burst clicks",
+    "burst_pause": "Burst pause",
+    "max_clicks": "Limit clicks",
+    "auto_stop": "Auto-stop",
+    "auto_stop_minutes": "Auto-stop",
+    "max_cps_ceiling": "Max clicks per second",
+    "pause_when_unfocused": "Pause when unfocused",
+}
+
+
+def field_label(key: str) -> str:
+    """Return the display name for a settings or validation-error key."""
+    return FIELD_LABELS.get(key, key.replace("_", " ").capitalize())
 
 
 class SettingsManager:
@@ -238,112 +284,103 @@ class SettingsManager:
         except ValidationError as e:
             return False, e.reason
 
-    def sanitize_input(self, key: str, value: Any) -> Any:
-        """Sanitize and validate input values"""
-        try:
-            # Handle empty strings and None values
-            if value is None or (isinstance(value, str) and value.strip() == ""):
-                return self.DEFAULT_SETTINGS.get(key, 0)
+    def parse_input(self, key: str, value: Any) -> tuple[Any, str | None]:
+        """Parse one raw (usually string) UI value.
 
-            # Convert string inputs to appropriate types
-            if isinstance(value, str):
-                value = value.strip()
-
-            if key in ["x_coord", "y_coord"]:
-                return max(0, min(int(float(value)), 10000))  # Reasonable coordinate bounds
-            elif key in ["interval"]:
-                return max(0, min(float(value), 60000))  # 0 = max speed between bursts
-            elif key in [
-                "variation",
-                "burst_clicks",
-                "max_clicks",
-                "auto_stop_minutes",
-                "max_cps_ceiling",
-            ]:
-                return max(0, int(float(value)))
-            elif key in ["burst_pause"]:
-                return max(0, min(float(value), 60000))  # Max 1 minute
-            elif key in ["mouse_button"]:
-                if str(value) not in ["left", "right", "middle"]:
-                    return "left"
-                return str(value)
-            elif key in ["click_type"]:
-                if str(value) not in ["single", "double"]:
-                    return "single"
-                return str(value)
-            elif key in ["interval_unit"]:
-                if str(value) not in ["ms", "seconds"]:
-                    return "ms"
-                return str(value)
-        except (ValueError, TypeError):
-            # Return default values if conversion fails
-            return self.DEFAULT_SETTINGS.get(key, 0)
-
-        return value
+        Returns ``(parsed, None)`` on success or ``(None, message)`` when the
+        value cannot be parsed. Range checks happen in validate_all_settings;
+        nothing here clamps or substitutes a default.
+        """
+        if key in _INT_FIELDS or key in _FLOAT_FIELDS:
+            if isinstance(value, bool) or value is None:
+                return None, "Enter a number"
+            text = value.strip() if isinstance(value, str) else value
+            if text == "":
+                return None, "Enter a number"
+            try:
+                number = float(text)
+            except (TypeError, ValueError):
+                return None, "Must be a number"
+            if not math.isfinite(number):
+                return None, "Must be a number"
+            if key in _INT_FIELDS:
+                if not number.is_integer():
+                    return None, "Must be a whole number"
+                return int(number), None
+            # Keep whole numbers as int so they round-trip to the UI as "500", not "500.0"
+            return (int(number) if number.is_integer() else number), None
+        if key in _CHOICE_FIELDS:
+            choices = _CHOICE_FIELDS[key]
+            text = str(value).strip()
+            if text not in choices:
+                return None, f"Must be one of: {', '.join(choices)}"
+            return text, None
+        return value, None
 
     def validate_all_settings(
         self, settings: dict[str, Any], screen_width: int = 1920, screen_height: int = 1080
     ) -> dict[str, Any]:
-        """Validate all settings and return sanitized versions with error messages"""
-        errors = {}
+        """Parse and validate settings.
 
-        raw_unit = settings.get("interval_unit", "ms")
-        if raw_unit is not None and str(raw_unit).strip() not in ("ms", "seconds"):
-            errors["interval"] = f"Invalid unit: {raw_unit}. Must be 'ms' or 'seconds'"
-
-        # First, sanitize all values to handle string inputs from UI
-        sanitized_settings = {}
+        Returns ``{"valid", "errors", "sanitized_settings"}``. ``errors`` maps a
+        field (or group such as ``"coordinates"``) to a message;
+        ``sanitized_settings`` holds the parsed values that could be read.
+        Invalid input is reported, never rewritten into a different value.
+        """
+        errors: dict[str, str] = {}
+        parsed: dict[str, Any] = {}
         for key, value in settings.items():
-            sanitized_settings[key] = self.sanitize_input(key, value)
+            result, error = self.parse_input(key, value)
+            if error is not None:
+                errors[key] = error
+            else:
+                parsed[key] = result
 
-        # Now validate using sanitized values
-        # Validate coordinates
-        x_coord = sanitized_settings.get("x_coord", 100)
-        y_coord = sanitized_settings.get("y_coord", 100)
-        x_valid, x_error = self.validate_coordinate(x_coord, y_coord, screen_width, screen_height)
-        if not x_valid:
-            errors["coordinates"] = x_error
+        if "x_coord" in parsed and "y_coord" in parsed:
+            ok, error = self.validate_coordinate(
+                parsed["x_coord"], parsed["y_coord"], screen_width, screen_height
+            )
+            if not ok:
+                errors["coordinates"] = error
 
-        # Validate interval
-        interval = sanitized_settings.get("interval", 1000)
-        unit = sanitized_settings.get("interval_unit", "ms")
-        interval_valid, interval_error = self.validate_interval(interval, unit)
-        if not interval_valid:
-            errors["interval"] = interval_error
+        interval_ok = "interval" in parsed and "interval_unit" in parsed
+        if interval_ok:
+            ok, error = self.validate_interval(parsed["interval"], parsed["interval_unit"])
+            if not ok:
+                errors["interval"] = error
+                interval_ok = False
 
-        # Validate variation
-        variation = sanitized_settings.get("variation", 0)
-        variation_valid, variation_error = self.validate_variation(variation, interval, unit)
-        if not variation_valid:
-            errors["variation"] = variation_error
+        if interval_ok and "variation" in parsed:
+            ok, error = self.validate_variation(
+                parsed["variation"], parsed["interval"], parsed["interval_unit"]
+            )
+            if not ok:
+                errors["variation"] = error
 
-        # Validate burst settings
-        burst_clicks = sanitized_settings.get("burst_clicks", 1)
-        burst_pause = sanitized_settings.get("burst_pause", 1000)
-        burst_valid, burst_error = self.validate_burst_settings(burst_clicks, burst_pause)
-        if not burst_valid:
-            errors["burst"] = burst_error
+        if "burst_clicks" in parsed and "burst_pause" in parsed:
+            ok, error = self.validate_burst_settings(parsed["burst_clicks"], parsed["burst_pause"])
+            if not ok:
+                errors["burst"] = error
 
-        # Validate safety settings
-        max_clicks = sanitized_settings.get("max_clicks", 0)
-        clicks_valid, clicks_error = self.validate_clicks(max_clicks)
-        if not clicks_valid:
-            errors["max_clicks"] = clicks_error
+        if "max_clicks" in parsed:
+            ok, error = self.validate_clicks(parsed["max_clicks"])
+            if not ok:
+                errors["max_clicks"] = error
 
-        auto_stop = sanitized_settings.get("auto_stop_minutes", 0)
-        time_valid, time_error = self.validate_minutes(auto_stop)
-        if not time_valid:
-            errors["auto_stop"] = time_error
+        if "auto_stop_minutes" in parsed:
+            ok, error = self.validate_minutes(parsed["auto_stop_minutes"])
+            if not ok:
+                errors["auto_stop"] = error
 
-        max_cps = sanitized_settings.get("max_cps_ceiling", 50)
-        cps_valid, cps_error = self.validate_max_cps(max_cps)
-        if not cps_valid:
-            errors["max_cps_ceiling"] = cps_error
+        if "max_cps_ceiling" in parsed:
+            ok, error = self.validate_max_cps(parsed["max_cps_ceiling"])
+            if not ok:
+                errors["max_cps_ceiling"] = error
 
         return {
-            "valid": len(errors) == 0,
+            "valid": not errors,
             "errors": errors,
-            "sanitized_settings": sanitized_settings,
+            "sanitized_settings": parsed,
         }
 
     def get_all(self) -> dict[str, Any]:

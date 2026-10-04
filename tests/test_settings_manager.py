@@ -217,26 +217,65 @@ class TestSettingsManager(unittest.TestCase):
         self.assertFalse(valid)
         self.assertIn("cannot exceed 60,000", error)
 
-    def test_input_sanitization(self):
-        """Test input sanitization"""
-        # Test coordinate sanitization
-        self.assertEqual(self.manager.sanitize_input("x_coord", 500), 500)
-        self.assertEqual(self.manager.sanitize_input("x_coord", -50), 0)
-        self.assertEqual(self.manager.sanitize_input("x_coord", 20000), 10000)
-        self.assertEqual(self.manager.sanitize_input("x_coord", "invalid"), 100)  # Default
+    def test_parse_input_never_clamps_or_defaults(self):
+        """#39: parsing reports bad input instead of rewriting it."""
+        self.assertEqual(self.manager.parse_input("x_coord", "500"), (500, None))
+        self.assertEqual(self.manager.parse_input("x_coord", " -50 "), (-50, None))
+        self.assertEqual(self.manager.parse_input("x_coord", 20000), (20000, None))
+        self.assertEqual(self.manager.parse_input("x_coord", "invalid")[1], "Must be a number")
+        self.assertEqual(self.manager.parse_input("x_coord", "2.5")[1], "Must be a whole number")
+        self.assertEqual(self.manager.parse_input("interval", "70000"), (70000, None))
+        self.assertEqual(self.manager.parse_input("interval", "0.5"), (0.5, None))
+        self.assertEqual(self.manager.parse_input("interval", "")[1], "Enter a number")
+        self.assertEqual(self.manager.parse_input("interval", "nan")[1], "Must be a number")
+        self.assertEqual(self.manager.parse_input("mouse_button", "left"), ("left", None))
+        self.assertIsNotNone(self.manager.parse_input("mouse_button", "invalid")[1])
+        self.assertIsNotNone(self.manager.parse_input("click_type", "invalid")[1])
+        self.assertEqual(self.manager.parse_input("enable_failsafe", True), (True, None))
 
-        # Test interval sanitization
-        self.assertEqual(self.manager.sanitize_input("interval", 500), 500)
-        self.assertEqual(self.manager.sanitize_input("interval", 0), 0)
-        self.assertEqual(self.manager.sanitize_input("interval", 70000), 60000)
+    def _ui_settings(self, **overrides):
+        base = {
+            "x_coord": "100",
+            "y_coord": "100",
+            "interval": "500",
+            "interval_unit": "ms",
+            "variation": "0",
+            "mouse_button": "left",
+            "click_type": "single",
+            "burst_clicks": "1",
+            "burst_pause": "0",
+            "max_clicks": "0",
+            "auto_stop_minutes": "0",
+            "max_cps_ceiling": 50,
+        }
+        base.update(overrides)
+        return base
 
-        # Test mouse button sanitization
-        self.assertEqual(self.manager.sanitize_input("mouse_button", "left"), "left")
-        self.assertEqual(self.manager.sanitize_input("mouse_button", "invalid"), "left")
+    def test_bad_input_is_reported_not_rewritten(self):
+        """#39: typos must not turn into a different (possibly faster) run."""
+        cases = {
+            "interval": ["-500", "1OO", "abc", "999999", ""],
+            "x_coord": ["-1200", "abc", "5000"],
+            "variation": ["-1", "x"],
+            "burst_clicks": ["0", "101", "abc"],
+            "burst_pause": ["-1", "70000"],
+            "max_clicks": ["-1", "abc"],
+            "auto_stop_minutes": ["-1", "1441", "abc"],
+        }
+        for field, values in cases.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    result = self.manager.validate_all_settings(
+                        self._ui_settings(**{field: value}), 1920, 1080
+                    )
+                    self.assertFalse(result["valid"])
+                    self.assertTrue(result["errors"])
 
-        # Test click type sanitization
-        self.assertEqual(self.manager.sanitize_input("click_type", "double"), "double")
-        self.assertEqual(self.manager.sanitize_input("click_type", "invalid"), "single")
+    def test_valid_ui_strings_parse_to_numbers(self):
+        result = self.manager.validate_all_settings(self._ui_settings(interval="0"), 1920, 1080)
+        self.assertTrue(result["valid"], result["errors"])
+        self.assertEqual(result["sanitized_settings"]["interval"], 0.0)
+        self.assertEqual(result["sanitized_settings"]["x_coord"], 100)
 
     def test_comprehensive_validation(self):
         """Test comprehensive validation of all settings"""
@@ -274,11 +313,11 @@ class TestSettingsManager(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertGreater(len(result["errors"]), 0)
 
-        # Check that sanitized settings are provided
-        self.assertIn("sanitized_settings", result)
+        # Parsed values are kept as entered, never clamped or defaulted
         sanitized = result["sanitized_settings"]
-        self.assertEqual(sanitized["x_coord"], 0)  # Clamped to 0
-        self.assertEqual(sanitized["interval_unit"], "ms")  # Reset to default
+        self.assertEqual(sanitized["x_coord"], -50)
+        self.assertNotIn("interval_unit", sanitized)
+        self.assertIn("interval_unit", result["errors"])
 
     def test_non_dict_json_uses_defaults(self):
         with open(self.settings_file, "w", encoding="utf-8") as fh:
