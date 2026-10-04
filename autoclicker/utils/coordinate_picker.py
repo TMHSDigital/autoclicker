@@ -30,6 +30,9 @@ PROFILE_KEYS = (
     "auto_stop_minutes",
     "sequence",
     "sequence_repeat",
+    "action",
+    "hold_ms",
+    "key",
 )
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
@@ -60,7 +63,12 @@ def describe_profile(profile: dict[str, Any]) -> str:
         if profile.get("variation"):
             every += f" ±{profile['variation']} ms"
         parts.append(every)
-    if "mouse_button" in profile or "click_type" in profile:
+    action = profile.get("action", "click")
+    if action == "key":
+        parts.append(f"press {profile.get('key', '?')}")
+    elif action == "hold":
+        parts.append(f"hold {profile.get('mouse_button', 'left')} {profile.get('hold_ms', 0)} ms")
+    elif "mouse_button" in profile or "click_type" in profile:
         parts.append(f"{profile.get('mouse_button', 'left')} {profile.get('click_type', 'single')}")
     burst = profile.get("burst_clicks")
     if isinstance(burst, int) and burst > 1:

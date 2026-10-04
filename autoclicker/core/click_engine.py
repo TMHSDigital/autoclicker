@@ -147,6 +147,11 @@ class ClickEngine:
         # (0 = until stopped). Empty means a normal single-target run.
         self._steps: tuple[ClickStep, ...] = ()
         self._repeat = 0
+        # What each "click" does: "click", "hold" (press the button for
+        # _hold_ms, then release) or "key" (press _key, e.g. "f5" or "ctrl+r").
+        self._action = "click"
+        self._hold_ms = 0.0
+        self._key = ""
         self.current_step = 0  # 1-based step being clicked, for error messages
         # First stop source wins; reset on every start.
         self._stop_reason: tuple[str, str] | None = None
@@ -187,6 +192,9 @@ class ClickEngine:
         *,
         steps: Sequence[ClickStep] | None = None,
         repeat: int = 0,
+        action: str = "click",
+        hold_ms: float = 0.0,
+        key: str = "",
     ) -> bool:
         """
         Start the clicking process
@@ -208,6 +216,9 @@ class ClickEngine:
                 mouse_button, click_type and burst settings are ignored), then
                 waits ``interval`` before the next round
             repeat: Rounds to run in sequence mode (0 = until stopped)
+            action: "click", "hold" (press mouse_button for ``hold_ms``, then
+                release; released on every stop path) or "key" (press ``key``,
+                such as "f5" or "ctrl+r", wherever the focus is)
 
         Returns:
             True if started successfully, False otherwise
@@ -217,8 +228,13 @@ class ClickEngine:
         if self.click_thread is not None and self.click_thread.is_alive():
             return False
 
+        if action not in ("click", "hold", "key"):
+            raise ClickEngineError("start_clicking", f"Unsupported action: {action}")
         self._steps = tuple(steps or ())
         self._repeat = max(0, int(repeat))
+        self._action = "click" if self._steps else action
+        self._hold_ms = max(0.0, float(hold_ms))
+        self._key = key
         self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
@@ -536,7 +552,7 @@ class ClickEngine:
 
             # Cursor mode (x and y are None): click wherever the cursor is.
             position: dict[str, int] = {}
-            if x is not None and y is not None:
+            if x is not None and y is not None and self._action != "key":
                 # Validate against the cached desktop bounds; query live only if
                 # the cache is empty (e.g. direct unit-test calls).
                 if self._screen_bounds is None:
@@ -558,13 +574,18 @@ class ClickEngine:
 
             # One call for every button. A double click counts as one click toward
             # max_clicks, but as two presses for the runaway guard.
-            presses = 2 if click_type == "double" else 1
+            presses = 2 if click_type == "double" and self._action == "click" else 1
             try:
-                pyautogui.click(
-                    **position,
-                    button=mouse_button,
-                    clicks=presses,
-                )
+                if self._action == "key":
+                    keys = self._key.split("+")
+                    if len(keys) == 1:
+                        pyautogui.press(keys[0])
+                    else:
+                        pyautogui.hotkey(*keys)
+                elif self._action == "hold":
+                    self._hold(position, mouse_button)
+                else:
+                    pyautogui.click(**position, button=mouse_button, clicks=presses)
                 if self.enable_performance_monitoring:
                     self.stats.record_success(time.perf_counter() - click_start_time)
 
@@ -587,6 +608,30 @@ class ClickEngine:
         except Exception as e:
             self.stats.errors += 1
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
+
+    def _hold(self, position: dict[str, int], button: str) -> None:
+        """Press ``button`` for the hold time; always release it, even when stopping."""
+        pyautogui.mouseDown(**position, button=button)
+        try:
+            # A stop request ends the hold early; the button is released either way.
+            self._stop_event.wait(timeout=self._hold_ms / 1000)
+        finally:
+            self._release(button)
+
+    @staticmethod
+    def _release(button: str) -> None:
+        try:
+            pyautogui.mouseUp(button=button)
+        except pyautogui.FailSafeException:
+            # The cursor is in a failsafe corner. Release anyway so the button is
+            # never left pressed, then let the failsafe stop the run.
+            previous = pyautogui.FAILSAFE
+            pyautogui.FAILSAFE = False
+            try:
+                pyautogui.mouseUp(button=button)
+            finally:
+                pyautogui.FAILSAFE = previous
+            raise
 
     def _cursor_in_failsafe_corner(self, x: int | None, y: int | None) -> bool:
         """True if the user has moved the cursor into a failsafe corner of any monitor."""

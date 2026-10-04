@@ -65,7 +65,7 @@ built around safety stops that are on by default.
     </td>
     <td width="33%" valign="top">
       <h3>Burst mode</h3>
-      Fire several clicks in quick succession, then wait the interval. Left, right or middle button; single or double click.
+      Fire several clicks in quick succession, then wait the interval. Left, right or middle button; single or double click. Or <b>hold</b> the button for a set time, or press a <b>key</b> such as <kbd>F5</kbd> instead of clicking.
     </td>
   </tr>
   <tr>
@@ -172,6 +172,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--profile NAME` | Load a saved profile first (other flags apply on top) |
 | `--interval 100ms` / `2s`, `--variation MS` | Timing |
 | `--button left\|right\|middle`, `--double`, `--single` | What to click |
+| `--hold MS`, `--key KEY` | Hold the button, or press a key, instead of clicking |
 | `--burst N:MS`, `--clicks N`, `--minutes N`, `--repeat N` | Bursts, limits and sequence rounds |
 | `--delay SECONDS` | Countdown before clicking starts |
 | `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
@@ -258,6 +259,9 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `variation` | `0` | ± random milliseconds added to each interval |
 | `mouse_button` | `"left"` | `"left"`, `"right"` or `"middle"` |
 | `click_type` | `"single"` | `"single"` or `"double"`, for any button. A double click counts as one click toward limits and two presses toward the runaway guard |
+| `action` | `"click"` | `"click"`; `"hold"` presses the button for `hold_ms`, then releases it (always released when a run stops); `"key"` presses `key` in whatever window has focus. Sequences always click |
+| `hold_ms` | `500` | Hold time in milliseconds, 1 to 60 000 |
+| `key` | `""` | Key or combo for the Key action, e.g. `"f5"`, `"space"`, `"ctrl+r"`; can't be one of the app's own hotkeys |
 | `burst_clicks` | `1` | Clicks per burst |
 | `burst_pause` | `1000` | Milliseconds between clicks inside a burst |
 | `max_clicks` | `0` | Stop after this many clicks; `0` = no limit |

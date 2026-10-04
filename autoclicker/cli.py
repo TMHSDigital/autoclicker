@@ -83,6 +83,9 @@ def build_parser() -> argparse.ArgumentParser:
     clicks = parser.add_mutually_exclusive_group()
     clicks.add_argument("--double", action="store_true", help="double click")
     clicks.add_argument("--single", action="store_true", help="single click")
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--hold", metavar="MS", help="hold the button for MS instead of clicking")
+    action.add_argument("--key", metavar="KEY", help="press a key instead, e.g. f5 or ctrl+r")
     parser.add_argument("--burst", metavar="N:MS", help="N clicks per burst, MS apart")
     parser.add_argument("--clicks", metavar="N", help="stop after N clicks")
     parser.add_argument("--minutes", metavar="N", help="stop after N minutes")
@@ -105,7 +108,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
         "at", "cursor", "sequence", "profile", "interval", "variation", "button", "double",
-        "single", "burst", "clicks", "minutes", "repeat", "delay",
+        "single", "burst", "clicks", "minutes", "repeat", "delay", "hold", "key",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
 
@@ -155,6 +158,10 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
         value = getattr(args, flag)
         if value is not None:
             values[key] = value
+    if args.hold is not None:
+        values.update(action="hold", hold_ms=args.hold)
+    if args.key is not None:
+        values.update(action="key", key=args.key)
     if args.double:
         values["click_type"] = "double"
     if args.single:

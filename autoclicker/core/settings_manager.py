@@ -37,12 +37,13 @@ _INT_FIELDS = frozenset(
         "sequence_repeat",
     }
 )
-_FLOAT_FIELDS = frozenset({"interval", "burst_pause"})
+_FLOAT_FIELDS = frozenset({"interval", "burst_pause", "hold_ms"})
 _CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
     "mouse_button": ("left", "right", "middle"),
     "click_type": ("single", "double"),
     "interval_unit": ("ms", "seconds"),
     "target_mode": ("fixed", "cursor", "sequence"),
+    "action": ("click", "hold", "key"),
 }
 
 # Human-readable names for validation error keys, used in error dialogs.
@@ -67,7 +68,13 @@ FIELD_LABELS: dict[str, str] = {
     "start_delay_seconds": "Start delay",
     "sequence": "Sequence",
     "sequence_repeat": "Repeat",
+    "action": "Action",
+    "hold_ms": "Hold",
+    "key": "Key",
 }
+
+# Longest mouse-button hold, in milliseconds.
+MAX_HOLD_MS = 60_000
 
 # Longest countdown before a Start-button run begins, in seconds.
 MAX_START_DELAY_SECONDS = 60
@@ -94,7 +101,7 @@ _STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click typ
 _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
 _LIST_KEYS = frozenset({"sequence"})
-_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme"})
+_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key"})
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
 
@@ -117,6 +124,19 @@ def _is_valid_preset(value: Any) -> bool:
         isinstance(value.get(axis), int) and not isinstance(value.get(axis), bool)
         for axis in ("x", "y")
     )
+
+
+def _key_error(text: str) -> str | None:
+    """Why a key (or "+"-joined combo) can't be pressed, or None if it can."""
+    parts = text.split("+")
+    if not text or any(not part for part in parts):
+        return "Enter a key such as F5, space or ctrl+r"
+    import pyautogui  # deferred: the settings layer is otherwise free of it
+
+    for part in parts:
+        if part not in pyautogui.KEYBOARD_KEYS:
+            return f"Unknown key: {part}"
+    return None
 
 
 def field_label(key: str) -> str:
@@ -145,6 +165,9 @@ class SettingsManager:
         "start_delay_seconds": 3,
         "sequence": [],
         "sequence_repeat": 0,
+        "action": "click",
+        "hold_ms": 500,
+        "key": "",
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -441,6 +464,10 @@ class SettingsManager:
             return (int(number) if number.is_integer() else number), None
         if key == "sequence":
             return self._parse_sequence(value)
+        if key == "key":
+            if not isinstance(value, str):
+                return None, "Enter a key such as F5, space or ctrl+r"
+            return "+".join(part.strip().lower() for part in value.split("+")), None
         if key in _CHOICE_FIELDS:
             choices = _CHOICE_FIELDS[key]
             text = str(value).strip()
@@ -494,8 +521,13 @@ class SettingsManager:
         # cursor and sequence mode, the sequence outside sequence mode.
         mode = str(settings.get("target_mode", "fixed")).strip()
         unused = {"sequence", "sequence_repeat"} if mode != "sequence" else set()
-        if mode in ("cursor", "sequence"):
+        action = str(settings.get("action", "click")).strip()
+        if mode in ("cursor", "sequence") or action == "key":
             unused |= {"x_coord", "y_coord"}
+        if action != "key":
+            unused.add("key")
+        if action != "hold":
+            unused.add("hold_ms")
         for key, value in settings.items():
             if key in unused:
                 continue
@@ -565,6 +597,16 @@ class SettingsManager:
             errors["sequence_repeat"] = (
                 f"Must be between 0 and {MAX_SEQUENCE_REPEAT:,} (0 = until stopped)"
             )
+
+        if parsed.get("action") in ("hold", "key") and mode == "sequence":
+            errors["action"] = "Sequences always click; choose Click"
+        hold = parsed.get("hold_ms")
+        if hold is not None and not 0 < hold <= MAX_HOLD_MS:
+            errors["hold_ms"] = f"Must be between 1 and {MAX_HOLD_MS:,} ms"
+        if parsed.get("action") == "key" and "key" in parsed:
+            key_error = _key_error(parsed["key"])
+            if key_error:
+                errors["key"] = key_error
 
         delay = parsed.get("start_delay_seconds")
         if delay is not None and not 0 <= delay <= MAX_START_DELAY_SECONDS:

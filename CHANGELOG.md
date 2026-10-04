@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Action setting (Click Settings): **Hold** presses the mouse button for a set time and releases it, and **Key** presses a key or combo such as F5 or Ctrl+R in the focused window, both on the same interval, burst, limits and stop paths. A held button is released on every stop, including emergency stop and the failsafe; a key can't be one of the app's own hotkeys. Also `--hold MS` and `--key KEY` on the command line (#78).
 - Opt-in update check: asked once on first launch (and changeable under Advanced), the app checks GitHub at most once a day and shows an "Update to X" button plus a tray notification when a newer release exists. It never checks while clicking, never downloads anything, and makes no network requests when off (#79).
 - Command line: flags such as `--profile`, `--at X,Y`, `--cursor`, `--interval 100ms`, `--clicks N`, `--start` and `--minimized` set up the window for one launch, and `--headless` runs once without a window (hotkeys, failsafe and limits still apply) and exits with a code that says how the run ended. Saved settings are left alone (#75).
 - Sequence target mode: click several points in order, each with its own button, click type and wait before the next step, repeated N times or until stopped. Points are added with Pick Location and can be reordered or removed; every stop path and limit is checked before each step, and sequences are saved in settings and profiles (#72).

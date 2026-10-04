@@ -32,6 +32,23 @@ class StartClickResult:
     busy: bool = False
 
 
+def _hotkey_clash(key: str, bindings: Any) -> str | None:
+    """Error if the key to press is one of the app's own hotkeys (it would never arrive)."""
+    from .hotkeys import HotkeyError, normalize_hotkey
+
+    try:
+        pressed = normalize_hotkey(key)
+    except HotkeyError:
+        return None  # e.g. a bare letter, which can't be a hotkey
+    for action, bound in dict(bindings or {}).items():
+        try:
+            if bound and normalize_hotkey(str(bound)) == pressed:
+                return f"{pressed} is the {action} hotkey; pick another key"
+        except HotkeyError:
+            continue
+    return None
+
+
 class AutoclickerController:
     """Owns settings, click engine, and presets."""
 
@@ -80,6 +97,9 @@ class AutoclickerController:
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
             "sequence": ui_fields.get("sequence", []),
             "sequence_repeat": ui_fields.get("sequence_repeat", 0),
+            "action": ui_fields.get("action", "click"),
+            "hold_ms": ui_fields.get("hold_ms", 500),
+            "key": ui_fields.get("key", ""),
         }
 
     def validate(
@@ -128,7 +148,8 @@ class AutoclickerController:
         sanitized = validation_result["sanitized_settings"]
 
         mode = sanitized.get("target_mode", "fixed")
-        has_point = mode == "fixed"
+        action = sanitized.get("action", "click")
+        has_point = mode == "fixed" and action != "key"
         x = sanitized["x_coord"] if has_point else None
         y = sanitized["y_coord"] if has_point else None
         steps = (
@@ -176,10 +197,15 @@ class AutoclickerController:
             on_finished=lambda outcome: self._run_finished(outcome, on_finished),
             steps=steps,
             repeat=int(sanitized.get("sequence_repeat", 0)),
+            action=action,
+            hold_ms=float(sanitized.get("hold_ms", 0) or 0),
+            key=str(sanitized.get("key", "")),
         )
 
         if started:
-            if steps:
+            if action == "key":
+                target = f"key:{sanitized['key']}"
+            elif steps:
                 target = f"sequence:{len(steps)}"
             else:
                 target = f"{x},{y}" if has_point else "cursor"
@@ -223,9 +249,16 @@ class AutoclickerController:
     ) -> dict[str, Any]:
         """Validate against the desktop spanning every monitor."""
         bounds = screen_bounds or virtual_screen_bounds(pyautogui.size)
-        return settings.validate_all_settings(
+        result = settings.validate_all_settings(
             raw_settings, bounds.width, bounds.height, bounds.left, bounds.top
         )
+        sanitized = result["sanitized_settings"]
+        if sanitized.get("action") == "key" and "key" not in result["errors"]:
+            clash = _hotkey_clash(str(sanitized.get("key", "")), settings.get("hotkeys"))
+            if clash:
+                result["errors"]["key"] = clash
+                result["valid"] = False
+        return result
 
     def stop_clicking(self) -> bool:
         """Stop clicking and wait for the click thread. Returns prior running state.

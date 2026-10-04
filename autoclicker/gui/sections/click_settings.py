@@ -62,3 +62,35 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.variation_entry.pack(side=tk.LEFT)
     app.variation_entry.insert(0, str(settings.get("variation", "0")))
     ttk.Label(interval_frame, text="ms").pack(side=tk.LEFT)
+
+    # What each click does: click, hold the button, or press a key.
+    ttk.Label(settings_frame, text="Action:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
+    action_frame = ttk.Frame(settings_frame)
+    action_frame.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    saved_action = settings.get("action", "click")
+    app.action_var = tk.StringVar(
+        value=saved_action if saved_action in ("click", "hold", "key") else "click"
+    )
+    for text, value in (("Click", "click"), ("Hold", "hold")):
+        ttk.Radiobutton(
+            action_frame,
+            text=text,
+            variable=app.action_var,
+            value=value,
+            command=app._apply_action_state,
+        ).pack(side=tk.LEFT, padx=(0, 6))
+    app.hold_entry = ttk.Entry(action_frame, width=6)
+    app.hold_entry.pack(side=tk.LEFT)
+    app.hold_entry.insert(0, str(settings.get("hold_ms", "500")))
+    ttk.Label(action_frame, text="ms").pack(side=tk.LEFT, padx=(3, 12))
+    ttk.Radiobutton(
+        action_frame,
+        text="Key",
+        variable=app.action_var,
+        value="key",
+        command=app._apply_action_state,
+    ).pack(side=tk.LEFT, padx=(0, 6))
+    app.key_entry = ttk.Entry(action_frame, width=10)
+    app.key_entry.pack(side=tk.LEFT)
+    app.key_entry.insert(0, str(settings.get("key", "")))
+    app._apply_action_state()

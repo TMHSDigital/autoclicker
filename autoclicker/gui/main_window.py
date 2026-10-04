@@ -60,6 +60,9 @@ class AutoclickerApp:
     preset_summary_var: tk.StringVar
     button_var: tk.StringVar
     click_type_var: tk.StringVar
+    action_var: tk.StringVar
+    hold_entry: ttk.Entry
+    key_entry: ttk.Entry
     interval_entry: ttk.Entry
     interval_unit_var: tk.StringVar
     variation_entry: ttk.Entry
@@ -353,6 +356,10 @@ class AutoclickerApp:
     def _target_summary(self) -> str:
         """Status-bar description of what the form currently targets."""
         mode = self.target_mode_var.get()
+        if mode != "sequence" and getattr(self, "action_var", None) is not None:
+            if self.action_var.get() == "key":
+                key = self.key_entry.get().strip() or "?"
+                return f"Target: the focused window (press {key})"
         if mode == "cursor":
             return "Target: current cursor position"
         if mode == "sequence":
@@ -450,6 +457,13 @@ class AutoclickerApp:
             return
         del self.sequence_steps[index]
         self._sequence_changed(select=min(index, len(self.sequence_steps) - 1))
+
+    def _apply_action_state(self) -> None:
+        """Enable the hold time only for Hold and the key only for Key."""
+        action = self.action_var.get()
+        self.hold_entry.configure(state=tk.NORMAL if action == "hold" else tk.DISABLED)
+        self.key_entry.configure(state=tk.NORMAL if action == "key" else tk.DISABLED)
+        self._refresh_target_summary()
 
     def _on_target_mode_change(self) -> None:
         """Apply and remember the chosen target mode."""
@@ -586,6 +600,8 @@ class AutoclickerApp:
             "auto_stop_minutes": self.auto_stop_entry,
             "sequence_repeat": self.sequence_repeat_entry,
             "start_delay_seconds": self.start_delay_entry,
+            "hold_ms": self.hold_entry,
+            "key": self.key_entry,
         }
         for key, entry in entries.items():
             if key in values:
@@ -594,10 +610,12 @@ class AutoclickerApp:
             "interval_unit": self.interval_unit_var,
             "mouse_button": self.button_var,
             "click_type": self.click_type_var,
+            "action": self.action_var,
         }
         for key, var in variables.items():
             if key in values:
                 var.set(values[key])
+        self._apply_action_state()
         if "max_clicks" in values:
             try:
                 limited = float(values["max_clicks"]) != 0
@@ -691,6 +709,9 @@ class AutoclickerApp:
                 "start_delay_seconds": self.start_delay_entry.get(),
                 "sequence": [dict(step) for step in self.sequence_steps],
                 "sequence_repeat": self.sequence_repeat_entry.get(),
+                "action": self.action_var.get(),
+                "hold_ms": self.hold_entry.get(),
+                "key": self.key_entry.get(),
             }
         )
 

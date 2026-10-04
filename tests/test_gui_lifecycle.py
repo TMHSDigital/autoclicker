@@ -661,3 +661,39 @@ class TestTargetSummary(GuiHarness):
         app.target_mode_var.set("sequence")
         app._on_target_mode_change()
         self.assertEqual(app.coord_var.get(), "Target: sequence of 0 points")
+
+
+class TestActionUi(GuiHarness):
+    """#78: the Action row enables the right field and runs key presses."""
+
+    def test_action_switches_fields(self):
+        app = self.app
+        self.assertEqual(app.hold_entry.cget("state"), "disabled")
+        self.assertEqual(app.key_entry.cget("state"), "disabled")
+        app.action_var.set("key")
+        app._apply_action_state()
+        self.assertEqual(app.key_entry.cget("state"), "normal")
+        self.assertEqual(app.hold_entry.cget("state"), "disabled")
+
+    def test_key_run(self):
+        app = self.app
+        app.action_var.set("key")
+        app._apply_action_state()
+        self.set_fields(key="F5", interval="0")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        app.start_clicking()
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+        self.assertEqual(self.pyautogui.press.call_count, 2)
+        log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log").read_text("utf-8")
+        self.assertIn("target=key:f5", log)
+
+
+class TestKeyTargetSummary(GuiHarness):
+    def test_key_action_names_the_focused_window(self):
+        app = self.app
+        self.set_fields(key="f5")
+        app.action_var.set("key")
+        app._apply_action_state()
+        self.assertEqual(app.coord_var.get(), "Target: the focused window (press f5)")
