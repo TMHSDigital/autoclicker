@@ -72,7 +72,7 @@ autoclicker = ["assets/*.ico", "assets/*.png"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -v --tb=short --cov=autoclicker --cov-report=term-missing:skip-covered --cov-fail-under=65"
+addopts = "-ra -v --tb=short --cov=autoclicker --cov-report=term-missing:skip-covered --cov-fail-under=85"
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning"]
 python_files = "test_*.py"
@@ -90,7 +90,6 @@ omit = [
     "*/tests/*",
     "*/test_*.py",
     "autoclicker_env/*",
-    "autoclicker/gui/sections/*",
     "*/__pycache__/*",
     "*/.git/*",
     "*/build/*",

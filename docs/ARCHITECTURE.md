@@ -88,4 +88,4 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 
 ## Test layout
 
-Unit tests under `tests/` (pytest). Coverage gate on the `autoclicker` package (`cov-fail-under=65`, `gui/sections` omitted). `scripts/smoke_check.py` verifies imports outside pytest and runs in CI on Python 3.11.
+Unit tests under `tests/` (pytest). Coverage gate on the whole `autoclicker` package (`cov-fail-under=85`). `tests/test_gui_lifecycle.py` builds the real app with fake Tk widgets and drives every stop path end to end on the real click thread. `scripts/smoke_check.py` verifies imports outside pytest and runs in CI on Python 3.11.
