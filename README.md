@@ -94,7 +94,7 @@ built around safety stops that are on by default.
 </table>
 
 > [!NOTE]
-> The executable isn't code-signed yet ([#45](https://github.com/TMHSDigital/autoclicker/issues/45)), so Windows SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**. Every release is built from this repository by [CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml) when a version tag is pushed.
+> The executable isn't code-signed, so Windows SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**. Every release is built from this repository by [CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml) and ships with a SHA-256 checksum and a build provenance attestation; see [how to verify a download](docs/RELEASING.md#verifying-a-download).
 
 <details>
 <summary><b id="run-from-source">Run from source</b> (Python 3.10 to 3.14)</summary>

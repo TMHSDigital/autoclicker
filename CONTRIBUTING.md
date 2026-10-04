@@ -96,7 +96,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-CI tests the tag, builds `WindowsAutoclicker.exe` and publishes the GitHub release.
+CI tests the tag, builds and smoke-launches `WindowsAutoclicker.exe`, and publishes it with a SHA-256 checksum, a provenance attestation, and release notes taken from that version's CHANGELOG section. The release fails if the tag and `__version__` differ or the section is missing. Details: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Security
 
