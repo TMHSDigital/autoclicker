@@ -22,8 +22,8 @@ coverage:
 	$(VENV_PYTHON) -m pytest --cov=autoclicker --cov-report=term --cov-report=html --cov-report=xml
 
 lint:
-	$(VENV_PYTHON) -m ruff check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
-	$(VENV_PYTHON) -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
+	$(VENV_PYTHON) -m ruff check autoclicker autoclicker.py tests scripts tools
+	$(VENV_PYTHON) -m ruff format --check autoclicker autoclicker.py tests scripts tools
 
 format:
 	$(VENV_PYTHON) -m ruff format .

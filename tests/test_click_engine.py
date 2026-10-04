@@ -163,24 +163,24 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
             engine._wait_with_variation(0, 0)
         mock_wait.assert_not_called()
 
-    def test_should_stop_max_clicks(self):
+    def test_limit_max_clicks(self):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.click_count = 10
-        self.assertTrue(engine._should_stop(10, 0))
+        self.assertEqual(engine._limit_reached(10, 0), "Done: reached 10 clicks")
 
     @patch("autoclicker.core.click_engine.time.monotonic")
-    def test_should_stop_auto_stop_minutes(self, mock_time):
+    def test_limit_auto_stop_minutes(self, mock_time):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.start_time = 1000.0
         mock_time.return_value = 1000.0 + 61 * 60
-        self.assertTrue(engine._should_stop(0, 1))
+        self.assertIsNotNone(engine._limit_reached(0, 1))
 
     def test_wall_clock_jump_does_not_affect_auto_stop(self):
         """#52: elapsed time uses a monotonic clock, not the wall clock."""
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.start_time = time.monotonic()
         with patch("autoclicker.core.click_engine.time.time", return_value=time.time() + 86400):
-            self.assertFalse(engine._should_stop(0, 1))
+            self.assertIsNone(engine._limit_reached(0, 1))
             self.assertEqual(engine.get_status()["runtime"], "00:00:00")
 
     @patch("autoclicker.core.click_engine.pyautogui")
@@ -343,11 +343,32 @@ class TestClickEnginePerformance(unittest.TestCase):
         self.assertGreater(metrics["success_rate"], 0)
         self.assertIn("average_click_time", metrics)
 
-    def test_reset_performance_metrics(self):
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_stats_are_per_run(self, mock_pyautogui):
+        """#68: each start resets the stats, so success rate is never a lifetime figure."""
+        mock_pyautogui.size.return_value = (1920, 1080)
         engine = ClickEngine(enable_performance_monitoring=True)
-        engine.performance_metrics["click_success_count"] = 99
-        engine.reset_performance_metrics()
-        self.assertEqual(engine.performance_metrics["click_success_count"], 0)
+        engine.stats.successes = 99
+        engine.stats.errors = 99
+        engine.start_clicking(5, 5, 1000, 0, 1, 0, 1, 0, "left", "single")
+        engine.click_thread.join(2)
+        self.assertEqual(engine.stats.successes, 1)
+        self.assertEqual(engine.stats.errors, 0)
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_failed_click_counts_one_error(self, mock_pyautogui):
+        """#68: a failed click used to be counted twice."""
+        import pyautogui
+
+        mock_pyautogui.size.return_value = (1920, 1080)
+        mock_pyautogui.FailSafeException = pyautogui.FailSafeException
+        mock_pyautogui.PyAutoGUIException = pyautogui.PyAutoGUIException
+        mock_pyautogui.click.side_effect = pyautogui.PyAutoGUIException("boom")
+        engine = ClickEngine(enable_performance_monitoring=True)
+        with self.assertRaises(ClickEngineError):
+            engine._perform_click(5, 5, "left", "single")
+        self.assertEqual(engine.stats.errors, 1)
+        self.assertEqual(engine.get_performance_metrics()["success_rate"], 0.0)
 
     @patch("autoclicker.core.click_engine.pyautogui")
     def test_welford_timing_stats(self, mock_pyautogui):
@@ -356,7 +377,7 @@ class TestClickEnginePerformance(unittest.TestCase):
         for _ in range(5):
             engine._perform_click(1, 1, "left", "single")
         metrics = engine.get_performance_metrics()
-        self.assertEqual(metrics["_timing_count"], 5)
+        self.assertEqual(engine.stats.timing_count, 5)
         self.assertGreater(metrics["average_click_time"], 0)
         self.assertIn("click_time_std_dev", metrics)
 

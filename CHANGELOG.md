@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The status bar's success rate is per run; it used to add up every run since launch, and a failed click was counted twice (#68).
+- The app icon in the title row shows again; it was looked up in the current directory instead of the package (#68).
 - The corner failsafe works on every monitor, not just the primary one. Corners where two screens meet are ignored, so moving between monitors never stops a run (#66).
 - An unreadable settings file (for example after a hand edit with a typo) is moved aside as `autoclicker_settings.json.corrupt-<time>` and the status bar says so, instead of being overwritten by defaults on the next save and losing presets and hotkeys. Individual values of the wrong type fall back to their defaults without affecting the rest (#65).
 - The runaway guard counts both presses of a double click, so Double can no longer run at twice the limit, and ceilings above 1,023 clicks per second can now actually trip (#64).

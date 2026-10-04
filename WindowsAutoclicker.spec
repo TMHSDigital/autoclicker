@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Frozen Windows build. Icons ship in autoclicker/assets (regenerate with create_icon.py)."""
+"""Frozen Windows build. Icons ship in autoclicker/assets (regenerate with tools/create_icon.py)."""
 
 import re
 from pathlib import Path

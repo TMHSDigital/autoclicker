@@ -9,7 +9,7 @@
 | Change | Rationale |
 |--------|-----------|
 | Welford running mean/variance for timings | `get_status()` / `get_performance_metrics()` no longer call `statistics.mean/stdev` over up to 1000 deque entries on every poll |
-| Keep bounded `click_timings` deque | Debug/history only; status UI uses O(1) aggregates |
+| Per-run `ClickStats` dataclass | Replaced the untyped metrics dict and the unused 1000-sample timing deque; reset on every start so the status bar's success rate is per run (#68) |
 
 ## Profiling (local, Windows)
 
@@ -29,5 +29,5 @@ The script prints `cProfile` top functions before/after for comparison.
 ## Targets
 
 - Status polling at 1 Hz should not scale with click history length.
-- UI CPS is lifetime `click_count / runtime`. The runaway guard uses a sliding 1-second window.
+- UI CPS is the run's `click_count / runtime`. The runaway guard uses a sliding 1-second window.
 - Interval floor still dominated by OS scheduler + pyautogui; use ms intervals ≥ 1 for stable CPS.

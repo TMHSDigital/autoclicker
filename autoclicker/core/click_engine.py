@@ -11,6 +11,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import pyautogui
 
@@ -63,6 +64,40 @@ class RunOutcome:
     error: BaseException | None = None
 
 
+@dataclass
+class ClickStats:
+    """Per-run click outcomes and timing, updated in O(1) per click.
+
+    Timing uses Welford's running mean/variance so the 1 Hz status poll never
+    scans a history.
+    """
+
+    successes: int = 0
+    errors: int = 0
+    timing_count: int = 0
+    timing_mean: float = 0.0
+    timing_m2: float = 0.0
+
+    def record_success(self, seconds: float) -> None:
+        self.successes += 1
+        self.timing_count += 1
+        delta = seconds - self.timing_mean
+        self.timing_mean += delta / self.timing_count
+        self.timing_m2 += delta * (seconds - self.timing_mean)
+
+    @property
+    def success_rate(self) -> float:
+        """Percentage of attempted clicks that succeeded (0 before any attempt)."""
+        attempts = self.successes + self.errors
+        return self.successes / attempts * 100 if attempts else 0.0
+
+    @property
+    def timing_std_dev(self) -> float:
+        if self.timing_count < 2:
+            return 0.0
+        return float((self.timing_m2 / (self.timing_count - 1)) ** 0.5)
+
+
 class ClickEngine:
     """Handles mouse clicking operations with threading and safety features"""
 
@@ -70,29 +105,17 @@ class ClickEngine:
         self.is_running = False
         self.click_thread: threading.Thread | None = None
         self.click_count = 0
-        self.start_time = 0
+        self.start_time = 0.0
         self._stop_event = threading.Event()
 
-        # Performance monitoring
+        # Performance monitoring; reset at every start so the numbers are per run.
         self.enable_performance_monitoring = enable_performance_monitoring
-        self.performance_metrics = {
-            "click_timings": deque(maxlen=1000),  # Recent samples for debugging
-            "click_success_count": 0,
-            "click_error_count": 0,
-            "average_click_time": 0.0,
-            "min_click_time": float("inf"),
-            "max_click_time": 0.0,
-            "total_click_time": 0.0,
-            # Welford running stats (avoid O(n) statistics.* on every status read)
-            "_timing_count": 0,
-            "_timing_mean": 0.0,
-            "_timing_m2": 0.0,
-        }
+        self.stats = ClickStats()
 
         # Windowed CPS tracking (timestamps of recent button presses). Must hold
         # one more sample than the highest ceiling or the guard could never trip;
         # bounded so a multi-day session with the guard off never grows it.
-        self._recent_click_ts: deque = deque(maxlen=MAX_CPS_CEILING + 1)
+        self._recent_click_ts: deque[float] = deque(maxlen=MAX_CPS_CEILING + 1)
 
         # Cached desktop bounds (all monitors); refreshed on start. Querying per
         # click is a Win32 syscall and noticeably hot at high CPS.
@@ -185,6 +208,7 @@ class ClickEngine:
         self._safety_fired = False
         self._stop_reason = None
         self.click_count = 0
+        self.stats = ClickStats()
         self.start_time = time.monotonic()
         self._stop_event.clear()
         self._recent_click_ts.clear()
@@ -213,46 +237,20 @@ class ClickEngine:
 
         return True
 
-    def get_performance_metrics(self) -> dict:
-        """Get current performance metrics"""
-        metrics = self.performance_metrics.copy()
-
-        # Calculate additional metrics
-        total_clicks = metrics["click_success_count"] + metrics["click_error_count"]
-        if total_clicks > 0:
-            metrics["success_rate"] = (metrics["click_success_count"] / total_clicks) * 100
-        else:
-            metrics["success_rate"] = 0.0
-
-        count = metrics.get("_timing_count", 0)
-        if count > 0:
-            mean = metrics["_timing_mean"]
-            metrics["average_click_time"] = mean
-            if count > 1:
-                metrics["click_time_std_dev"] = (metrics["_timing_m2"] / (count - 1)) ** 0.5
-            else:
-                metrics["click_time_std_dev"] = 0.0
-
-        # Calculate clicks per second if running
+    def get_performance_metrics(self) -> dict[str, float]:
+        """Performance numbers for the current (or last) run."""
+        stats = self.stats
+        clicks_per_second = 0.0
         if self.start_time > 0 and self.click_count > 0:
             runtime = time.monotonic() - self.start_time
-            metrics["clicks_per_second"] = self.click_count / runtime if runtime > 0 else 0.0
-
-        return metrics
-
-    def reset_performance_metrics(self) -> None:
-        """Reset all performance metrics"""
-        self.performance_metrics = {
-            "click_timings": deque(maxlen=1000),
-            "click_success_count": 0,
-            "click_error_count": 0,
-            "average_click_time": 0.0,
-            "min_click_time": float("inf"),
-            "max_click_time": 0.0,
-            "total_click_time": 0.0,
-            "_timing_count": 0,
-            "_timing_mean": 0.0,
-            "_timing_m2": 0.0,
+            clicks_per_second = self.click_count / runtime if runtime > 0 else 0.0
+        return {
+            "click_success_count": stats.successes,
+            "click_error_count": stats.errors,
+            "success_rate": stats.success_rate,
+            "average_click_time": stats.timing_mean,
+            "click_time_std_dev": stats.timing_std_dev,
+            "clicks_per_second": clicks_per_second,
         }
 
     def _set_stop_reason(self, reason: str, message: str) -> None:
@@ -422,10 +420,6 @@ class ClickEngine:
 
         return None
 
-    def _should_stop(self, max_clicks: int, auto_stop_minutes: int) -> bool:
-        """Check if clicking should stop based on limits"""
-        return self._limit_reached(max_clicks, auto_stop_minutes) is not None
-
     def _perform_burst(
         self,
         x: int | None,
@@ -460,7 +454,7 @@ class ClickEngine:
         click_type: str,
     ) -> None:
         """Perform a single click at coordinates with performance monitoring"""
-        click_start_time = time.perf_counter() if self.enable_performance_monitoring else None
+        click_start_time = time.perf_counter()
 
         try:
             if self._cursor_in_failsafe_corner(x, y):
@@ -497,19 +491,8 @@ class ClickEngine:
                     button=mouse_button,
                     clicks=presses,
                 )
-                # Record performance metrics
                 if self.enable_performance_monitoring:
-                    total_time = time.perf_counter() - click_start_time
-                    self.performance_metrics["click_timings"].append(total_time)
-                    self._record_timing_sample(total_time)
-                    self.performance_metrics["click_success_count"] += 1
-                    self.performance_metrics["total_click_time"] += total_time
-                    self.performance_metrics["min_click_time"] = min(
-                        self.performance_metrics["min_click_time"], total_time
-                    )
-                    self.performance_metrics["max_click_time"] = max(
-                        self.performance_metrics["max_click_time"], total_time
-                    )
+                    self.stats.record_success(time.perf_counter() - click_start_time)
 
                 self.click_count += 1
                 now = time.monotonic()
@@ -517,27 +500,18 @@ class ClickEngine:
                     self._recent_click_ts.append(now)
 
             except pyautogui.FailSafeException:
-                if self.enable_performance_monitoring:
-                    self.performance_metrics["click_error_count"] += 1
                 raise SafetyError(
                     "fail_safe", "detected", "User moved mouse to corner during operation"
                 )
             except pyautogui.PyAutoGUIException as e:
-                if self.enable_performance_monitoring:
-                    self.performance_metrics["click_error_count"] += 1
                 raise ClickEngineError("perform_click", f"PyAutoGUI error: {e}")
 
         except (CoordinateError, ClickEngineError, SafetyError):
-            # Record error metrics
-            if self.enable_performance_monitoring:
-                self.performance_metrics["click_error_count"] += 1
-            # Re-raise our custom exceptions
+            # Counted once here, whichever check raised it
+            self.stats.errors += 1
             raise
         except Exception as e:
-            # Record error metrics for unexpected errors
-            if self.enable_performance_monitoring:
-                self.performance_metrics["click_error_count"] += 1
-            # Wrap unexpected errors
+            self.stats.errors += 1
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
 
     def _cursor_in_failsafe_corner(self, x: int | None, y: int | None) -> bool:
@@ -554,18 +528,6 @@ class ClickEngine:
             for cx, cy in self._failsafe_corners
         )
 
-    def _record_timing_sample(self, sample: float) -> None:
-        """Update Welford running mean/variance for click timings."""
-        metrics = self.performance_metrics
-        count = metrics["_timing_count"] + 1
-        delta = sample - metrics["_timing_mean"]
-        mean = metrics["_timing_mean"] + delta / count
-        delta2 = sample - mean
-        m2 = metrics["_timing_m2"] + delta * delta2
-        metrics["_timing_count"] = count
-        metrics["_timing_mean"] = mean
-        metrics["_timing_m2"] = m2
-
     def _wait_with_variation(self, interval: float, variation: int) -> None:
         """Wait for the specified interval with random variation (ms). Zero = no sleep."""
         if variation > 0:
@@ -577,14 +539,14 @@ class ClickEngine:
         if wait_time > 0:
             self._stop_event.wait(timeout=wait_time)
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         """Get current clicking status"""
         elapsed = int(time.monotonic() - self.start_time) if self.start_time > 0 else 0
         hours = elapsed // 3600
         minutes = (elapsed % 3600) // 60
         seconds = elapsed % 60
 
-        status = {
+        status: dict[str, Any] = {
             "is_running": self.is_running,
             "is_paused": self.is_paused,
             "click_count": self.click_count,
@@ -601,7 +563,7 @@ class ClickEngine:
                 "average_click_time": round(
                     metrics.get("average_click_time", 0) * 1000, 2
                 ),  # Convert to ms
-                "total_errors": metrics.get("click_error_count", 0),
+                "total_errors": int(metrics["click_error_count"]),
             }
 
         return status

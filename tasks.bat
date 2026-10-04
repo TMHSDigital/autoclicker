@@ -36,9 +36,9 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :lint
-"%PY%" -m ruff check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
+"%PY%" -m ruff check autoclicker autoclicker.py tests scripts tools
 if errorlevel 1 exit /b 1
-"%PY%" -m ruff format --check autoclicker autoclicker.py tests scripts tools run_tests.py create_icon.py
+"%PY%" -m ruff format --check autoclicker autoclicker.py tests scripts tools
 exit /b %ERRORLEVEL%
 
 :format

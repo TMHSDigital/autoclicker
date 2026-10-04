@@ -113,7 +113,6 @@ def run_soak(duration_s: float, target_cps: int, real: bool) -> int:
     print(f"Mean click time (ms): {perf['average_click_time']}")
     print(f"Error count:          {perf['total_errors']}")
     print(f"Heap delta:           {delta:+d} bytes ({delta / 1024:+.1f} KiB)")
-    print(f"Timings deque size:   {len(engine.performance_metrics['click_timings'])}")
     print(f"Recent ts deque size: {len(engine._recent_click_ts)}")
     return 0
 

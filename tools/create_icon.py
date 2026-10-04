@@ -70,7 +70,7 @@ def draw_icon() -> Image.Image:
 
 
 def create_icon() -> None:
-    assets = Path(__file__).resolve().parent / "autoclicker" / "assets"
+    assets = Path(__file__).resolve().parent.parent / "autoclicker" / "assets"
     assets.mkdir(parents=True, exist_ok=True)
     image = draw_icon()
     image.save(assets / "autoclicker.png", format="PNG", optimize=True)

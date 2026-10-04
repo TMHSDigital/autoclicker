@@ -23,7 +23,7 @@ tasks.bat install
 
 `install` creates `.venv`, installs the pinned runtime dependencies (`requirements-lock.txt`) and the pinned dev and build tools (`requirements-dev-lock.txt`), then installs the package in editable mode.
 
-End users who run from source can use `requirements.txt` or `requirements-lock.txt` as described in the README.
+End users who run from source install `requirements-lock.txt` as described in the README. `requirements.txt` only lists the unpinned runtime dependencies that `tools/refresh_lock.py` locks.
 
 ## Running checks
 

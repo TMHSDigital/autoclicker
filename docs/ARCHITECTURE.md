@@ -25,7 +25,8 @@ autoclicker/
     session_log.py          # Session events, rotated at 1 MB
     single_instance.py      # Named mutex + show event: one running instance
     app_data.py             # %APPDATA%/WindowsAutoclicker (never CWD-relative)
-    screen.py               # Virtual-desktop bounds across monitors
+    dpi.py                  # Per-monitor DPI awareness, set before PyAutoGUI loads
+    screen.py               # Virtual-desktop bounds, monitor corners, cursor position
     resources.py            # Asset paths (autoclicker/assets) for source, wheel and frozen runs
     logging_setup.py        # stderr + AppData rotating log
     exceptions.py

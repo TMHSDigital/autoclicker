@@ -44,6 +44,38 @@ _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "er
 class AutoclickerApp:
     """Main autoclicker application class with modular design."""
 
+    # Widgets and variables the section builders in gui/sections attach.
+    x_entry: ttk.Entry
+    y_entry: ttk.Entry
+    pick_btn: ttk.Button
+    target_mode_var: tk.StringVar
+    coord_var: tk.StringVar
+    preset_var: tk.StringVar
+    preset_combo: ttk.Combobox
+    button_var: tk.StringVar
+    click_type_var: tk.StringVar
+    interval_entry: ttk.Entry
+    interval_unit_var: tk.StringVar
+    variation_entry: ttk.Entry
+    burst_clicks_entry: ttk.Entry
+    burst_pause_entry: ttk.Entry
+    limit_clicks_var: tk.BooleanVar
+    max_clicks_entry: ttk.Entry
+    auto_stop_entry: ttk.Entry
+    max_cps_entry: ttk.Entry
+    failsafe_var: tk.BooleanVar
+    pause_unfocused_var: tk.BooleanVar
+    minimize_to_tray_var: tk.BooleanVar
+    start_btn: ttk.Button
+    stop_btn: ttk.Button
+    emergency_btn: ttk.Button
+    status_var: tk.StringVar
+    status_dot: ttk.Label
+    click_count_var: tk.StringVar
+    runtime_var: tk.StringVar
+    performance_var: tk.StringVar
+    theme_button: ttk.Button
+
     def __init__(self) -> None:
         self.root = tk.Tk()
         self.controller = AutoclickerController()

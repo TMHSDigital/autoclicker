@@ -82,11 +82,6 @@ class TestSoakSustainedClicking(unittest.TestCase):
             ce.pyautogui = original
 
         self.assertGreaterEqual(engine.click_count, 5_000, "engine stopped before reaching max")
-        self.assertLessEqual(
-            len(engine.performance_metrics["click_timings"]),
-            1000,
-            "timings deque must stay bounded",
-        )
         # Bounded by the highest accepted ceiling (one more sample than it).
         self.assertIsNotNone(engine._recent_click_ts.maxlen)
         self.assertLessEqual(

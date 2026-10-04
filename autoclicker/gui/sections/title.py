@@ -2,8 +2,9 @@
 """Title row with app icon and theme toggle."""
 
 import tkinter as tk
-from pathlib import Path
 from tkinter import ttk
+
+from ...core.resources import resource_path
 
 
 def build_title_section(app, parent: ttk.Frame) -> None:
@@ -12,12 +13,12 @@ def build_title_section(app, parent: ttk.Frame) -> None:
     header.grid(row=0, column=0, columnspan=2, pady=(0, 16), sticky=(tk.W, tk.E))
     header.grid_columnconfigure(1, weight=1)
 
-    icon_path = Path("autoclicker.png")
-    if icon_path.exists():
+    icon_path = resource_path("autoclicker.png")
+    if icon_path.is_file():
         try:
             from PIL import Image, ImageTk
 
-            image = Image.open(icon_path).resize((28, 28), Image.LANCZOS)
+            image = Image.open(icon_path).resize((28, 28), Image.Resampling.LANCZOS)
             app._title_icon = ImageTk.PhotoImage(image)
             ttk.Label(header, image=app._title_icon).grid(row=0, column=0, padx=(0, 10))
         except Exception:
