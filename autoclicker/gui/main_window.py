@@ -397,12 +397,31 @@ class AutoclickerApp:
                 "auto_stop_minutes": self.auto_stop_entry.get(),
                 "enable_failsafe": self.failsafe_var.get(),
                 "pause_when_unfocused": self.pause_unfocused_var.get(),
-                "max_cps_ceiling": self.settings.get("max_cps_ceiling", 50),
+                "max_cps_ceiling": self.max_cps_entry.get(),
             }
+        )
+
+    def _confirm_guard_off(self) -> bool:
+        """Ask before the first run with the runaway guard turned off."""
+        try:
+            requested = float(self.max_cps_entry.get().strip())
+            saved = float(self.settings.get("max_cps_ceiling", 50))
+        except (TypeError, ValueError, AttributeError):
+            return True  # validation reports bad input
+        if requested != 0 or saved == 0:
+            return True
+        return bool(
+            messagebox.askokcancel(
+                "Turn off speed limit",
+                "With the speed limit at 0, nothing stops a run that clicks faster than "
+                "intended. Continue?",
+            )
         )
 
     def start_clicking(self) -> None:
         """Start the autoclicking process with comprehensive validation."""
+        if not self._confirm_guard_off():
+            return
         try:
             result = self.controller.validate_and_start_clicking(
                 self._collect_ui_settings(),

@@ -28,6 +28,7 @@ from .safety import (
     root_window_at,
 )
 from .screen import ScreenBounds, virtual_screen_bounds
+from .settings_manager import MAX_CPS_CEILING
 
 # Default PAUSE is 0.1s between every PyAutoGUI call, which caps CPS at about 5 to 10
 pyautogui.PAUSE = 0
@@ -79,10 +80,10 @@ class ClickEngine:
             "_timing_m2": 0.0,
         }
 
-        # Windowed CPS tracking (timestamps of recent successful clicks).
-        # 1024 samples ≈ 10 s at the 100 cps ceiling we cap at; bounded so a
-        # multi-day session never grows this deque.
-        self._recent_click_ts: deque = deque(maxlen=1024)
+        # Windowed CPS tracking (timestamps of recent button presses). Must hold
+        # one more sample than the highest ceiling or the guard could never trip;
+        # bounded so a multi-day session with the guard off never grows it.
+        self._recent_click_ts: deque = deque(maxlen=MAX_CPS_CEILING + 1)
 
         # Cached desktop bounds (all monitors); refreshed on start. Querying per
         # click is a Win32 syscall and noticeably hot at high CPS.
@@ -465,13 +466,14 @@ class ClickEngine:
             if mouse_button not in ("left", "right", "middle"):
                 raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")
 
-            # One call for every button; a double click counts as one click toward
-            # max_clicks and the runaway guard.
+            # One call for every button. A double click counts as one click toward
+            # max_clicks, but as two presses for the runaway guard.
+            presses = 2 if click_type == "double" else 1
             try:
                 pyautogui.click(
                     **position,
                     button=mouse_button,
-                    clicks=2 if click_type == "double" else 1,
+                    clicks=presses,
                 )
                 # Record performance metrics
                 if self.enable_performance_monitoring:
@@ -488,7 +490,9 @@ class ClickEngine:
                     )
 
                 self.click_count += 1
-                self._recent_click_ts.append(time.monotonic())
+                now = time.monotonic()
+                for _ in range(presses):
+                    self._recent_click_ts.append(now)
 
             except pyautogui.FailSafeException:
                 if self.enable_performance_monitoring:

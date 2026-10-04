@@ -18,6 +18,9 @@ from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings
 
 _log = logging.getLogger(__name__)
 
+# Highest runaway-guard ceiling accepted, in clicks per second.
+MAX_CPS_CEILING = 10_000
+
 # Fields parsed from free-text UI entries. Values are parsed, never clamped or
 # defaulted: a value that does not parse, or is out of range, is an error.
 _INT_FIELDS = frozenset(
@@ -297,11 +300,11 @@ class SettingsManager:
             max_cps = self._parse_int(max_cps, "max_cps_ceiling")
             if max_cps < 0:
                 raise ValidationError("max_cps_ceiling", max_cps, "CPS ceiling cannot be negative")
-            if max_cps > 10000:
+            if max_cps > MAX_CPS_CEILING:
                 raise ValidationError(
                     "max_cps_ceiling",
                     max_cps,
-                    "CPS ceiling cannot exceed 10,000",
+                    f"CPS ceiling cannot exceed {MAX_CPS_CEILING:,}",
                 )
             return True, ""
         except ValidationError as e:

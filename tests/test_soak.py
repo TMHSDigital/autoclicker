@@ -87,9 +87,11 @@ class TestSoakSustainedClicking(unittest.TestCase):
             1000,
             "timings deque must stay bounded",
         )
+        # Bounded by the highest accepted ceiling (one more sample than it).
+        self.assertIsNotNone(engine._recent_click_ts.maxlen)
         self.assertLessEqual(
             len(engine._recent_click_ts),
-            1024,
+            engine._recent_click_ts.maxlen,
             "recent-click ts deque must stay bounded",
         )
         self.assertEqual(

@@ -65,8 +65,17 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
     app.auto_stop_entry.insert(0, str(settings.get("auto_stop_minutes", "0")))
     ttk.Label(safety_frame, text="minutes").pack(side=tk.LEFT)
 
+    # Runaway guard ceiling: a run stops if more clicks than this land in one second.
+    ttk.Label(body, text="Speed limit:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
+    speed_frame = ttk.Frame(body)
+    speed_frame.grid(row=2, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    app.max_cps_entry = ttk.Entry(speed_frame, width=6)
+    app.max_cps_entry.pack(side=tk.LEFT)
+    app.max_cps_entry.insert(0, str(settings.get("max_cps_ceiling", "50")))
+    ttk.Label(speed_frame, text="clicks per second max (0 = off)").pack(side=tk.LEFT, padx=(5, 0))
+
     toggles_frame = ttk.Frame(body)
-    toggles_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
+    toggles_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(12, 0))
 
     app.failsafe_var = tk.BooleanVar(value=settings.get("enable_failsafe", True))
     ttk.Checkbutton(

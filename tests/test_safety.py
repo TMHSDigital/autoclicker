@@ -219,3 +219,26 @@ class TestWindowHelpers(unittest.TestCase):
             gui.GetAncestor.assert_called_once_with(11, safety.GA_ROOT)
             gui.WindowFromPoint.side_effect = OSError("nope")
             self.assertIsNone(safety.root_window_at(1, 2))
+
+
+class TestRunawayGuardCounting(unittest.TestCase):
+    """#64: the guard counts button presses and works at any accepted ceiling."""
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_double_click_counts_two_presses(self, mock_pyautogui):
+        mock_pyautogui.size.return_value = (1920, 1080)
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine._perform_click(10, 10, "left", "double")
+        self.assertEqual(engine.click_count, 1)  # limits still count one click
+        self.assertEqual(len(engine._recent_click_ts), 2)
+
+    def test_highest_ceiling_can_trip(self):
+        from autoclicker.core.settings_manager import MAX_CPS_CEILING
+
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.max_cps_ceiling = MAX_CPS_CEILING
+        engine.start_time = 1.0
+        with patch("autoclicker.core.click_engine.time.monotonic", return_value=2.0):
+            for _ in range(MAX_CPS_CEILING + 1):
+                engine._recent_click_ts.append(1.5)
+            self.assertTrue(engine._check_runaway_cps())

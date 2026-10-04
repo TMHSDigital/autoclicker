@@ -374,3 +374,40 @@ class TestHotkeysDialog(unittest.TestCase):
         d._defaults()
         self.assertEqual(d._vars["stop"].get(), "F7")
         self.assertEqual(d._capture("stop", self._key("Tab")), "")
+
+
+class TestSpeedLimitField(GuiHarness):
+    """#64: the runaway guard ceiling is editable in Advanced."""
+
+    def test_ceiling_is_saved_from_the_ui(self):
+        app = self.app
+        self.assertEqual(app.max_cps_entry.get(), "50")
+        self.set_fields(interval="5", max_cps="120")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        app.start_clicking()
+        _settle(app)
+        self.assertEqual(app.settings.get("max_cps_ceiling"), 120)
+        self.assertEqual(app.click_engine.max_cps_ceiling, 120)
+
+    def test_turning_the_guard_off_asks_first(self):
+        app = self.app
+        self.set_fields(interval="5", max_cps="0")
+        self.messagebox.askokcancel.return_value = False
+        app.start_clicking()
+        self.assertFalse(app.click_engine.is_running)
+        self.assertEqual(app.settings.get("max_cps_ceiling"), 50)
+
+        self.messagebox.askokcancel.return_value = True
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        app.start_clicking()
+        _settle(app)
+        self.assertEqual(app.settings.get("max_cps_ceiling"), 0)
+
+    def test_invalid_ceiling_is_reported(self):
+        app = self.app
+        self.set_fields(max_cps="fast")
+        app.start_clicking()
+        _title, message = self.messagebox.showerror.call_args.args
+        self.assertIn("Max clicks per second", message)

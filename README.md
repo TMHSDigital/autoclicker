@@ -178,7 +178,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
       <ul>
         <li><b>Limit clicks</b>: stop after N clicks (Advanced).</li>
         <li><b>Auto-stop</b>: stop after N minutes (Advanced).</li>
-        <li><b>Runaway guard</b>: stops if more than 50 clicks land in any one second (<code>max_cps_ceiling</code>, 0 turns it off).</li>
+        <li><b>Runaway guard</b>: stops if more than 50 button presses land in any one second (a double click is two). Change it under <b>Advanced, Speed limit</b>; 0 turns it off after a confirmation.</li>
         <li><b>Pause when unfocused</b>: pauses whenever the target window isn't in front, and the status bar shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button (in cursor mode, the next window you bring to the front). Paused time counts toward auto-stop. Refuses to start if it can't read the foreground window.</li>
       </ul>
     </td>
@@ -220,14 +220,14 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |
 | `variation` | `0` | ± random milliseconds added to each interval |
 | `mouse_button` | `"left"` | `"left"`, `"right"` or `"middle"` |
-| `click_type` | `"single"` | `"single"` or `"double"`, for any button. A double click counts as one click toward limits |
+| `click_type` | `"single"` | `"single"` or `"double"`, for any button. A double click counts as one click toward limits and two presses toward the runaway guard |
 | `burst_clicks` | `1` | Clicks per burst |
 | `burst_pause` | `1000` | Milliseconds between clicks inside a burst |
 | `max_clicks` | `0` | Stop after this many clicks; `0` = no limit |
 | `auto_stop_minutes` | `0` | Stop after this many minutes; `0` = off |
 | `enable_failsafe` | `true` | Corner failsafe |
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
-| `max_cps_ceiling` | `50` | Runaway guard threshold in clicks per second; `0` = off |
+| `max_cps_ceiling` | `50` | Runaway guard (Advanced, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
@@ -253,7 +253,7 @@ A dialog lists any field that failed validation. Check that the coordinates are 
 
 <br />
 
-Check the status bar and `sessions.log` for the reason: a click limit or auto-stop in **Advanced**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second), or **Pause when unfocused** if another window came to the front.
+Check the status bar and `sessions.log` for the reason: a click limit or auto-stop in **Advanced**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second; raise **Advanced, Speed limit** if that speed is intended), or **Pause when unfocused** if another window came to the front.
 
 </details>
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Speed limit setting under Advanced for the runaway guard (previously only editable in the settings file). Setting it to 0 asks for confirmation (#64).
 - Minimize to tray (Advanced, on by default): minimizing hides the window to the tray icon, with a one-time reminder that clicking continues. Double-clicking the tray icon restores the window, and its tooltip shows the current state and click count (#49).
 - Configurable hotkeys under Advanced, Hotkeys: rebind Start, Stop and Emergency stop, or add a single start/stop toggle key. Buttons and the tray menu show the current keys (#47).
 - "Current cursor position" target mode: hover over something and press F6 to click wherever the cursor is, with no coordinates to pick (#48).
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The runaway guard counts both presses of a double click, so Double can no longer run at twice the limit, and ceilings above 1,023 clicks per second can now actually trip (#64).
 - Pause when unfocused no longer stalls after one click when a run is started with the Start button or the tray menu. It used to remember the autoclicker's own window as the one that must stay in front; it now uses the window under the target (or, in cursor mode, the next window you bring to the front). While paused, the status bar and tray tooltip say so instead of "Running..." (#63).
 - In Fixed location mode every click now goes to the target. Previously, once the first click had moved the cursor there, moving the mouse during a run made the following clicks land wherever the cursor was (#62).
 - The window opens at the size of its content, so the footer is no longer cut off with a scrollbar on first launch.
