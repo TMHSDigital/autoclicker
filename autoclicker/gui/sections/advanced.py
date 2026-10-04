@@ -84,6 +84,14 @@ def build_advanced_section(app, parent: ttk.Frame) -> None:
         command=app._sync_safety_from_ui,
     ).pack(anchor=tk.W, pady=(4, 0))
 
+    app.minimize_to_tray_var = tk.BooleanVar(value=bool(settings.get("minimize_to_tray", True)))
+    ttk.Checkbutton(
+        toggles_frame,
+        text="Minimize to tray",
+        variable=app.minimize_to_tray_var,
+        command=app._on_minimize_to_tray_toggle,
+    ).pack(anchor=tk.W, pady=(4, 0))
+
     ttk.Button(
         toggles_frame,
         text="Hotkeys\u2026",

@@ -76,6 +76,8 @@ class AutoclickerApp:
             stop_label=lambda: "Stop" + self._hotkey_suffix("stop"),
         )
         self._refresh_hotkey_labels()
+        self._tray_hint_shown = False
+        self.root.bind("<Unmap>", self._on_unmap)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -238,6 +240,7 @@ class AutoclickerApp:
         """
         if hasattr(self, "status_var"):
             self.status_var.set(message)
+        self._set_tray_title(message)
         dot = getattr(self, "status_dot", None)
         if dot is not None:
             dot.configure(foreground=STATUS_COLORS.get(state, STATUS_COLORS["stopped"]))
@@ -447,6 +450,8 @@ class AutoclickerApp:
         status = self.click_engine.get_status()
         self.click_count_var.set(f"Clicks: {status['click_count']}")
         self.runtime_var.set(f"Runtime: {status['runtime']}")
+        if status.get("is_running"):
+            self._set_tray_title(f"running, {status['click_count']:,} clicks")
 
         if "performance" in status:
             perf = status["performance"]
@@ -471,6 +476,36 @@ class AutoclickerApp:
         if self.click_engine.is_running:
             self._on_status_update()
             self._status_timer = self.root.after(1000, self._update_status_loop)
+
+    def _set_tray_title(self, text: str) -> None:
+        """Mirror the current state in the tray icon's tooltip."""
+        tray = getattr(self, "tray_icon", None)
+        if tray is None:
+            return
+        try:
+            tray.title = f"Windows Autoclicker: {text}"[:127]  # Win32 tooltip limit
+        except Exception:
+            pass
+
+    def _on_unmap(self, event) -> None:
+        """Minimizing hides the window to the tray when that option is on."""
+        if event.widget is not self.root or self.tray_icon is None:
+            return
+        if not self.minimize_to_tray_var.get() or self.root.state() != "iconic":
+            return
+        self.root.withdraw()
+        if not self._tray_hint_shown:
+            self._tray_hint_shown = True
+            try:
+                self.tray_icon.notify(
+                    "Still running in the tray. Double-click the icon to restore it.",
+                    "Windows Autoclicker",
+                )
+            except Exception:
+                pass
+
+    def _on_minimize_to_tray_toggle(self) -> None:
+        self.settings.set("minimize_to_tray", bool(self.minimize_to_tray_var.get()))
 
     def show_window(self) -> None:
         """Show main window."""

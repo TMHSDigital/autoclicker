@@ -167,3 +167,42 @@ class TestHotkeyWiring(unittest.TestCase):
         app._hotkeys.bindings = {"start": "", "stop": "", "emergency": "Esc", "toggle": "F8"}
         self.assertEqual(app._hotkey_suffix("start"), " (F8)")
         self.assertEqual(app._hotkey_suffix("emergency"), " (Esc)")
+
+
+class TestMinimizeToTray(unittest.TestCase):
+    """#49: minimizing hides to the tray, with a one-time hint."""
+
+    def _app(self, enabled=True, state="iconic"):
+        app = _bare_app()
+        app.tray_icon = MagicMock()
+        app.minimize_to_tray_var = MagicMock()
+        app.minimize_to_tray_var.get.return_value = enabled
+        app.root.state.return_value = state
+        app._tray_hint_shown = False
+        return app
+
+    def test_minimize_withdraws_and_hints_once(self):
+        app = self._app()
+        event = MagicMock(widget=app.root)
+        app._on_unmap(event)
+        app._on_unmap(event)
+        self.assertEqual(app.root.withdraw.call_count, 2)
+        app.tray_icon.notify.assert_called_once()
+
+    def test_disabled_or_not_minimized_does_nothing(self):
+        for enabled, state in ((False, "iconic"), (True, "withdrawn"), (True, "normal")):
+            with self.subTest(enabled=enabled, state=state):
+                app = self._app(enabled, state)
+                app._on_unmap(MagicMock(widget=app.root))
+                app.root.withdraw.assert_not_called()
+
+    def test_child_widget_unmap_ignored(self):
+        app = self._app()
+        app._on_unmap(MagicMock(widget=MagicMock()))
+        app.root.withdraw.assert_not_called()
+
+    def test_status_mirrored_in_tray_tooltip(self):
+        app = _bare_app()
+        app.tray_icon = MagicMock()
+        app._set_status_message("Running...", "running")
+        self.assertEqual(app.tray_icon.title, "Windows Autoclicker: Running...")

@@ -163,7 +163,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
       <ul>
         <li><b>Corner failsafe</b> (on by default): slam the mouse into a screen corner to abort. Turning it off asks for confirmation.</li>
         <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
-        <li><b>Tray menu</b>: Show, Start, Stop and Exit from the notification area.</li>
+        <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (Advanced, on by default); double-click the icon to bring it back.</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -222,6 +222,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
 | `max_cps_ceiling` | `50` | Runaway guard threshold in clicks per second; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
+| `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | `{"Name": {"x": 800, "y": 600}}` |
 

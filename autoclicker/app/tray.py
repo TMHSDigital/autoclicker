@@ -44,7 +44,8 @@ def create_tray_icon(
             icon_image,
             "Windows Autoclicker",
             menu=pystray.Menu(
-                pystray.MenuItem("Show", show_window),
+                # default=True: double-clicking the tray icon restores the window
+                pystray.MenuItem("Show", show_window, default=True),
                 pystray.MenuItem(lambda _item: start_label(), start),
                 pystray.MenuItem(lambda _item: stop_label(), stop),
                 pystray.MenuItem("Exit", quit_app),
