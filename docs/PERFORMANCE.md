@@ -36,10 +36,12 @@ The `ImageWatch` thread grabs the search region and looks for the captured image
 
 | Search margin | Region searched | Screen grab | Search |
 |---------------|-----------------|-------------|--------|
-| 150 px (default) | 360 x 330 | about 49 ms | about 1 ms |
-| 2,000 px (maximum) | 2560 x 1080 | about 55 ms | about 14 ms |
+| 150 px (default) | 360 x 330 | about 17 ms (was 49 to 67 ms) | about 1 ms |
+| 2,000 px (maximum) | 2560 x 1080 | about 17 ms (was 55 ms) | about 14 ms |
 
-The grab dominates because Pillow's `ImageGrab.grab(all_screens=True)` captures the whole virtual desktop and then crops it, so its cost follows the desktop size, not the margin. Grabbing only the region is tracked in #97. The search itself is cheap: each row is scanned for the template's first row with `bytes.find`, and only those hits are compared in full.
+`image_match.grab` copies only the region with `BitBlt` from the screen DC (#97). Pillow's `ImageGrab.grab(all_screens=True)`, still the fallback if that fails, copies the whole virtual desktop and then crops it, so its cost follows the desktop size rather than the margin. The remaining ~17 ms is one display frame at 60 Hz: with desktop composition on, a screen `BitBlt` waits for the compositor. The wait happens inside a ctypes call, which releases the GIL, so the click thread keeps its timing.
+
+The template's rows and its anchor row (the one with the most distinct colors) are prepared once per run (`PreparedTemplate`). The search scans each region row for the anchor with `bytes.find` and compares the full template only at those hits.
 
 ## Targets
 

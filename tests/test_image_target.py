@@ -293,3 +293,49 @@ class TestImageRobustness(unittest.TestCase):
         picker._on_drag_start(ev(x_root=10, y_root=20))
         picker._on_drag(ev(x_root=70, y_root=45))
         self.assertEqual(label.configure.call_args.kwargs["text"], f"60 x 25\n{_AREA_HINT}")
+
+
+class TestRegionGrab(unittest.TestCase):
+    """#97: grab only the search region; prepare the template once."""
+
+    def test_prepared_template_matches_like_the_image(self):
+        from autoclicker.core.image_match import PreparedTemplate
+
+        hay = Image.new("RGB", (120, 80), (10, 10, 10))
+        ImageDraw.Draw(hay).rectangle((40, 30, 59, 41), fill=(200, 50, 50))
+        ImageDraw.Draw(hay).point((45, 35), fill=(1, 2, 3))
+        needle = hay.crop((38, 28, 62, 44))
+        prepared = PreparedTemplate.from_image(needle)
+        self.assertEqual((prepared.width, prepared.height), (24, 16))
+        self.assertEqual(find_template(hay, prepared), (38, 28))
+        self.assertEqual(find_template(hay, needle), (38, 28))
+        self.assertEqual(find_template(hay.convert("RGBA"), prepared), (38, 28))
+
+    def test_target_prepares_once(self):
+        target = ImageTarget(Image.new("RGB", (4, 3), (5, 6, 7)), ScreenBounds(0, 0, 10, 10))
+        self.assertEqual((target.prepared.width, target.prepared.height), (4, 3))
+        with patch("autoclicker.core.image_match.PreparedTemplate.from_image") as prepare:
+            target.locate(grabber=lambda _r: Image.new("RGB", (10, 10)))
+        prepare.assert_not_called()
+
+    def test_falls_back_to_pillow(self):
+        from autoclicker.core import image_match
+
+        fallback = Image.new("RGB", (5, 5))
+        for failure in ({"return_value": None}, {"side_effect": OSError("no desktop")}):
+            with (
+                self.subTest(failure=failure),
+                patch.object(image_match, "_grab_region_win32", **failure),
+                patch.object(image_match.ImageGrab, "grab", return_value=fallback) as pillow,
+            ):
+                self.assertIs(image_match.grab(ScreenBounds(1, 2, 5, 5)), fallback)
+                pillow.assert_called_once_with(bbox=(1, 2, 6, 7), all_screens=True)
+
+    def test_region_grab_has_the_region_size(self):
+        from autoclicker.core.image_match import _grab_region_win32
+
+        self.assertIsNone(_grab_region_win32(ScreenBounds(0, 0, 0, 5)))
+        image = _grab_region_win32(ScreenBounds(0, 0, 8, 6))
+        if image is None:
+            self.skipTest("no interactive desktop to copy from")
+        self.assertEqual((image.mode, image.size), ("RGB", (8, 6)))
