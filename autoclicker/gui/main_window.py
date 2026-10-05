@@ -101,6 +101,7 @@ class AutoclickerApp:
     runtime_var: tk.StringVar
     performance_var: tk.StringVar
     theme_button: ttk.Button
+    bottom_frame: ttk.Frame
     sequence_frame: ttk.Frame
     sequence_list: tk.Listbox
     sequence_repeat_entry: ttk.Entry
@@ -192,14 +193,18 @@ class AutoclickerApp:
             self.theme_button.configure(text=label)
 
     def _fit_to_content(self) -> None:
-        """Size the window to its content (Advanced collapsed) so nothing starts cut off.
+        """Size the window to its content (sections collapsed) so nothing starts cut off.
 
         Capped at 90% of the screen height; the scrollbar covers anything taller.
         """
         try:
             self.root.update_idletasks()
+            bottom = getattr(self, "bottom_frame", None)
             width = max(520, int(self.main_frame.winfo_reqwidth()))
             height = int(self.main_frame.winfo_reqheight())
+            if bottom is not None:
+                width = max(width, int(bottom.winfo_reqwidth()))
+                height += int(bottom.winfo_reqheight())
             height = min(height, int(self.root.winfo_screenheight() * 0.9))
         except (TypeError, ValueError, AttributeError):
             return
@@ -225,7 +230,7 @@ class AutoclickerApp:
 
         self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
 
-        main_frame = ttk.Frame(self.canvas, padding="20")
+        main_frame = ttk.Frame(self.canvas, padding=(20, 20, 20, 0))
         self.main_frame = main_frame
         self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
 
@@ -240,9 +245,17 @@ class AutoclickerApp:
         build_coordinate_section(self, main_frame)
         build_click_settings_section(self, main_frame)
         build_advanced_section(self, main_frame)
-        build_control_section(self, main_frame)
-        build_status_section(self, main_frame)
-        build_disclaimer_section(self, main_frame)
+
+        # Start/Stop, status and footer stay pinned below the scrolling settings,
+        # so they are always visible however many sections are open (#85).
+        bottom = ttk.Frame(self.root, padding=(20, 6, 20, 14))
+        bottom.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))
+        bottom.grid_columnconfigure(0, weight=1)
+        bottom.grid_columnconfigure(1, weight=1)
+        self.bottom_frame = bottom
+        build_control_section(self, bottom)
+        build_status_section(self, bottom)
+        build_disclaimer_section(self, bottom)
 
     def _on_mousewheel(self, event) -> None:
         """Scroll the canvas with the mouse wheel when content overflows."""
@@ -1016,7 +1029,7 @@ class AutoclickerApp:
                     "Check for updates",
                     "Check GitHub once a day for new versions of Windows Autoclicker?\n\n"
                     "Only the public release page is contacted, and nothing is downloaded. "
-                    "You can change this under Advanced.",
+                    "You can change this under App.",
                 )
             )
             self.settings.set("check_for_updates", choice)

@@ -156,8 +156,8 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 | :-- | :-- | :-: |
 | **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 to 60 000 ms<br /><sub>or 0.001 to 60 s</sub> |
 | **± variation**<br /><sub>Click Settings</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
-| **Burst clicks**<br /><sub>Advanced, Burst</sub> | Clicks fired per burst | 1 to 100 |
-| **Burst pause**<br /><sub>Advanced, "ms apart"</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
+| **Burst clicks**<br /><sub>Timing, Burst</sub> | Clicks fired per burst | 1 to 100 |
+| **Burst pause**<br /><sub>Timing, "ms apart"</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
 
 </div>
 
@@ -208,7 +208,7 @@ A headless run exits with `0` when it finishes or you press Stop, `2` for bad op
   </tbody>
 </table>
 
-<p align="center"><sub>Hotkeys are global: they work while another window has focus. Change them, or add a single start/stop <b>toggle</b> key, under <b>Advanced → Hotkeys…</b><br />The Stop and Emergency keys are only claimed while clicking, so <kbd>Esc</kbd> keeps working in other programs the rest of the time.</sub></p>
+<p align="center"><sub>Hotkeys are global: they work while another window has focus. Change them, or add a single start/stop <b>toggle</b> key, under <b>App → Hotkeys…</b><br />The Stop and Emergency keys are only claimed while clicking, so <kbd>Esc</kbd> keeps working in other programs the rest of the time.</sub></p>
 
 ## Safety
 
@@ -221,17 +221,17 @@ An autoclicker that won't stop is worse than none, so every run has more than on
       <ul>
         <li><b>Corner failsafe</b> (on by default): slam the mouse into a corner of any monitor to abort; checked before every click. Corners where two screens meet don't count, so moving between monitors is safe. Turning it off asks for confirmation.</li>
         <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
-        <li><b>Start countdown</b>: the Start button and tray menu wait 3 seconds before clicking (Advanced, Start delay; 0 starts at once), so you can let go of the mouse. Any stop key cancels it. The Start hotkey always starts immediately.</li>
-        <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (Advanced, on by default); double-click the icon to bring it back.</li>
+        <li><b>Start countdown</b>: the Start button and tray menu wait 3 seconds before clicking (Timing, Start delay; 0 starts at once), so you can let go of the mouse. Any stop key cancels it. The Start hotkey always starts immediately.</li>
+        <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (App, on by default); double-click the icon to bring it back.</li>
       </ul>
     </td>
     <td width="50%" valign="top">
       <b>Let it stop itself</b>
       <ul>
-        <li><b>Limit clicks</b>: stop after N clicks (Advanced).</li>
-        <li><b>Auto-stop</b>: stop after N minutes (Advanced).</li>
-        <li><b>Runaway guard</b>: stops if more than 50 button presses land in any one second (a double click is two). Change it under <b>Advanced, Speed limit</b>; 0 turns it off after a confirmation.</li>
-        <li><b>Only when a pixel matches</b> (Advanced, Only when): <b>Sample...</b> a point's color, then clicking waits (or stops) whenever that pixel changes, so a run doesn't keep clicking after the window it was meant for closes or moves.</li>
+        <li><b>Limit clicks</b>: stop after N clicks (Safety, Limits).</li>
+        <li><b>Auto-stop</b>: stop after N minutes (Safety, Limits).</li>
+        <li><b>Runaway guard</b>: stops if more than 50 button presses land in any one second (a double click is two). Change it under <b>Safety, Speed limit</b>; 0 turns it off after a confirmation.</li>
+        <li><b>Only when a pixel matches</b> (Safety, Only when): <b>Sample...</b> a point's color, then clicking waits (or stops) whenever that pixel changes, so a run doesn't keep clicking after the window it was meant for closes or moves.</li>
         <li><b>Pause when unfocused</b>: pauses whenever the target window isn't in front, and the status bar shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button; the first click brings it to the front. In a sequence, any window a step clicks into counts. In cursor mode it's the next window you bring to the front. Paused time counts toward auto-stop. Refuses to start if it can't read the foreground window.</li>
       </ul>
     </td>
@@ -287,15 +287,15 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `enable_failsafe` | `true` | Corner failsafe |
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
 | `start_delay_seconds` | `3` | Countdown before a Start-button or tray start, 0 to 60; `0` = start at once. Hotkey starts are immediate |
-| `max_cps_ceiling` | `50` | Runaway guard (Advanced, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
+| `max_cps_ceiling` | `50` | Runaway guard (Safety, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
-| `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (Advanced) |
+| `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (App) |
 | `last_update_check` | `0` | When the last update check ran (Unix time) |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks` and `auto_stop_minutes`; older point-only presets still load |
 
-**Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under Advanced). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
+**Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 
@@ -317,7 +317,7 @@ A dialog lists any field that failed validation. Check that the coordinates are 
 
 <br />
 
-Check the status bar and `sessions.log` for the reason: a click limit or auto-stop in **Advanced**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second; raise **Advanced, Speed limit** if that speed is intended), or **Pause when unfocused** if another window came to the front.
+Check the status bar and `sessions.log` for the reason: a click or time limit in **Safety**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second; raise **Safety, Speed limit** if that speed is intended), or **Pause when unfocused** if another window came to the front.
 
 </details>
 
@@ -335,7 +335,7 @@ If that app runs as administrator, Windows blocks input from non-elevated progra
 
 <br />
 
-Another program may already own the key; the status bar names any key that could not be registered. Pick a different one under **Advanced → Hotkeys…**. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
+Another program may already own the key; the status bar names any key that could not be registered. Pick a different one under **App → Hotkeys…**. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
 
 </details>
 

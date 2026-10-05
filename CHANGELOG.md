@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Install with Scoop: `scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker`, then `scoop install tmhs/windows-autoclicker`. winget manifests are generated with each release (#76).
 - Project website at https://tmhsdigital.github.io/autoclicker/ and GitHub Discussions for questions, linked from the new-issue page (#77).
 
+### Changed
+
+- Advanced is split into three collapsed sections, **Timing**, **Safety** and **App**, and Start, Stop, the status panel and the footer stay pinned at the bottom of the window, so they remain visible on small screens however many sections are open (#85).
+
 ### Fixed
 
 - The corner failsafe now works during a Hold; previously a hold of up to 60 seconds ignored the corner until it ended. The button is released and the run stops within about 50 ms (#82).
