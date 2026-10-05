@@ -74,6 +74,11 @@ def build_parser() -> argparse.ArgumentParser:
     target.add_argument(
         "--sequence", action="store_true", help="click the saved sequence of points"
     )
+    target.add_argument(
+        "--image",
+        action="store_true",
+        help="click wherever the captured image appears (the saved capture, or the profile's)",
+    )
     parser.add_argument("--profile", metavar="NAME", help="load a saved profile first")
     parser.add_argument(
         "--interval", metavar="TIME", help="wait between clicks or bursts, e.g. 100ms or 2s"
@@ -107,7 +112,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
-        "at", "cursor", "sequence", "profile", "interval", "variation", "button", "double",
+        "at", "cursor", "sequence", "image", "profile", "interval", "variation", "button", "double",
         "single", "burst", "clicks", "minutes", "repeat", "delay", "hold", "key",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
@@ -134,6 +139,8 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
         values["target_mode"] = "cursor"
     if args.sequence:
         values["target_mode"] = "sequence"
+    if args.image:
+        values["target_mode"] = "image"
     if args.interval:
         match = _INTERVAL.match(args.interval)
         if not match:

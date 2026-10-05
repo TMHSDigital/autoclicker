@@ -59,6 +59,8 @@ class TestOverrides(unittest.TestCase):
     def test_modes(self):
         self.assertEqual(overrides("--cursor")["target_mode"], "cursor")
         self.assertEqual(overrides("--sequence", "--repeat", "4")["sequence_repeat"], "4")
+        self.assertEqual(overrides("--image")["target_mode"], "image")
+        self.assertTrue(has_overrides(parse_args(["--image"])))
 
     def test_profile_then_flags_on_top(self):
         profiles = {"Work": {"x": 1, "y": 2, "interval": 100, "mouse_button": "left"}}
@@ -183,6 +185,23 @@ class TestHeadless(HeadlessCase):
             patch("autoclicker.core.safety.get_foreground_window_handle", return_value=99),
         ):
             self.assertEqual(cli._launcher_window(), 99)
+
+    def test_image_target_from_the_saved_capture(self):
+        """#98: --image runs the captured image headless."""
+        from PIL import Image
+
+        folder = self.settings_path().parent
+        (folder / "images").mkdir(parents=True)
+        image = folder / "images" / "target-1.png"
+        Image.new("RGB", (20, 10), (1, 2, 3)).save(image)
+        self.settings_path().write_text(
+            json.dumps({"image_path": str(image), "image_region": [100, 100, 300, 200]}),
+            encoding="utf-8",
+        )
+        with patch("autoclicker.core.image_match.ImageTarget.locate", return_value=(150, 140)):
+            code = self.run_cli("--image", "--interval", "0ms", "--clicks", "1", "--delay", "0")
+        self.assertEqual(code, EXIT_OK)
+        self.pyautogui.click.assert_called_with(x=150, y=140, button="left", clicks=1)
 
     def test_failsafe_exit_code(self):
         self.pyautogui.click.side_effect = pyautogui.FailSafeException()

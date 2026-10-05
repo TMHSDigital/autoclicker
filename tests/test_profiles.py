@@ -125,3 +125,80 @@ class TestImportExport(ProfileTestCase):
             self.manager.read_profiles_file(bad)
         with self.assertRaisesRegex(ValueError, "Could not read"):
             self.manager.read_profiles_file(self.path("missing.json"))
+
+
+class TestImageProfiles(ProfileTestCase):
+    """#98: image profiles carry their own image, safely, through export/import."""
+
+    def setUp(self):
+        super().setUp()
+        from unittest.mock import patch
+
+        from PIL import Image
+
+        self.appdata = os.path.join(self._dir.name, "appdata")
+        env = patch.dict(os.environ, {"APPDATA": self.appdata})
+        env.start()
+        self.addCleanup(env.stop)
+        self.image_file = self.path("capture.png")
+        Image.new("RGB", (30, 12), (200, 10, 10)).save(self.image_file)
+        self.profile = {
+            "x": 1,
+            "y": 2,
+            "target_mode": "image",
+            "image_path": self.image_file,
+            "image_region": [100, 100, 330, 312],
+            "image_margin": 150,
+        }
+
+    def test_saved_with_its_image_and_described(self):
+        self.manager.save_profile("Ok button", self.profile)
+        loaded = self.manager.load_profile("Ok button")
+        self.assertEqual(loaded["image_path"], self.image_file)
+        self.assertEqual(loaded["image_region"], [100, 100, 330, 312])
+        self.assertIn("wherever its image appears", describe_profile(loaded))
+
+    def test_export_embeds_the_png_and_import_stores_it_locally(self):
+        self.manager.save_profile("Ok button", self.profile)
+        out = self.path("export.json")
+        self.manager.export_profiles(out)
+        exported = json.loads(open(out, encoding="utf-8").read())["profiles"]["Ok button"]
+        self.assertNotIn("image_path", exported)
+        self.assertIn("image_png", exported)
+
+        fresh = PresetManager(SettingsManager(self.path("other.json")))
+        profiles = fresh.read_profiles_file(out)
+        result = fresh.import_profiles(profiles, replace_existing=False)
+        self.assertEqual(result.added, ["Ok button"])
+        stored = fresh.load_profile("Ok button")["image_path"]
+        self.assertTrue(
+            stored.startswith(os.path.join(self.appdata, "WindowsAutoclicker", "images"))
+        )
+        from PIL import Image
+
+        with Image.open(stored) as image:
+            self.assertEqual(image.size, (30, 12))
+        # Importing the same profile again reuses the same file.
+        fresh.import_profiles(profiles, replace_existing=True)
+        self.assertEqual(fresh.load_profile("Ok button")["image_path"], stored)
+
+    def test_import_never_trusts_a_path_from_the_file(self):
+        raw = {**self.profile, "image_path": "\\\\attacker\\share\\x.png"}
+        result = self.manager.import_profiles({"Evil": raw}, replace_existing=False)
+        self.assertEqual(result.added, ["Evil"])
+        self.assertNotIn("image_path", self.manager.load_profile("Evil"))
+
+    def test_bad_embedded_images_are_rejected(self):
+        import base64
+        import io
+
+        from PIL import Image
+
+        gif = io.BytesIO()
+        Image.new("RGB", (4, 4)).save(gif, format="GIF")
+        for bad in ("not base64!", base64.b64encode(b"hello").decode(), 42,
+                    base64.b64encode(gif.getvalue()).decode()):  # fmt: skip
+            with self.subTest(bad=str(bad)[:20]):
+                raw = {"x": 1, "y": 1, "target_mode": "image", "image_png": bad}
+                result = self.manager.import_profiles({"Bad": raw}, replace_existing=True)
+                self.assertEqual(result.invalid, ["Bad"])

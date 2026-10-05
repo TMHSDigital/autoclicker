@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ..core.image_match import encode_image, store_embedded_image
+
 _log = logging.getLogger(__name__)
 
 # Click settings a profile restores, in addition to the target point.
@@ -38,6 +40,9 @@ PROFILE_KEYS = (
     "condition_y",
     "condition_color",
     "condition_tolerance",
+    "image_path",
+    "image_region",
+    "image_margin",
 )
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
@@ -60,6 +65,8 @@ def describe_profile(profile: dict[str, Any]) -> str:
     elif profile.get("target_mode") == "sequence":
         count = len(profile.get("sequence") or [])
         parts.append(f"sequence of {count} point{'s' if count != 1 else ''}")
+    elif profile.get("target_mode") == "image":
+        parts.append("wherever its image appears")
     else:
         parts.append(f"({profile.get('x')}, {profile.get('y')})")
     if "interval" in profile:
@@ -158,8 +165,21 @@ class PresetManager:
     # -- import / export ---------------------------------------------------
 
     def export_profiles(self, path: str | Path) -> int:
-        """Write every profile to a JSON file. Returns how many were written."""
-        profiles = self._profiles()
+        """Write every profile to a JSON file. Returns how many were written.
+
+        A profile's captured image travels inside the file as base64 PNG
+        (``image_png``); the local ``image_path`` is never written.
+        """
+        profiles = {}
+        for name, stored in self._profiles().items():
+            profile = dict(stored) if isinstance(stored, dict) else stored
+            if isinstance(profile, dict) and profile.get("image_path"):
+                try:
+                    profile["image_png"] = encode_image(profile["image_path"])
+                except OSError as e:
+                    _log.warning("Profile %r: image not exported: %s", name, e)
+                del profile["image_path"]
+            profiles[name] = profile
         payload = {"format": EXPORT_FORMAT, "version": EXPORT_VERSION, "profiles": profiles}
         Path(path).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         return len(profiles)
@@ -202,7 +222,8 @@ class PresetManager:
             return None
         clean: dict[str, Any] = {}
         for key in ("x", "y", *PROFILE_KEYS):
-            if key not in raw:
+            # A file never names a local image path: only the embedded image is used (#98).
+            if key not in raw or key == "image_path":
                 continue
             setting = {"x": "x_coord", "y": "y_coord"}.get(key, key)
             value, error = self.settings.parse_input(setting, raw[key])
@@ -211,4 +232,10 @@ class PresetManager:
             clean[key] = value
         if "x" not in clean or "y" not in clean:
             return None
+        if "image_png" in raw:
+            try:
+                clean["image_path"] = store_embedded_image(raw["image_png"])
+            except (OSError, ValueError) as e:
+                _log.warning("Imported profile image rejected: %s", e)
+                return None
         return clean

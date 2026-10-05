@@ -196,3 +196,39 @@ class TestPickerAreaMode(unittest.TestCase):
         picker._on_drag_end(self.ev(12, 11))
         self.assertEqual(selected, [])
         self.assertEqual(cancelled, [True])
+
+
+class TestLoadImageTargetSafety(unittest.TestCase):
+    """#98/#100: never open network paths; oversized images are an error, not a crash."""
+
+    def test_network_paths_are_refused(self):
+        for path in ("\\\\server\\share\\x.png", "//server/share/x.png"):
+            with self.subTest(path=path), patch("autoclicker.core.image_match.Image.open") as op:
+                target, error = _load_image_target(
+                    {"image_path": path, "image_region": [0, 0, 5, 5]}
+                )
+                self.assertIsNone(target)
+                self.assertIn("local file", error)
+                op.assert_not_called()
+
+    def test_oversized_or_bomb_images_report_an_error(self):
+        from PIL import Image as PILImage
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "big.png")
+            PILImage.new("RGB", (10, 10)).save(path)
+            for limit in (50, None):
+                with self.subTest(limit=limit):
+                    if limit is None:
+                        ctx = patch(
+                            "autoclicker.core.image_match.Image.open",
+                            side_effect=PILImage.DecompressionBombError("bomb"),
+                        )
+                    else:
+                        ctx = patch("autoclicker.core.image_match.MAX_TEMPLATE_PIXELS", limit)
+                    with ctx:
+                        target, error = _load_image_target(
+                            {"image_path": path, "image_region": [0, 0, 5, 5]}
+                        )
+                    self.assertIsNone(target)
+                    self.assertIn("unreadable", error)

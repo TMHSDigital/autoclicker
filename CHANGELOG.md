@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Image target mode: press Capture and drag a rectangle around a button; each click then goes wherever that image is found nearby (searched within a margin around the capture), and the run waits while it isn't on screen. Matching is exact and needs no extra dependencies (#87).
+- Image profiles: a profile saved in Image mode keeps its own captured image, and exporting profiles embeds the picture in the file so it works on another PC. `--image` runs the captured image from the command line, also with `--headless` and `--profile` (#98).
 
 ### Fixed
 

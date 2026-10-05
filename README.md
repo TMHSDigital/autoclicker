@@ -193,7 +193,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 
 | Flag | Meaning |
 | :-- | :-- |
-| `--at X,Y`, `--cursor`, `--sequence` | Target: a point, wherever the cursor is, or the saved sequence |
+| `--at X,Y`, `--cursor`, `--sequence`, `--image` | Target: a point, wherever the cursor is, the saved sequence, or wherever the captured image appears (the saved capture, or the one in `--profile`) |
 | `--profile NAME` | Load a saved profile first (other flags apply on top) |
 | `--interval 100ms` / `2s`, `--variation MS` | Timing |
 | `--button left\|right\|middle`, `--double`, `--single` | What to click |
@@ -305,7 +305,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (App) |
 | `last_update_check` | `0` | When the last update check ran (Unix time) |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
-| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks` and `auto_stop_minutes`; older point-only presets still load |
+| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, the `condition_*` settings and, for image profiles, `image_path`, `image_region` and `image_margin`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
 **Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 

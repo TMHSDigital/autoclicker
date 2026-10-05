@@ -9,10 +9,9 @@ from dataclasses import dataclass
 from typing import Any
 
 import pyautogui
-from PIL import Image
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
-from ..core.image_match import ImageTarget
+from ..core.image_match import ImageTarget, open_template
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -50,10 +49,12 @@ class StartClickResult:
 def _load_image_target(sanitized: dict[str, Any]) -> tuple[ImageTarget | None, str | None]:
     """The engine's image target from validated settings, or an error message."""
     path = str(sanitized.get("image_path", ""))
+    if path.replace("/", "\\").startswith("\\\\"):
+        # Never open a network path: Windows would send the user's credentials (#98).
+        return None, "The image must be a local file; capture it again"
     try:
-        with Image.open(path) as captured:
-            template = captured.convert("RGB")
-    except (OSError, ValueError):
+        template = open_template(path)
+    except ValueError:
         return None, "The captured image is missing or unreadable; capture it again"
     return ImageTarget(template=template, region=ScreenBounds(*sanitized["image_region"])), None
 

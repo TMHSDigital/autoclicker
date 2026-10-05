@@ -917,6 +917,27 @@ class TestImageUi(GuiHarness):
         self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
         self.pyautogui.click.assert_called_with(x=520, y=410, button="left", clicks=1)
 
+    def test_profile_brings_its_own_image(self):
+        """#98: loading an image profile arms its image; one without an image clears it."""
+        app = self.app
+        app.image_path, app.image_region = "C:/old.png", [0, 0, 10, 10]
+        app.preset_manager.save_profile(
+            "Ok",
+            {"x": 1, "y": 1, "target_mode": "image", "image_path": "C:/ok.png",
+             "image_region": [10, 20, 300, 200], "image_margin": 40},
+        )  # fmt: skip
+        app.preset_manager.save_profile("Bare", {"x": 1, "y": 1, "target_mode": "image"})
+        app.preset_var.set("Ok")
+        app.load_preset()
+        self.assertEqual((app.image_path, app.image_region), ("C:/ok.png", [10, 20, 300, 200]))
+        self.assertEqual(app.image_margin_entry.get(), "40")
+        self.assertIn("Searching 300x200", app.image_info_var.get())
+        self.assertIn("wherever its image appears", app.preset_summary_var.get())
+        app.preset_var.set("Bare")
+        app.load_preset()
+        self.assertEqual((app.image_path, app.image_region), ("", []))
+        self.assertEqual(app.image_info_var.get(), "No image captured yet")
+
     def test_run_without_capture_is_reported(self):
         app = self.app
         app.target_mode_var.set("image")

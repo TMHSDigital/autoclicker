@@ -9,16 +9,80 @@ and only those hits are checked row by row. No OpenCV or NumPy needed.
 
 from __future__ import annotations
 
+import base64
+import binascii
+import hashlib
+import io
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
+from typing import IO, Any
 
 from PIL import Image, ImageGrab
 
+from .app_data import app_data_dir
 from .screen import ScreenBounds
 
 # Search this far around the captured image by default (pixels on each side).
 DEFAULT_MARGIN = 150
 MAX_MARGIN = 2000
+# Largest template accepted from a file: an 8K screen. Bigger is not a capture.
+MAX_TEMPLATE_PIXELS = 7680 * 4320
+# Largest base64 image accepted from an imported profile (characters).
+MAX_EMBEDDED_IMAGE_CHARS = 24 * 1024 * 1024
+
+
+def images_dir() -> Path:
+    """Folder that holds captured and imported images."""
+    return app_data_dir() / "images"
+
+
+def open_template(source: str | Path | IO[bytes]) -> Image.Image:
+    """Load a template image as RGB. Raises ValueError for anything unusable."""
+    try:
+        with Image.open(source) as image:
+            width, height = image.size
+            if width * height > MAX_TEMPLATE_PIXELS:
+                raise ValueError("The image is too large")
+            return image.convert("RGB")
+    except ValueError:
+        raise
+    except Exception as e:  # OSError, Image.DecompressionBombError, truncated files
+        raise ValueError(f"Unreadable image: {e}") from e
+
+
+def encode_image(path: str | Path) -> str:
+    """A PNG file as base64 text, for embedding in a profiles export."""
+    return base64.b64encode(Path(path).read_bytes()).decode("ascii")
+
+
+def store_embedded_image(data: Any) -> str:
+    """Decode a base64 PNG from an imported profile into images_dir(); returns its path.
+
+    The image is re-encoded by Pillow, so only pixels are kept. Raises ValueError
+    if it isn't a usable PNG. Files are named by content, so importing the same
+    profile twice reuses one file.
+    """
+    if not isinstance(data, str) or len(data) > MAX_EMBEDDED_IMAGE_CHARS:
+        raise ValueError("The embedded image is missing or too large")
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise ValueError("The embedded image is not valid base64") from e
+    try:
+        with Image.open(io.BytesIO(raw)) as probe:
+            if probe.format != "PNG":
+                raise ValueError("The embedded image is not a PNG")
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"Unreadable image: {e}") from e
+    template = open_template(io.BytesIO(raw))
+    folder = images_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"imported-{hashlib.sha256(raw).hexdigest()[:16]}.png"
+    if not path.is_file():
+        template.save(path, format="PNG")
+    return str(path)
 
 
 def find_template(haystack: Image.Image, needle: Image.Image) -> tuple[int, int] | None:

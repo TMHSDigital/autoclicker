@@ -137,6 +137,16 @@ class ProfilesMixin(AppBase):
         if isinstance(values.get("sequence"), list):
             self.sequence_steps = [dict(step) for step in values["sequence"]]
             self._refresh_sequence_list()
+        if "image_margin" in values:
+            put(self.image_margin_entry, values["image_margin"])
+        if values.get("target_mode") == "image" or "image_path" in values:
+            # An image profile brings its own image; one without it must not
+            # silently click the image captured last (#98).
+            self.image_path = str(values.get("image_path") or "")
+            region = values.get("image_region")
+            self.image_region = list(region) if isinstance(region, list) else []
+            self.settings.update({"image_path": self.image_path, "image_region": self.image_region})
+            self._refresh_image_label()
         if values.get("target_mode") in ("fixed", "cursor", "sequence", "image"):
             self.target_mode_var.set(values["target_mode"])
             self._apply_target_mode_state()
