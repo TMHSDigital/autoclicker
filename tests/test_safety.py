@@ -225,6 +225,48 @@ class TestFocusWindowSelection(unittest.TestCase):
         self.assertTrue(engine.get_status()["is_paused"])
 
 
+class TestForegroundFailsClosed(unittest.TestCase):
+    """#111: every way the foreground lookup can fail means "not in front"."""
+
+    def test_without_win32gui(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32gui", None):
+            self.assertIsNone(safety.get_foreground_window_handle())
+            self.assertFalse(safety.is_foreground_window(5))
+            self.assertIsNone(safety.root_window_at(1, 1))
+
+    def test_lookup_error(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32gui") as gui:
+            gui.GetForegroundWindow.side_effect = OSError("access denied")
+            self.assertIsNone(safety.get_foreground_window_handle())
+            self.assertFalse(safety.is_foreground_window(5))
+
+    def test_no_handle_and_another_window(self):
+        from autoclicker.core import safety
+
+        self.assertFalse(safety.is_foreground_window(None))
+        with patch.object(safety, "win32gui") as gui:
+            gui.GetForegroundWindow.return_value = 7
+            self.assertFalse(safety.is_foreground_window(5))
+            self.assertTrue(safety.is_foreground_window(7))
+
+    def test_own_window_without_win32process_counts_as_ours(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32process", None):
+            self.assertTrue(safety.is_own_window(5))
+
+    def test_root_window_at_nothing(self):
+        from autoclicker.core import safety
+
+        with patch.object(safety, "win32gui") as gui:
+            gui.WindowFromPoint.return_value = 0
+            self.assertIsNone(safety.root_window_at(1, 2))
+
+
 class TestWindowHelpers(unittest.TestCase):
     def test_own_window_lookup_failure_counts_as_ours(self):
         from autoclicker.core import safety
