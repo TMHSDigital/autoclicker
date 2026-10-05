@@ -1,10 +1,10 @@
-# Performance notes (deep dive phase 4)
+# Performance notes
 
 ## Hot path
 
 `ClickEngine._click_loop` → `_perform_burst` → `_perform_click` (one `pyautogui.click(x, y, ...)` call with `PAUSE=0`; the target is passed on every click so a mouse moved mid-run never drags the clicks with it, #62).
 
-## Changes in phase 4
+## Running statistics
 
 | Change | Rationale |
 |--------|-----------|
@@ -29,6 +29,17 @@ The script prints `cProfile` top functions before/after for comparison.
 ## Pixel condition
 
 Reading one screen pixel (`GetPixel`, or a 1x1 `BitBlt`) waits for the next composed frame: about 17 ms at 60 Hz on the dev machine. Doing that on the click thread would stall every click, so the watched pixel is polled on its own `PixelWatch` thread every 50 ms and the click loop only reads the latest result. Clicks may therefore act on a reading up to about 70 ms old.
+
+## Image target
+
+The `ImageWatch` thread grabs the search region and looks for the captured image every 100 ms (`_IMAGE_POLL_SECONDS`). Measured on a 3840x1080 two-monitor desktop with a 60x30 capture:
+
+| Search margin | Region searched | Screen grab | Search |
+|---------------|-----------------|-------------|--------|
+| 150 px (default) | 360 x 330 | about 49 ms | about 1 ms |
+| 2,000 px (maximum) | 2560 x 1080 | about 55 ms | about 14 ms |
+
+The grab dominates because Pillow's `ImageGrab.grab(all_screens=True)` captures the whole virtual desktop and then crops it, so its cost follows the desktop size, not the margin. Grabbing only the region is tracked in #97. The search itself is cheap: each row is scanned for the template's first row with `bytes.find`, and only those hits are compared in full.
 
 ## Targets
 
