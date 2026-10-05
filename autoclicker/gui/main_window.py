@@ -5,15 +5,12 @@ Handles user interface and event coordination.
 """
 
 import threading
-import time
 import tkinter as tk
-import webbrowser
 from collections.abc import Callable
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import ttk
 
 import sv_ttk
 
-from .. import __version__
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import (
     DEFAULT_HOTKEYS,
@@ -30,16 +27,20 @@ from ..core.click_engine import (
     STOP_SAFETY,
     RunOutcome,
 )
-from ..core.diagnostics import build_report
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
-from ..core.recorder import ClickRecorder, RecordedClick, clicks_to_steps
 from ..core.resources import resource_path
-from ..core.safety import is_own_window, root_window_at
-from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
-from ..core.updates import RELEASES_PAGE, Release, check_due, newer_release
-from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
+from ..core.settings_manager import field_label
+from . import dialogs
+from .features import (
+    ConditionMixin,
+    CountdownMixin,
+    InfoMixin,
+    ProfilesMixin,
+    RecordingMixin,
+    SequenceMixin,
+    UpdatesMixin,
+)
 from .hotkeys_dialog import HotkeysDialog
-from .info_dialog import InfoDialog
 from .picker import CoordinatePicker
 from .sections import (
     build_advanced_section,
@@ -56,68 +57,16 @@ from .sections.status import STATUS_COLORS
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
 
 
-class AutoclickerApp:
+class AutoclickerApp(
+    SequenceMixin,
+    RecordingMixin,
+    ConditionMixin,
+    ProfilesMixin,
+    CountdownMixin,
+    UpdatesMixin,
+    InfoMixin,
+):
     """Main autoclicker application class with modular design."""
-
-    # Widgets and variables the section builders in gui/sections attach.
-    x_entry: ttk.Entry
-    y_entry: ttk.Entry
-    pick_btn: ttk.Button
-    target_mode_var: tk.StringVar
-    coord_var: tk.StringVar
-    preset_var: tk.StringVar
-    preset_combo: ttk.Combobox
-    preset_summary_var: tk.StringVar
-    button_var: tk.StringVar
-    click_type_var: tk.StringVar
-    action_var: tk.StringVar
-    hold_entry: ttk.Entry
-    key_entry: ttk.Entry
-    condition_var: tk.StringVar
-    condition_label_var: tk.StringVar
-    condition_swatch: tk.Label
-    condition_tolerance_entry: ttk.Entry
-    # (x, y, "#rrggbb") of the watched pixel
-    condition_point: tuple
-    interval_entry: ttk.Entry
-    interval_unit_var: tk.StringVar
-    variation_entry: ttk.Entry
-    burst_clicks_entry: ttk.Entry
-    burst_pause_entry: ttk.Entry
-    limit_clicks_var: tk.BooleanVar
-    max_clicks_entry: ttk.Entry
-    auto_stop_entry: ttk.Entry
-    max_cps_entry: ttk.Entry
-    start_delay_entry: ttk.Entry
-    failsafe_var: tk.BooleanVar
-    pause_unfocused_var: tk.BooleanVar
-    minimize_to_tray_var: tk.BooleanVar
-    check_updates_var: tk.BooleanVar
-    update_button: ttk.Button
-    start_btn: ttk.Button
-    stop_btn: ttk.Button
-    emergency_btn: ttk.Button
-    status_var: tk.StringVar
-    status_dot: ttk.Label
-    click_count_var: tk.StringVar
-    runtime_var: tk.StringVar
-    performance_var: tk.StringVar
-    theme_button: ttk.Button
-    bottom_frame: ttk.Frame
-    sequence_frame: ttk.Frame
-    sequence_list: tk.Listbox
-    sequence_repeat_entry: ttk.Entry
-    # Steps of the sequence target mode: {"x", "y", "button", "click_type", "delay_ms"}
-    sequence_steps: list[dict]
-
-    # Pending root.after id while a Start-button countdown is running.
-    _countdown_job: str | None = None
-    # Release page of a newer version found by the update check.
-    _release_url: str | None = None
-    # Active while recording a sequence (#86); the hook exists only then.
-    _recorder: ClickRecorder | None = None
-    # Pause reason the status line currently shows; None while running normally.
-    _shown_paused: str | None = None
 
     def __init__(self) -> None:
         self.root = tk.Tk()
@@ -306,7 +255,7 @@ class AutoclickerApp:
     def open_hotkeys_dialog(self) -> None:
         """Rebind hotkeys; global keys are released while the dialog is open."""
         if self.click_engine.is_running:
-            messagebox.showwarning("Hotkeys", "Stop clicking before changing hotkeys.")
+            dialogs.messagebox.showwarning("Hotkeys", "Stop clicking before changing hotkeys.")
             return
         self._hotkeys.set_suspended(True)
         HotkeysDialog(
@@ -358,7 +307,7 @@ class AutoclickerApp:
 
     def _on_failsafe_toggle(self) -> None:
         if not self.failsafe_var.get():
-            confirmed = messagebox.askokcancel(
+            confirmed = dialogs.messagebox.askokcancel(
                 "Disable failsafe",
                 "Moving the mouse to a screen corner will no longer abort clicking. Continue?",
             )
@@ -405,192 +354,6 @@ class AutoclickerApp:
         if hasattr(self, "coord_var"):
             self.coord_var.set(self._target_summary())
 
-    # -- sequence steps ------------------------------------------------------
-
-    _DEFAULT_STEP_DELAY_MS = 500
-
-    def _refresh_sequence_list(self, select: int | None = None) -> None:
-        listbox = self.sequence_list
-        listbox.delete(0, tk.END)
-        last = len(self.sequence_steps)
-        for number, step in enumerate(self.sequence_steps, start=1):
-            delay = step.get("delay_ms", 0)
-            after = "then the Interval" if number == last else f"then wait {delay:g} ms"
-            listbox.insert(
-                tk.END,
-                f"{number}. ({step['x']}, {step['y']})  {step['button']} {step['click_type']}, {after}",
-            )
-        if select is not None and 0 <= select < last:
-            listbox.selection_clear(0, tk.END)
-            listbox.selection_set(select)
-            listbox.see(select)
-
-    def _selected_step(self) -> int | None:
-        selection = self.sequence_list.curselection()
-        return int(selection[0]) if selection else None
-
-    def _sequence_changed(self, select: int | None = None) -> None:
-        self._refresh_sequence_list(select)
-        self._refresh_target_summary()
-        self.settings.set("sequence", [dict(step) for step in self.sequence_steps])
-
-    def toggle_sequence_recording(self) -> None:
-        """Record button: start capturing real clicks as steps, or finish."""
-        if self._finish_recording():
-            return
-        if self.click_engine.is_running or self._countdown_job is not None:
-            self._set_status_message("Stop clicking before recording", "alert")
-            return
-        self._recorded: list[RecordedClick] = []
-        recorder = ClickRecorder(on_click=lambda click: self._ui(self._on_recorded_click, click))
-        if not recorder.start():
-            self._set_status_message("Could not start recording on this system", "error")
-            return
-        self._recorder = recorder
-        self._hotkeys.set_running(True)  # the Stop and Emergency keys finish recording
-        stop_key = self._hotkey_suffix("stop").strip(" ()") or "Stop"
-        self._set_status_message(
-            f"Recording: click each point in order, then press {stop_key} or Record", "alert"
-        )
-
-    def _on_recorded_click(self, click: RecordedClick) -> None:
-        if self._recorder is None:
-            return
-        window = root_window_at(click.x, click.y)
-        if window is None or is_own_window(window):
-            return  # clicks on the autoclicker itself (e.g. the Record button)
-        self._recorded.append(click)
-        count = len(self._recorded)
-        self._set_status_message(f"Recording: {count} click{'s' * (count != 1)}", "alert")
-
-    def _finish_recording(self) -> bool:
-        """Stop recording and turn the clicks into steps. False if not recording."""
-        recorder, self._recorder = self._recorder, None
-        if recorder is None:
-            return False
-        recorder.stop()
-        self._hotkeys.set_running(False)
-        steps = clicks_to_steps(self._recorded)
-        if not steps:
-            self._set_status_message("Recording ended with no clicks", "alert")
-            return True
-        if self.sequence_steps and not messagebox.askyesno(
-            "Recorded sequence",
-            f"Replace the current {len(self.sequence_steps)} steps with the "
-            f"{len(steps)} recorded ones?\n\nNo adds them after the current steps.",
-        ):
-            steps = self.sequence_steps + steps
-        self.sequence_steps = steps[:MAX_SEQUENCE_STEPS]
-        self.target_mode_var.set("sequence")
-        self._apply_target_mode_state()
-        self._sequence_changed(select=0)
-        self._set_status_message(f"Recorded {len(self.sequence_steps)} steps", "alert")
-        return True
-
-    def add_sequence_point(self) -> None:
-        """Pick a point and append it as a step using the current button and click type."""
-        if len(self.sequence_steps) >= MAX_SEQUENCE_STEPS:
-            self._set_status_message(f"A sequence has at most {MAX_SEQUENCE_STEPS} steps", "alert")
-            return
-        self.start_coordinate_picker(on_selected=self._on_sequence_point_picked)
-
-    def _on_sequence_point_picked(self, x: int, y: int) -> None:
-        self.sequence_steps.append(
-            {
-                "x": x,
-                "y": y,
-                "button": self.button_var.get(),
-                "click_type": self.click_type_var.get(),
-                "delay_ms": self._DEFAULT_STEP_DELAY_MS,
-            }
-        )
-        self._sequence_changed(select=len(self.sequence_steps) - 1)
-        self.show_window()
-        self._apply_target_mode_state()
-        self._set_status_message(f"Added step {len(self.sequence_steps)}", "alert")
-
-    def edit_sequence_delay(self) -> None:
-        index = self._selected_step()
-        if index is None:
-            self._set_status_message("Select a step first", "alert")
-            return
-        step = self.sequence_steps[index]
-        value = simpledialog.askfloat(
-            "Wait after step",
-            f"Milliseconds to wait after step {index + 1} before the next one:",
-            initialvalue=step.get("delay_ms", 0),
-            minvalue=0,
-            maxvalue=MAX_STEP_DELAY_MS,
-        )
-        if value is None:
-            return
-        step["delay_ms"] = int(value) if float(value).is_integer() else value
-        self._sequence_changed(select=index)
-
-    def move_sequence_step(self, offset: int) -> None:
-        index = self._selected_step()
-        if index is None:
-            return
-        target = index + offset
-        if not 0 <= target < len(self.sequence_steps):
-            return
-        steps = self.sequence_steps
-        steps[index], steps[target] = steps[target], steps[index]
-        self._sequence_changed(select=target)
-
-    def remove_sequence_step(self) -> None:
-        index = self._selected_step()
-        if index is None:
-            return
-        del self.sequence_steps[index]
-        self._sequence_changed(select=min(index, len(self.sequence_steps) - 1))
-
-    # -- pixel condition -----------------------------------------------------
-
-    _CONDITION_TEXT = {
-        "none": "off",
-        "wait": "wait until ({x}, {y}) is",
-        "stop": "stop when ({x}, {y}) isn't",
-    }
-
-    def _refresh_condition_label(self) -> None:
-        x, y, color = self.condition_point
-        template = self._CONDITION_TEXT.get(self.condition_var.get(), "off")
-        self.condition_label_var.set(template.format(x=x, y=y))
-        try:
-            self.condition_swatch.configure(background=color)
-        except Exception:
-            pass
-
-    def sample_condition_pixel(self) -> None:
-        """Pick a point, then read its color once the overlay is gone."""
-        self.start_coordinate_picker(on_selected=self._on_condition_point_picked)
-
-    def _on_condition_point_picked(self, x: int, y: int) -> None:
-        # The overlay was just destroyed; give the screen a moment to repaint
-        # before reading the pixel, and keep our window hidden until then.
-        self.root.after(200, self._read_condition_pixel, x, y)
-
-    def _read_condition_pixel(self, x: int, y: int) -> None:
-        import pyautogui
-
-        try:
-            r, g, b = tuple(pyautogui.pixel(x, y))[:3]
-        except Exception as e:
-            self.show_window()
-            self._apply_target_mode_state()
-            self._set_status_message(f"Could not read that pixel: {e}", "error")
-            return
-        color = f"#{int(r):02x}{int(g):02x}{int(b):02x}"
-        self.condition_point = (x, y, color)
-        if self.condition_var.get() == "none":
-            self.condition_var.set("wait")
-        self._refresh_condition_label()
-        self.settings.update({"condition_x": x, "condition_y": y, "condition_color": color})
-        self.show_window()
-        self._apply_target_mode_state()
-        self._set_status_message(f"Watching ({x}, {y}) for {color}", "alert")
-
     def _apply_action_state(self) -> None:
         """Enable the hold time only for Hold and the key only for Key."""
         action = self.action_var.get()
@@ -608,7 +371,7 @@ class AutoclickerApp:
     ) -> None:
         """Start coordinate picking mode (fills X/Y unless ``on_selected`` is given)."""
         if self.click_engine.is_running:
-            messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
+            dialogs.messagebox.showwarning("Warning", "Stop clicking before picking coordinates.")
             return
 
         if self.coordinate_picker.is_picking() or self._countdown_job is not None:
@@ -646,190 +409,6 @@ class AutoclickerApp:
         self.show_window()
         self._apply_target_mode_state()
         self._set_status_message("Coordinate selection cancelled", "alert")
-
-    def _profile_from_ui(self) -> dict | None:
-        """The current target and click settings as a profile, or None if invalid."""
-        result = self.controller.validate(self._collect_ui_settings())
-        if not result["valid"]:
-            self._show_validation_errors(result["errors"])
-            return None
-        sanitized = result["sanitized_settings"]
-        profile = {k: sanitized[k] for k in PROFILE_KEYS if k in sanitized}
-        # Cursor-mode profiles still keep a point, so switching them to Fixed works.
-        for axis, key in (("x", "x_coord"), ("y", "y_coord")):
-            value = sanitized.get(key, self.settings.get(key, 100))
-            try:
-                profile[axis] = int(value)
-            except (TypeError, ValueError):
-                profile[axis] = 100
-        return profile
-
-    def save_preset(self) -> None:
-        """Save the target and click settings as a named profile."""
-        profile = self._profile_from_ui()
-        if profile is None:
-            return
-        name = simpledialog.askstring("Save Profile", "Profile name:")
-        name = name.strip() if name else ""
-        if not name:
-            return
-        if self.preset_manager.has_profile(name) and not messagebox.askyesno(
-            "Save Profile", f"Replace the existing profile '{name}'?"
-        ):
-            return
-        if self.preset_manager.save_profile(name, profile):
-            self.update_preset_list()
-            self.preset_var.set(name)
-            self.preset_summary_var.set(describe_profile(profile))
-            self._set_status_message(f"Saved profile '{name}'")
-        else:
-            messagebox.showerror("Error", "Failed to save the profile")
-
-    def delete_preset(self) -> None:
-        """Delete the selected coordinate preset."""
-        preset_name = self.preset_var.get()
-        if not preset_name:
-            messagebox.showwarning("Delete Profile", "Select a profile to delete.")
-            return
-        if not messagebox.askokcancel("Delete Profile", f"Delete profile '{preset_name}'?"):
-            return
-        if self.preset_manager.delete_preset(preset_name):
-            self.update_preset_list()
-            self.preset_var.set("")
-            self.preset_summary_var.set("")
-            self._set_status_message(f"Deleted profile '{preset_name}'")
-        else:
-            messagebox.showerror("Error", "Failed to delete the profile")
-
-    def load_preset(self, event=None) -> None:
-        """Apply the selected profile to the form (only the settings it stores)."""
-        profile = self.preset_manager.load_profile(self.preset_var.get())
-        if profile is None:
-            return
-        self.apply_form_values(profile)
-        self.preset_summary_var.set(describe_profile(profile))
-
-    def apply_form_values(self, values: dict) -> None:
-        """Fill the form from profile-shaped values (``x``/``y`` for the point).
-
-        Only keys present are changed. Used for profiles and command-line flags;
-        nothing is validated here, Start reports bad values as usual.
-        """
-
-        def put(entry: ttk.Entry, value) -> None:
-            state = str(entry.cget("state"))
-            entry.configure(state=tk.NORMAL)
-            entry.delete(0, tk.END)
-            entry.insert(0, str(value))
-            entry.configure(state=state)
-
-        entries = {
-            "x": self.x_entry,
-            "y": self.y_entry,
-            "interval": self.interval_entry,
-            "variation": self.variation_entry,
-            "burst_clicks": self.burst_clicks_entry,
-            "burst_pause": self.burst_pause_entry,
-            "auto_stop_minutes": self.auto_stop_entry,
-            "sequence_repeat": self.sequence_repeat_entry,
-            "start_delay_seconds": self.start_delay_entry,
-            "hold_ms": self.hold_entry,
-            "key": self.key_entry,
-        }
-        for key, entry in entries.items():
-            if key in values:
-                put(entry, values[key])
-        variables = {
-            "interval_unit": self.interval_unit_var,
-            "mouse_button": self.button_var,
-            "click_type": self.click_type_var,
-            "action": self.action_var,
-        }
-        for key, var in variables.items():
-            if key in values:
-                var.set(values[key])
-        self._apply_action_state()
-        if "max_clicks" in values:
-            try:
-                limited = float(values["max_clicks"]) != 0
-            except (TypeError, ValueError):
-                limited = True  # let validation report the bad value
-            self.limit_clicks_var.set(limited)
-            if limited:
-                put(self.max_clicks_entry, values["max_clicks"])
-            self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
-        if "condition_tolerance" in values:
-            put(self.condition_tolerance_entry, values["condition_tolerance"])
-        if all(k in values for k in ("condition_x", "condition_y", "condition_color")):
-            self.condition_point = (
-                values["condition_x"],
-                values["condition_y"],
-                str(values["condition_color"]),
-            )
-        if values.get("condition") in ("none", "wait", "stop"):
-            self.condition_var.set(values["condition"])
-        self._refresh_condition_label()
-        if isinstance(values.get("sequence"), list):
-            self.sequence_steps = [dict(step) for step in values["sequence"]]
-            self._refresh_sequence_list()
-        if values.get("target_mode") in ("fixed", "cursor", "sequence"):
-            self.target_mode_var.set(values["target_mode"])
-            self._apply_target_mode_state()
-        self._refresh_target_summary()
-
-    def export_profiles(self) -> None:
-        """Save every profile to a JSON file."""
-        if not self.preset_manager.get_preset_names():
-            messagebox.showinfo("Export Profiles", "There are no profiles to export yet.")
-            return
-        path = filedialog.asksaveasfilename(
-            title="Export Profiles",
-            defaultextension=".json",
-            initialfile="autoclicker-profiles.json",
-            filetypes=[("Profiles", "*.json"), ("All files", "*.*")],
-        )
-        if not path:
-            return
-        try:
-            count = self.preset_manager.export_profiles(path)
-        except OSError as e:
-            messagebox.showerror("Export Profiles", f"Could not write the file: {e}")
-            return
-        self._set_status_message(f"Exported {count} profile{'s' if count != 1 else ''}")
-
-    def import_profiles(self) -> None:
-        """Add profiles from a file exported by this app."""
-        path = filedialog.askopenfilename(
-            title="Import Profiles",
-            filetypes=[("Profiles", "*.json"), ("All files", "*.*")],
-        )
-        if not path:
-            return
-        try:
-            profiles = self.preset_manager.read_profiles_file(path)
-        except ValueError as e:
-            messagebox.showerror("Import Profiles", str(e))
-            return
-        clashes = [name for name in profiles if self.preset_manager.has_profile(name)]
-        replace = bool(clashes) and messagebox.askyesno(
-            "Import Profiles",
-            "These profiles already exist:\n\n"
-            + "\n".join(clashes)
-            + "\n\nReplace them with the imported ones?",
-        )
-        result = self.preset_manager.import_profiles(profiles, replace_existing=replace)
-        self.update_preset_list()
-        lines = [f"Added {len(result.added)}, replaced {len(result.replaced)}."]
-        if result.skipped:
-            lines.append(f"Kept existing: {', '.join(result.skipped)}.")
-        if result.invalid:
-            lines.append(f"Skipped invalid: {', '.join(result.invalid)}.")
-        messagebox.showinfo("Import Profiles", "\n".join(lines))
-
-    def update_preset_list(self) -> None:
-        """Update preset combobox with current presets."""
-        preset_names = self.preset_manager.get_preset_names()
-        self.preset_combo["values"] = preset_names
 
     def _collect_ui_settings(self) -> dict:
         """Collect current values from UI fields."""
@@ -874,7 +453,7 @@ class AutoclickerApp:
         if requested != 0 or saved == 0:
             return True
         return bool(
-            messagebox.askokcancel(
+            dialogs.messagebox.askokcancel(
                 "Turn off speed limit",
                 "With the speed limit at 0, nothing stops a run that clicks faster than "
                 "intended. Continue?",
@@ -882,58 +461,10 @@ class AutoclickerApp:
         )
 
     def _show_validation_errors(self, errors: dict[str, str]) -> None:
-        messagebox.showerror(
+        dialogs.messagebox.showerror(
             "Validation Error",
             "\n".join(f"{field_label(field)}: {error}" for field, error in errors.items()),
         )
-
-    def start_from_button(self) -> None:
-        """Start button and tray menu: count down first, then start.
-
-        The countdown gives the user time to let go of the mouse and bring the
-        target window to the front. Input is validated before it begins.
-        """
-        if self.click_engine.is_running or self._countdown_job is not None:
-            return
-        errors = self.controller.validation_errors(self._collect_ui_settings())
-        if errors:
-            self._show_validation_errors(errors)
-            return
-        delay = int(float(self.start_delay_entry.get()))
-        if delay <= 0:
-            self.start_clicking()
-            return
-        if not self._confirm_guard_off():
-            return
-        self.start_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
-        self._hotkeys.set_running(True)  # Stop, Emergency and Toggle keys cancel it
-        self._countdown_tick(delay)
-
-    def _countdown_tick(self, remaining: int) -> None:
-        if remaining > 0:
-            self._set_status_message(f"Starting in {remaining}...", "alert")
-            self._countdown_job = self.root.after(1000, self._countdown_tick, remaining - 1)
-            return
-        self._countdown_job = None
-        self.start_clicking(confirmed=True)
-        if not self.click_engine.is_running:
-            # Input changed during the countdown and failed, or the engine was busy
-            self._paint_stopped("Not started", "alert")
-
-    def _cancel_countdown(self, message: str | None = "Start cancelled") -> bool:
-        """Cancel a pending countdown. Returns True if one was running."""
-        job = self._countdown_job
-        if job is None:
-            return False
-        self._countdown_job = None
-        try:
-            self.root.after_cancel(job)
-        except Exception:
-            pass
-        if message is not None:
-            self._paint_stopped(message, "alert")
-        return True
 
     def start_clicking(self, confirmed: bool = False) -> None:
         """Start the autoclicking process with comprehensive validation.
@@ -975,10 +506,10 @@ class AutoclickerApp:
 
         except AutoclickerError as e:
             user_message = create_user_friendly_error(e)
-            messagebox.showerror("Autoclicker Error", user_message)
+            dialogs.messagebox.showerror("Autoclicker Error", user_message)
         except Exception as e:
             user_message = create_user_friendly_error(e)
-            messagebox.showerror("Unexpected Error", user_message)
+            dialogs.messagebox.showerror("Unexpected Error", user_message)
 
     def stop_clicking(self) -> None:
         """Stop the autoclicking process (or cancel a countdown, or finish recording)."""
@@ -1002,7 +533,7 @@ class AutoclickerApp:
         self.controller.finish_run()
         self._paint_stopped(outcome.message, _OUTCOME_STATE.get(outcome.reason, "stopped"))
         if outcome.reason == STOP_ERROR:
-            messagebox.showerror("Clicking stopped", outcome.message)
+            dialogs.messagebox.showerror("Clicking stopped", outcome.message)
 
     def _on_status_update(self) -> None:
         """Handle status updates from click engine."""
@@ -1078,74 +609,6 @@ class AutoclickerApp:
             except Exception:
                 pass
 
-    # -- update check (opt-in) ----------------------------------------------
-
-    def _maybe_check_for_updates(self) -> None:
-        """Ask once whether to check, then check at most daily, never while clicking."""
-        choice = self.settings.get("check_for_updates")
-        if choice is None:
-            choice = bool(
-                messagebox.askyesno(
-                    "Check for updates",
-                    "Check GitHub once a day for new versions of Windows Autoclicker?\n\n"
-                    "Only the public release page is contacted, and nothing is downloaded. "
-                    "You can change this under App.",
-                )
-            )
-            self.settings.set("check_for_updates", choice)
-            self.check_updates_var.set(choice)
-        if choice is not True or self.click_engine.is_running:
-            return
-        if not check_due(self.settings.get("last_update_check")):
-            return
-        self.settings.set("last_update_check", time.time())
-        threading.Thread(target=self._check_for_updates, daemon=True, name="UpdateCheck").start()
-
-    def _check_for_updates(self) -> None:
-        """(Worker thread) look for a newer release and report it on the Tk thread."""
-        release = newer_release(__version__)
-        if release is not None:
-            self._ui(self._show_update, release)
-
-    def _show_update(self, release: Release) -> None:
-        self._release_url = release.url
-        self.update_button.configure(text=f"Update to {release.version}")
-        self.update_button.grid()
-        if self.tray_icon is not None:
-            try:
-                self.tray_icon.notify(
-                    f"Version {release.version} is available.", "Windows Autoclicker"
-                )
-            except Exception:
-                pass
-
-    def show_info(self) -> None:
-        """Info dialog: version, responsible-use note, Copy diagnostics, Sponsor."""
-        InfoDialog(
-            self.root,
-            __version__,
-            diagnostics=lambda: build_report(self._settings_for_diagnostics()),
-        )
-
-    def _show_info_from_tray(self) -> None:
-        self.show_window()
-        self.show_info()
-
-    def _settings_for_diagnostics(self) -> dict:
-        """Saved settings plus the form's current (possibly unsaved) values."""
-        values = dict(self.settings.get_all())
-        try:
-            values.update(self._collect_ui_settings())
-        except Exception:
-            pass
-        return values
-
-    def open_release_page(self) -> None:
-        webbrowser.open(self._release_url or RELEASES_PAGE)
-
-    def _on_check_updates_toggle(self) -> None:
-        self.settings.set("check_for_updates", bool(self.check_updates_var.get()))
-
     def _on_minimize_to_tray_toggle(self) -> None:
         self.settings.set("minimize_to_tray", bool(self.minimize_to_tray_var.get()))
 
@@ -1184,7 +647,7 @@ class AutoclickerApp:
 
     def on_closing(self) -> None:
         """Handle window close event."""
-        if messagebox.askokcancel("Quit", "Do you want to quit the application?"):
+        if dialogs.messagebox.askokcancel("Quit", "Do you want to quit the application?"):
             self.quit_application()
 
     def quit_application(self) -> None:

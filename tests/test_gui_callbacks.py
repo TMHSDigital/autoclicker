@@ -91,7 +91,7 @@ class TestRunFinishedUi(unittest.TestCase):
         app = _bare_app()
         app._stop_status_timer = MagicMock()
         outcome = RunOutcome(STOP_ERROR, "Please select valid coordinates: off screen", 0)
-        with patch("autoclicker.gui.main_window.messagebox") as mb:
+        with patch("autoclicker.gui.dialogs.messagebox") as mb:
             app._on_run_finished(outcome)
         mb.showerror.assert_called_once()
         app.status_var.set.assert_called_with(outcome.message)

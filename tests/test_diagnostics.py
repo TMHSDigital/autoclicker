@@ -88,7 +88,7 @@ class TestInfoDialog(unittest.TestCase):
         app.settings.get_all.return_value = {"interval": 1}
         with (
             patch.object(AutoclickerApp, "_collect_ui_settings", return_value={"interval": "250"}),
-            patch("autoclicker.gui.main_window.InfoDialog") as dialog,
+            patch("autoclicker.gui.features.info.InfoDialog") as dialog,
         ):
             app.show_info()
             report = dialog.call_args.kwargs["diagnostics"]()

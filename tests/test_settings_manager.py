@@ -334,7 +334,7 @@ class TestSettingsManager(unittest.TestCase):
 
     def test_defaults_are_not_shared_between_instances(self):
         """Presets saved by one manager must not leak into another's defaults."""
-        from autoclicker.utils.coordinate_picker import PresetManager
+        from autoclicker.utils.profiles import PresetManager
 
         with tempfile.TemporaryDirectory() as tmp:
             first = SettingsManager(os.path.join(tmp, "a.json"))

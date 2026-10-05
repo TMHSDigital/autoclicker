@@ -142,8 +142,8 @@ class GuiHarness(unittest.TestCase):
             p(patch(f"tkinter.ttk.{name}", MagicMock()))
         p(patch("tkinter.ttk.Entry", FakeEntry))
         p(patch("autoclicker.gui.sections.advanced.CollapsibleFrame", FakeCollapsible))
-        self.messagebox = p(patch("autoclicker.gui.main_window.messagebox"))
-        self.simpledialog = p(patch("autoclicker.gui.main_window.simpledialog"))
+        self.messagebox = p(patch("autoclicker.gui.dialogs.messagebox"))
+        self.simpledialog = p(patch("autoclicker.gui.dialogs.simpledialog"))
         hotkeys_cls = p(patch("autoclicker.gui.main_window.HotkeyManager"))
         self.hotkeys = hotkeys_cls.return_value
         self.hotkeys.bindings = dict(DEFAULT_HOTKEYS)
@@ -500,7 +500,7 @@ class TestProfilesUi(GuiHarness):
 
     def setUp(self):
         super().setUp()
-        self.filedialog = self.stack.enter_context(patch("autoclicker.gui.main_window.filedialog"))
+        self.filedialog = self.stack.enter_context(patch("autoclicker.gui.dialogs.filedialog"))
 
     def test_save_and_load_restores_settings(self):
         app = self.app
@@ -743,14 +743,16 @@ class TestRecordingUi(GuiHarness):
     def setUp(self):
         super().setUp()
         self.recorder_cls = self.stack.enter_context(
-            patch("autoclicker.gui.main_window.ClickRecorder")
+            patch("autoclicker.gui.features.recording.ClickRecorder")
         )
         self.recorder_cls.return_value.start.return_value = True
         self.stack.enter_context(
-            patch("autoclicker.gui.main_window.root_window_at", side_effect=lambda x, y: x)
+            patch("autoclicker.gui.features.recording.root_window_at", side_effect=lambda x, y: x)
         )
         self.stack.enter_context(
-            patch("autoclicker.gui.main_window.is_own_window", side_effect=lambda h: h == 999)
+            patch(
+                "autoclicker.gui.features.recording.is_own_window", side_effect=lambda h: h == 999
+            )
         )
 
     def feed(self, *clicks):

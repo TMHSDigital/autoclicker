@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from autoclicker.core.settings_manager import SettingsManager
-from autoclicker.utils.coordinate_picker import (
+from autoclicker.utils.profiles import (
     EXPORT_FORMAT,
     PresetManager,
     describe_profile,

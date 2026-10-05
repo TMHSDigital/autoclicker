@@ -15,7 +15,7 @@ from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
 from ..core.settings_manager import SettingsManager
-from ..utils.coordinate_picker import PresetManager
+from ..utils.profiles import PresetManager
 
 _log = logging.getLogger(__name__)
 

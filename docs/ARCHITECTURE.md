@@ -90,6 +90,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 
 ## Design decisions
 
+- **GUI features:** `gui/main_window.py` keeps window setup, start/stop, hotkeys, tray and the status line. Each feature's handlers live in a mixin under `gui/features/` (sequence, recording, profiles, condition, countdown, updates, info); `features/base.py` declares the shared widgets and cross-feature methods so every module type-checks on its own. Standard dialogs are reached through `gui/dialogs.py` so tests patch them in one place.
 - **GUI / logic split:** `AutoclickerController` (`app/controller.py`) owns settings, engine, picker, and presets; `gui/sections/*` only build widgets and forward values, keeping the UI replaceable without touching core logic.
 - **Command line:** `cli.py` parses flags into profile-shaped overrides. In GUI mode `main.py` applies them with `AutoclickerApp.apply_form_values` and can schedule `start_from_button`; `--headless` runs `cli.run_headless`, which validates through the controller, starts with `persist=False`, registers the hotkeys without a window and maps the `RunOutcome` reason to an exit code.
 - **DPI:** `main.py` opts the process into per-monitor-v2 DPI awareness (`core/dpi.py`) before PyAutoGUI is imported, so Tk events, `GetCursorPos`, monitor rectangles and clicks all use physical pixels on every monitor. Verified on a single-DPI two-monitor desktop; mixed-DPI (for example 150% next to 100%) still needs a manual pick-and-click check (#67).

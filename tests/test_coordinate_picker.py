@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 from autoclicker.core.screen import ScreenBounds
 from autoclicker.core.settings_manager import SettingsManager
 from autoclicker.gui.picker import CoordinatePicker
-from autoclicker.utils.coordinate_picker import PresetManager
+from autoclicker.utils.profiles import PresetManager
 
 
 class TestOverlayPicker(unittest.TestCase):

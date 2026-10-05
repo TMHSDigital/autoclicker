@@ -72,15 +72,15 @@ def _app(choice, last_check=0):
 
 
 class TestGuiUpdateCheck(unittest.TestCase):
-    @patch("autoclicker.gui.main_window.threading.Thread")
-    @patch("autoclicker.gui.main_window.messagebox")
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    @patch("autoclicker.gui.dialogs.messagebox")
     def test_off_makes_no_request(self, messagebox, thread):
         _app(False)._maybe_check_for_updates()
         thread.assert_not_called()
         messagebox.askyesno.assert_not_called()
 
-    @patch("autoclicker.gui.main_window.threading.Thread")
-    @patch("autoclicker.gui.main_window.messagebox")
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    @patch("autoclicker.gui.dialogs.messagebox")
     def test_asks_once_and_remembers_no(self, messagebox, thread):
         messagebox.askyesno.return_value = False
         app = _app(None)
@@ -90,8 +90,8 @@ class TestGuiUpdateCheck(unittest.TestCase):
         app._maybe_check_for_updates()
         messagebox.askyesno.assert_called_once()
 
-    @patch("autoclicker.gui.main_window.threading.Thread")
-    @patch("autoclicker.gui.main_window.messagebox")
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    @patch("autoclicker.gui.dialogs.messagebox")
     def test_on_checks_at_most_daily_and_never_while_clicking(self, _messagebox, thread):
         app = _app(True)
         app.click_engine.is_running = True
@@ -106,7 +106,7 @@ class TestGuiUpdateCheck(unittest.TestCase):
     def test_newer_version_shows_the_button(self):
         app = _app(True)
         with patch(
-            "autoclicker.gui.main_window.newer_release",
+            "autoclicker.gui.features.updates.newer_release",
             return_value=Release("9.9.9", "https://example.invalid/r"),
         ):
             app._check_for_updates()
@@ -114,6 +114,6 @@ class TestGuiUpdateCheck(unittest.TestCase):
         callback()
         app.update_button.grid.assert_called_once()
         self.assertIn("9.9.9", app.update_button.configure.call_args.kwargs["text"])
-        with patch("autoclicker.gui.main_window.webbrowser.open") as open_:
+        with patch("autoclicker.gui.features.updates.webbrowser.open") as open_:
             app.open_release_page()
         open_.assert_called_once_with("https://example.invalid/r")
