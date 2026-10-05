@@ -17,6 +17,10 @@ class CountdownMixin(AppBase):
         """
         if self.click_engine.is_running or self._countdown_job is not None:
             return
+        blocked = self._start_blocked_reason()
+        if blocked:
+            self._set_status_message(blocked, "alert")
+            return
         errors = self.controller.validation_errors(self._collect_ui_settings())
         if errors:
             self._show_validation_errors(errors)

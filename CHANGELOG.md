@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Hotkeys dialog can no longer be opened during the Start countdown, while recording or while picking, and nothing starts while it is open. Before, a countdown could finish behind the dialog and start a run with every global stop key released (#93).
+- Emergency stop while the picker is open now stops a running engine too, instead of only closing the picker. Start (button, hotkey, tray) is refused while picking or recording, so a countdown can no longer end on the picker overlay or release the recorder's stop keys (#95).
 - Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
 
 ## [1.6.0] - 2026-10-05

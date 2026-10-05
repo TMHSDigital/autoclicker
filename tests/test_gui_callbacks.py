@@ -26,6 +26,7 @@ def _bare_app() -> AutoclickerApp:
     app.click_engine = MagicMock()
     app.click_engine.is_running = False
     app.coordinate_picker = MagicMock()
+    app.coordinate_picker.is_picking.return_value = False
     app.status_var = MagicMock()
     app.pick_btn = MagicMock()
     app.start_btn = MagicMock()

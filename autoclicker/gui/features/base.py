@@ -97,6 +97,8 @@ class AppBase:
     _release_url: str | None = None
     # Active while recording a sequence (#86); the hook exists only then.
     _recorder: ClickRecorder | None = None
+    # True while the Hotkeys dialog is open; global keys are released then (#93).
+    _hotkeys_dialog_open: bool = False
     # Pause reason the status line currently shows; None while running normally.
     _shown_paused: str | None = None
 
@@ -114,6 +116,7 @@ class AppBase:
         def _hotkey_suffix(self, action: str) -> str: ...
         def show_window(self) -> None: ...
         def start_clicking(self, confirmed: bool = False) -> None: ...
+        def _start_blocked_reason(self) -> str | None: ...
         def start_coordinate_picker(
             self, on_selected: Callable[[int, int], None] | None = None
         ) -> None: ...

@@ -256,16 +256,37 @@ class AutoclickerApp(
 
     def open_hotkeys_dialog(self) -> None:
         """Rebind hotkeys; global keys are released while the dialog is open."""
-        if self.click_engine.is_running:
+        # A run must never start while its stop keys are released (#93).
+        if (
+            self.click_engine.is_running
+            or self._countdown_job is not None
+            or self._recorder is not None
+            or self.coordinate_picker.is_picking()
+        ):
             dialogs.messagebox.showwarning("Hotkeys", "Stop clicking before changing hotkeys.")
             return
+        self._hotkeys_dialog_open = True
         self._hotkeys.set_suspended(True)
         HotkeysDialog(
             self.root,
             self._hotkeys.bindings,
             on_save=self._save_hotkeys,
-            on_close=lambda: self._hotkeys.set_suspended(False),
+            on_close=self._on_hotkeys_dialog_closed,
         )
+
+    def _on_hotkeys_dialog_closed(self) -> None:
+        self._hotkeys_dialog_open = False
+        self._hotkeys.set_suspended(False)
+
+    def _start_blocked_reason(self) -> str | None:
+        """Why a run cannot start right now, or None if it can."""
+        if self._recorder is not None:
+            return "Finish recording before starting"
+        if self.coordinate_picker.is_picking():
+            return "Finish picking before starting"
+        if self._hotkeys_dialog_open:
+            return "Close the Hotkeys dialog before starting"
+        return None
 
     def _save_hotkeys(self, bindings: dict[str, str]) -> None:
         self.settings.set("hotkeys", bindings)
@@ -483,8 +504,9 @@ class AutoclickerApp(
         ``confirmed`` skips the speed-limit-off question when the countdown
         already asked it.
         """
-        if self._recorder is not None:
-            self._set_status_message("Finish recording before starting", "alert")
+        blocked = self._start_blocked_reason()
+        if blocked:
+            self._set_status_message(blocked, "alert")
             return
         # A Start hotkey during a countdown starts right away.
         self._cancel_countdown(message=None)
@@ -533,7 +555,8 @@ class AutoclickerApp(
         """Emergency stop: immediate halt. Cancels the picker if it is active."""
         if self.coordinate_picker.is_picking():
             self.coordinate_picker.stop_picking(cancelled=True)
-            return
+            if not self.click_engine.is_running:
+                return
         if self._finish_recording() or self._cancel_countdown():
             return
         self.controller.emergency_stop()

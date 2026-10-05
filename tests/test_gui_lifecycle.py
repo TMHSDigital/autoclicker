@@ -217,6 +217,30 @@ class TestRunLifecycle(GuiHarness):
         _settle(app)
         self.assertEqual(app.status_var.get(), "Emergency stop")
 
+    def test_emergency_stop_with_picker_open_still_stops_the_run(self):
+        """#95: cancelling the picker must not swallow the emergency stop."""
+        app = self.app
+        self.set_fields(interval="20")
+        app.start_clicking()
+        time.sleep(0.05)
+        self.picker_cls.return_value.is_picking.return_value = True
+        app.emergency_stop()
+        _settle(app)
+        self.picker_cls.return_value.stop_picking.assert_called_once_with(cancelled=True)
+        self.assertFalse(app.click_engine.is_running)
+        self.assertEqual(app.status_var.get(), "Emergency stop")
+
+    def test_no_start_while_picking(self):
+        """#95: a run's clicks would land on the picker overlay."""
+        app = self.app
+        self.picker_cls.return_value.is_picking.return_value = True
+        for start in (app.start_from_button, app.start_clicking):
+            with self.subTest(start=start.__name__):
+                start()
+                self.assertFalse(app.click_engine.is_running)
+                self.assertIsNone(app._countdown_job)
+                self.assertEqual(app.status_var.get(), "Finish picking before starting")
+
     def test_failsafe_safety_stop(self):
         app = self.app
         self.pyautogui.click.side_effect = self.pyautogui.FailSafeException()
@@ -468,6 +492,35 @@ class TestStartCountdown(GuiHarness):
         app = self.begin()
         app.start_clicking()
         self.assertIsNone(app._countdown_job)
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+
+    def test_hotkeys_dialog_refused_during_countdown(self):
+        """#93: the run would start with every global stop key released."""
+        app = self.begin()
+        with patch("autoclicker.gui.main_window.HotkeysDialog") as dialog:
+            app.open_hotkeys_dialog()
+        dialog.assert_not_called()
+        self.assertNotIn(call(True), self.hotkeys.set_suspended.call_args_list)
+        self.messagebox.showwarning.assert_called_once()
+        self.assertIsNotNone(app._countdown_job)
+
+    def test_no_start_while_hotkeys_dialog_open(self):
+        """#93: Start (button, tray, countdown end) waits until the dialog closes."""
+        app = self.app
+        self.set_fields(interval="5", start_delay="0")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        with patch("autoclicker.gui.main_window.HotkeysDialog") as dialog:
+            app.open_hotkeys_dialog()
+        for start in (app.start_from_button, app.start_clicking):
+            with self.subTest(start=start.__name__):
+                start()
+                self.assertFalse(app.click_engine.is_running)
+                self.assertEqual(app.status_var.get(), "Close the Hotkeys dialog before starting")
+        dialog.call_args.kwargs["on_close"]()
+        self.hotkeys.set_suspended.assert_called_with(False)
+        app.start_from_button()
         _settle(app)
         self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
 
@@ -797,6 +850,24 @@ class TestRecordingUi(GuiHarness):
         self.assertEqual(app.status_var.get(), "Finish recording before starting")
         app.emergency_stop()
         self.assertEqual(app.status_var.get(), "Recording ended with no clicks")
+
+    def test_start_button_refused_while_recording(self):
+        """#95: no countdown while recording, and the recorder keeps its stop keys."""
+        app = self.app
+        app.toggle_sequence_recording()
+        self.hotkeys.set_running.reset_mock()
+        app.start_from_button()
+        self.assertIsNone(app._countdown_job)
+        self.assertEqual(app.status_var.get(), "Finish recording before starting")
+        self.hotkeys.set_running.assert_not_called()
+        self.assertIsNotNone(app._recorder)
+
+    def test_hotkeys_dialog_refused_while_recording(self):
+        app = self.app
+        app.toggle_sequence_recording()
+        with patch("autoclicker.gui.main_window.HotkeysDialog") as dialog:
+            app.open_hotkeys_dialog()
+        dialog.assert_not_called()
 
     def test_hook_unavailable(self):
         self.recorder_cls.return_value.start.return_value = False
