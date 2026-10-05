@@ -63,23 +63,12 @@ jobs:
         run: tasks.bat install
 
       - name: Unit tests
+        # Coverage is measured and gated (--cov-fail-under in pyproject) on every Python.
         run: tasks.bat test
 
       - name: Smoke check
         if: matrix.python-version == '3.11'
         run: tasks.bat smoke
-
-      - name: Coverage report
-        if: matrix.python-version == '3.11'
-        run: tasks.bat coverage
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-        with:
-          files: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
 
   real-input:
     # Drives the real mouse and keyboard against test windows (tests/integration).
