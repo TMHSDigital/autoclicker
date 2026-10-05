@@ -8,6 +8,9 @@ This project is licensed under [Creative Commons Attribution-NonCommercial 4.0 I
 
 - You may contribute non-commercial improvements aligned with the license.
 - Commercial use or commercial pull requests require prior coordination with the maintainers at info@tmhsdigital.com.
+- By opening a pull request you agree that your contribution is licensed under the same CC BY-NC 4.0 terms as the rest of the project (inbound = outbound).
+
+The license was reviewed in October 2026 (#71) against PolyForm Noncommercial, MIT and a GPL-3.0 plus commercial dual license, and kept as CC BY-NC 4.0 to preserve the non-commercial terms and the existing commercial-licensing arrangement. Known trade-offs: it isn't an OSI license, so free open-source code signing (SignPath) and some open-source-only directories aren't available, and the project is described as source-available rather than open source.
 
 ## Development setup
 
