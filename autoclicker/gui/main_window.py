@@ -30,12 +30,14 @@ from ..core.click_engine import (
     STOP_SAFETY,
     RunOutcome,
 )
+from ..core.diagnostics import build_report
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
 from ..core.updates import RELEASES_PAGE, Release, check_due, newer_release
 from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
 from .hotkeys_dialog import HotkeysDialog
+from .info_dialog import InfoDialog
 from .picker import CoordinatePicker
 from .sections import (
     build_advanced_section,
@@ -143,6 +145,7 @@ class AutoclickerApp:
             on_error=lambda msg: self._ui(self._set_status_message, msg, "error"),
             start_label=lambda: "Start" + self._hotkey_suffix("start"),
             stop_label=lambda: "Stop" + self._hotkey_suffix("stop"),
+            show_info=lambda: self._ui(self._show_info_from_tray),
         )
         self._refresh_hotkey_labels()
         warning = getattr(self.settings, "load_warning", None)
@@ -1042,6 +1045,27 @@ class AutoclickerApp:
                 )
             except Exception:
                 pass
+
+    def show_info(self) -> None:
+        """Info dialog: version, responsible-use note, Copy diagnostics, Sponsor."""
+        InfoDialog(
+            self.root,
+            __version__,
+            diagnostics=lambda: build_report(self._settings_for_diagnostics()),
+        )
+
+    def _show_info_from_tray(self) -> None:
+        self.show_window()
+        self.show_info()
+
+    def _settings_for_diagnostics(self) -> dict:
+        """Saved settings plus the form's current (possibly unsaved) values."""
+        values = dict(self.settings.get_all())
+        try:
+            values.update(self._collect_ui_settings())
+        except Exception:
+            pass
+        return values
 
     def open_release_page(self) -> None:
         webbrowser.open(self._release_url or RELEASES_PAGE)

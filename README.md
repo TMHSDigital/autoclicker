@@ -339,7 +339,7 @@ Another program may already own the key; the status bar names any key that could
 
 </details>
 
-<p align="center"><sub>Still stuck? <a href="https://github.com/TMHSDigital/autoclicker/issues/new/choose">Open an issue</a> with your Windows version, the app version and the end of <code>autoclicker.log</code>.</sub></p>
+<p align="center"><sub>Still stuck? Click <b>Info</b>, then <b>Copy diagnostics</b>, and paste it into a <a href="https://github.com/TMHSDigital/autoclicker/issues/new/choose">new issue</a>. It shows you exactly what is copied, and leaves out profile names and sequence points.</sub></p>
 
 ## Contributing
 

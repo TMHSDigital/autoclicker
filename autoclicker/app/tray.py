@@ -31,6 +31,7 @@ def create_tray_icon(
     on_error: Callable[[str], None],
     start_label: Callable[[], str] = lambda: "Start",
     stop_label: Callable[[], str] = lambda: "Stop",
+    show_info: Callable[[], None] | None = None,
 ) -> pystray.Icon | None:
     """Create the system tray icon and menu, or None on failure.
 
@@ -48,6 +49,7 @@ def create_tray_icon(
                 pystray.MenuItem("Show", show_window, default=True),
                 pystray.MenuItem(lambda _item: start_label(), start),
                 pystray.MenuItem(lambda _item: stop_label(), stop),
+                pystray.MenuItem("About and diagnostics", show_info, visible=show_info is not None),
                 pystray.MenuItem("Exit", quit_app),
             ),
         )

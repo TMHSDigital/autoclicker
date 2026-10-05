@@ -75,9 +75,10 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Log output
+      label: Diagnostics or log output
       description: |
-        Paste the last 30 or so lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`, plus the matching lines from `sessions.log` if a run stopped unexpectedly. Paste `%APPDATA%\WindowsAutoclicker` into Explorer's address bar to open the folder.
+        Easiest: click **Info** at the bottom of the app window (or **About and diagnostics** in the tray menu), then **Copy diagnostics** and paste here. It includes the version, monitors and the log tail, with profile names and sequence points left out.
+        Otherwise paste the last 30 or so lines of `%APPDATA%\WindowsAutoclicker\autoclicker.log`, plus the matching lines from `sessions.log` if a run stopped unexpectedly. Paste `%APPDATA%\WindowsAutoclicker` into Explorer's address bar to open the folder.
       render: text
 
   - type: checkboxes
