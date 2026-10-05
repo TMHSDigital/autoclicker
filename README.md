@@ -106,6 +106,13 @@ built around safety stops that are on by default.
 > [!NOTE]
 > The executable isn't code-signed, so Windows SmartScreen may say *"Windows protected your PC"*. Choose **More info → Run anyway**. Every release is built from this repository by [CI](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml) and ships with a SHA-256 checksum and a build provenance attestation; see [how to verify a download](docs/RELEASING.md#verifying-a-download).
 
+With [Scoop](https://scoop.sh/):
+
+```powershell
+scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker
+scoop install tmhs/windows-autoclicker
+```
+
 <details>
 <summary><b id="run-from-source">Run from source</b> (Python 3.10 to 3.14)</summary>
 

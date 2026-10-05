@@ -81,7 +81,7 @@ def winget_manifests(version: str, sha256: str) -> dict[str, str]:
             "License: CC BY-NC 4.0\n"
             f"LicenseUrl: https://github.com/{REPO}/blob/main/LICENSE\n"
             "ShortDescription: A fast, careful autoclicker with safety stops on by default.\n"
-            f"Description: {DESCRIPTION}\n"
+            f"Description: {json.dumps(DESCRIPTION)}\n"
             "Tags:\n- autoclicker\n- automation\n- clicker\n- mouse\n- productivity\n"
             f"ReleaseNotesUrl: https://github.com/{REPO}/releases/tag/v{version}\n"
             "ManifestType: defaultLocale\nManifestVersion: 1.9.0\n"

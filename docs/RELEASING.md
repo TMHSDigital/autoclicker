@@ -20,7 +20,7 @@ Checksum (Command Prompt or PowerShell), compared with `WindowsAutoclicker.exe.s
 certutil -hashfile WindowsAutoclicker.exe SHA256
 ```
 
-Provenance, which proves the file was built by this repository's workflow from a specific commit (needs the [GitHub CLI](https://cli.github.com/)):
+Provenance (needs GitHub CLI 2.60 or newer; older versions fail with an "unsupported tlog public key type" error), which proves the file was built by this repository's workflow from a specific commit (needs the [GitHub CLI](https://cli.github.com/)):
 
 ```bash
 gh attestation verify WindowsAutoclicker.exe --repo TMHSDigital/autoclicker
@@ -39,3 +39,10 @@ Options considered:
 | Traditional OV or EV certificate | Possible but the most expensive and needs a hardware token or cloud HSM for the key. |
 
 Decision: deferred. Revisit if download volume grows or users report blocked installs; Trusted Signing would be the first choice.
+
+## Package managers
+
+The release job runs `tools/package_manifests.py` with the published checksum and commits the results to `main`:
+
+- **Scoop:** `bucket/windows-autoclicker.json`, so this repository is itself a bucket (`scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker`). Its `checkver` and `autoupdate` entries also let other buckets track new releases.
+- **winget:** `packaging/winget/manifests/t/TMHSDigital/WindowsAutoclicker/<version>/`, in the layout of [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). Check it with `winget validate --manifest <dir>`, then copy the directory into a fork of winget-pkgs and open a pull request (or use `wingetcreate submit <dir>`). After the first version is accepted, later versions can be submitted the same way.
