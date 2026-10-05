@@ -140,7 +140,7 @@ def _build_image_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
     app.image_margin_entry.insert(0, str(settings.get("image_margin", "150")))
     ttk.Label(
         margin_row,
-        text="px around it (used by the next capture)",
+        text="px around where it was captured",
     ).pack(side=tk.LEFT)
     app._refresh_image_label()
 

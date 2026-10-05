@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 
-from ...core.app_data import app_data_dir
-from ...core.image_match import DEFAULT_MARGIN, grab, search_region
-from ...core.screen import ScreenBounds, virtual_screen_bounds
+from ...core.image_match import grab, images_dir
+from ...core.screen import ScreenBounds
 from .base import AppBase
 
 
@@ -21,7 +21,7 @@ class ImageMixin(AppBase):
             return
         started = self.coordinate_picker.start_selecting_area(
             on_selected=self._on_image_area_selected,
-            on_cancelled=self._on_coordinate_picker_cancelled,
+            on_cancelled=self._on_image_capture_cancelled,
         )
         if not started:
             self._set_status_message("Could not start the capture overlay", "error")
@@ -29,17 +29,22 @@ class ImageMixin(AppBase):
         self._set_status_message("Drag a rectangle around the image to click...", "running")
         self.root.withdraw()
 
+    def _on_image_capture_cancelled(self) -> None:
+        self.show_window()
+        self._apply_target_mode_state()
+        self._set_status_message(
+            "Capture cancelled: drag a rectangle at least 4 px each way around the image", "alert"
+        )
+
     def _on_image_area_selected(self, area: ScreenBounds) -> None:
         # Let the overlay repaint away before grabbing the screen; our window
         # stays hidden until then so it can't end up in the capture.
         self.root.after(200, self._grab_image, area)
 
     def _grab_image(self, area: ScreenBounds) -> None:
-        import pyautogui
-
         try:
             image = grab(area)
-            folder = app_data_dir() / "images"
+            folder = images_dir()
             folder.mkdir(parents=True, exist_ok=True)
             path = folder / f"target-{time.strftime('%Y%m%d-%H%M%S')}.png"
             image.save(path)
@@ -47,10 +52,10 @@ class ImageMixin(AppBase):
             self.show_window()
             self._set_status_message(f"Could not capture the image: {e}", "error")
             return
-        desktop = virtual_screen_bounds(pyautogui.size)
-        region = search_region(area, self._image_margin(), desktop)
+        self._forget_image(self.image_path)
         self.image_path = str(path)
-        self.image_region = [region.left, region.top, region.width, region.height]
+        # Where it was captured; the search area adds the margin at Start (#100).
+        self.image_region = [area.left, area.top, area.width, area.height]
         self.settings.update({"image_path": self.image_path, "image_region": self.image_region})
         self.target_mode_var.set("image")
         self.show_window()
@@ -58,15 +63,28 @@ class ImageMixin(AppBase):
         self._refresh_image_label()
         self._set_status_message(f"Captured a {area.width}x{area.height} image", "alert")
 
-    def _image_margin(self) -> int:
+    def _forget_image(self, path: str) -> None:
+        """Delete a replaced capture unless a profile still uses it (#100)."""
+        if not path:
+            return
+        old = Path(path)
         try:
-            return max(0, int(float(self.image_margin_entry.get())))
-        except (TypeError, ValueError):
-            return DEFAULT_MARGIN
+            if old.parent.resolve() != images_dir().resolve() or not old.name.startswith("target-"):
+                return  # only our own captures; imported images are shared by content
+        except OSError:
+            return
+        for name in self.preset_manager.get_preset_names():
+            profile = self.preset_manager.load_profile(name) or {}
+            if profile.get("image_path") == path:
+                return
+        try:
+            old.unlink(missing_ok=True)
+        except OSError:
+            pass
 
     def _refresh_image_label(self) -> None:
         if not self.image_path or len(self.image_region) != 4:
             self.image_info_var.set("No image captured yet")
             return
         left, top, width, height = self.image_region
-        self.image_info_var.set(f"Searching {width}x{height} px at ({left}, {top})")
+        self.image_info_var.set(f"Captured {width}x{height} px at ({left}, {top})")

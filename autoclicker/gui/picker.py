@@ -182,7 +182,14 @@ class CoordinatePicker:
         if self._readout is None or self._readout_label is None:
             return
         x, y = int(event.x_root), int(event.y_root)
-        self._readout_label.configure(text=f"{x}, {y}\n{_HINT}")
+        if not self._area_mode:
+            text = f"{x}, {y}\n{_HINT}"
+        elif self._drag_start is not None:
+            width, height = abs(x - self._drag_start[0]), abs(y - self._drag_start[1])
+            text = f"{width} x {height}\n{_AREA_HINT}"
+        else:
+            text = f"{x}, {y}\n{_AREA_HINT}"
+        self._readout_label.configure(text=text)
         self._readout.geometry(f"+{x + _READOUT_OFFSET}+{y + _READOUT_OFFSET}")
 
     def _on_click(self, event: Any) -> None:

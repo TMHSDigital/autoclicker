@@ -277,8 +277,8 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | Key | Default | Meaning |
 | :-- | :-: | :-- |
 | `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is; `"sequence"` clicks the steps in `sequence`; `"image"` clicks wherever the captured image appears |
-| `image_path`, `image_region` | `""`, `[]` | Image mode: the captured PNG (saved under `%APPDATA%\WindowsAutoclicker\images\`) and the `[left, top, width, height]` area searched for it |
-| `image_margin` | `150` | Pixels around a new capture to search, 0 to 2 000 |
+| `image_path`, `image_region` | `""`, `[]` | Image mode: the captured PNG (saved under `%APPDATA%\WindowsAutoclicker\images\`) and the `[left, top, width, height]` rectangle where it was captured. Replacing a capture deletes the old file unless a profile uses it |
+| `image_margin` | `150` | Pixels around the capture to search, 0 to 2 000; applied when a run starts, so changing it needs no recapture |
 | `sequence` | `[]` | Steps for sequence mode: `[{"x": 800, "y": 600, "button": "left", "click_type": "single", "delay_ms": 500}, ...]`; `delay_ms` is the wait before the next step |
 | `sequence_repeat` | `0` | Rounds to run in sequence mode; `0` = until stopped |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |

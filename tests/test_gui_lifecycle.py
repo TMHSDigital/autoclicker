@@ -891,21 +891,15 @@ class TestImageUi(GuiHarness):
         with patch.object(app.root, "after") as after:
             on_selected(ScreenBounds(500, 400, 40, 20))
         _delay, grab_later, area = after.call_args.args
-        with (
-            patch(
-                "autoclicker.gui.features.image.grab",
-                return_value=Image.new("RGB", (40, 20), (9, 9, 9)),
-            ),
-            patch(
-                "autoclicker.gui.features.image.virtual_screen_bounds",
-                return_value=ScreenBounds(0, 0, 1920, 1080),
-            ),
+        with patch(
+            "autoclicker.gui.features.image.grab",
+            return_value=Image.new("RGB", (40, 20), (9, 9, 9)),
         ):
             grab_later(area)
         self.assertEqual(app.target_mode_var.get(), "image")
-        self.assertEqual(app.image_region, [350, 250, 340, 320])  # 150 px margin
+        self.assertEqual(app.image_region, [500, 400, 40, 20])  # where it was captured
         self.assertTrue(Path(app.image_path).is_file())
-        self.assertIn("Searching 340x320", app.image_info_var.get())
+        self.assertIn("Captured 40x20", app.image_info_var.get())
         self.assertEqual(app.coord_var.get(), "Target: wherever the captured image appears")
 
         self.set_fields(interval="0")
@@ -916,6 +910,48 @@ class TestImageUi(GuiHarness):
             _settle(app)
         self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
         self.pyautogui.click.assert_called_with(x=520, y=410, button="left", clicks=1)
+
+    def _capture(self, when):
+        from PIL import Image
+
+        from autoclicker.core.screen import ScreenBounds
+
+        app = self.app
+        picker = self.picker_cls.return_value
+        picker.start_selecting_area.return_value = True
+        app.capture_image()
+        on_selected = picker.start_selecting_area.call_args.kwargs["on_selected"]
+        with patch.object(app.root, "after") as after:
+            on_selected(ScreenBounds(500, 400, 40, 20))
+        _delay, grab_later, area = after.call_args.args
+        with (
+            patch("autoclicker.gui.features.image.grab", return_value=Image.new("RGB", (40, 20))),
+            patch("autoclicker.gui.features.image.time.strftime", return_value=when),
+        ):
+            grab_later(area)
+        return Path(app.image_path)
+
+    def test_recapture_deletes_the_old_image_unless_a_profile_uses_it(self):
+        """#100: captures no longer pile up, but profile images are kept."""
+        app = self.app
+        first = self._capture("1")
+        second = self._capture("2")
+        self.assertFalse(first.exists())
+        self.assertTrue(second.is_file())
+        app.preset_manager.save_profile(
+            "Keep", {"x": 1, "y": 1, "target_mode": "image", "image_path": str(second)}
+        )
+        third = self._capture("3")
+        self.assertTrue(second.is_file())
+        self.assertTrue(third.is_file())
+
+    def test_capture_cancel_explains_the_minimum_size(self):
+        app = self.app
+        picker = self.picker_cls.return_value
+        picker.start_selecting_area.return_value = True
+        app.capture_image()
+        picker.start_selecting_area.call_args.kwargs["on_cancelled"]()
+        self.assertIn("at least 4 px", app.status_var.get())
 
     def test_profile_brings_its_own_image(self):
         """#98: loading an image profile arms its image; one without an image clears it."""
@@ -931,7 +967,7 @@ class TestImageUi(GuiHarness):
         app.load_preset()
         self.assertEqual((app.image_path, app.image_region), ("C:/ok.png", [10, 20, 300, 200]))
         self.assertEqual(app.image_margin_entry.get(), "40")
-        self.assertIn("Searching 300x200", app.image_info_var.get())
+        self.assertIn("Captured 300x200", app.image_info_var.get())
         self.assertIn("wherever its image appears", app.preset_summary_var.get())
         app.preset_var.set("Bare")
         app.load_preset()

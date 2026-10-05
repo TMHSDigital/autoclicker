@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image target mode no longer clicks the old position again after a click makes the image disappear: each click needs a search that started after the previous click (#96).
 - Copy diagnostics no longer includes the captured image's path or search area, and replaces your Windows user folder (which contains the account name) everywhere in the report, including the log lines (#99).
 - Quitting with one invalid field no longer throws away every other unsaved change: the invalid field keeps its last saved value and the rest is saved (#101).
+- Image mode: changing the search margin now takes effect at the next Start instead of needing a recapture (`image_region` now stores where the image was captured; older saved areas just search a little wider). Replacing a capture deletes the old file unless a profile uses it. A screen that can't be read ends the run with an error after about two seconds instead of waiting silently, an oversized or malformed image file reports an error instead of crashing Start, and the capture overlay keeps its own hint, shows the rectangle's size while dragging and explains a too-small drag (#100).
 - Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
 
 ## [1.6.0] - 2026-10-05

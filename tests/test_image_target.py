@@ -232,3 +232,64 @@ class TestLoadImageTargetSafety(unittest.TestCase):
                         )
                     self.assertIsNone(target)
                     self.assertIn("unreadable", error)
+
+
+class TestImageRobustness(unittest.TestCase):
+    """#100: margin applied at Start, unreadable screens end the run, overlay hints."""
+
+    def test_margin_is_applied_when_the_run_starts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "t.png")
+            Image.new("RGB", (8, 6)).save(path)
+            desktop = ScreenBounds(0, 0, 1920, 1080)
+            for margin, expected in ((50, ScreenBounds(50, 150, 140, 136)),
+                                     (500, ScreenBounds(0, 0, 640, 736))):  # fmt: skip
+                with self.subTest(margin=margin):
+                    target, error = _load_image_target(
+                        {"image_path": path, "image_region": [100, 200, 40, 36],
+                         "image_margin": margin},
+                        desktop,
+                    )  # fmt: skip
+                    self.assertIsNone(error)
+                    self.assertEqual(target.region, expected)
+
+    @patch("autoclicker.core.click_engine._IMAGE_MAX_FAILURES", 3)
+    @patch("autoclicker.core.click_engine._IMAGE_POLL_SECONDS", 0.01)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_screen_that_cannot_be_read_ends_the_run(self, m):
+        from autoclicker.core.click_engine import STOP_ERROR
+
+        _mock(m)
+        target = MagicMock(spec=ImageTarget)
+        target.locate.side_effect = OSError("screen grab failed")
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.configure_safety(failsafe=False, max_cps=0)
+        done = threading.Event()
+        outcomes = []
+        engine.start_clicking(
+            None, None, 0, 0, 1, 0, 0, 0, "left", "single",
+            lambda o: (outcomes.append(o), done.set()), image=target,
+        )  # fmt: skip
+        self.assertTrue(done.wait(3))
+        self.assertEqual(outcomes[0].reason, STOP_ERROR)
+        self.assertIn("Could not read the screen", outcomes[0].message)
+        m.click.assert_not_called()
+
+    def test_area_overlay_keeps_its_hint_and_shows_the_size(self):
+        from autoclicker.gui.picker import _AREA_HINT, CoordinatePicker
+
+        canvas = MagicMock()
+        picker = CoordinatePicker(
+            MagicMock(),
+            bounds=lambda: ScreenBounds(0, 0, 1000, 800),
+            toplevel_factory=lambda _root: MagicMock(),
+            canvas_factory=lambda *_a, **_k: canvas,
+        )
+        picker.start_selecting_area(lambda _area: None)
+        label = picker._readout_label = MagicMock()
+        ev = SimpleNamespace
+        picker._on_motion(ev(x_root=10, y_root=20))
+        self.assertEqual(label.configure.call_args.kwargs["text"], f"10, 20\n{_AREA_HINT}")
+        picker._on_drag_start(ev(x_root=10, y_root=20))
+        picker._on_drag(ev(x_root=70, y_root=45))
+        self.assertEqual(label.configure.call_args.kwargs["text"], f"60 x 25\n{_AREA_HINT}")

@@ -110,6 +110,8 @@ _IMAGE_POLL_SECONDS = 0.1
 # the previous click, so a click that closes the image is never repeated on
 # whatever is underneath (#96). Gives the clicked window time to repaint.
 _IMAGE_SETTLE_SECONDS = 0.05
+# Consecutive failed screen grabs (not "not found") that end an image run (#100).
+_IMAGE_MAX_FAILURES = 20
 
 
 @dataclass
@@ -614,12 +616,21 @@ class ClickEngine:
 
     def _watch_image(self, image: ImageTarget, run_id: int) -> None:
         """(ImageWatch thread) keep _image_match current until this run ends."""
+        failures = 0
         while run_id == self._run_id and self.is_running and not self._stop_event.is_set():
             searched_at = time.monotonic()
             try:
                 found = image.locate()
-            except Exception:
-                _log.debug("Image search failed", exc_info=True)
+                failures = 0
+            except Exception as e:
+                failures += 1
+                if failures == 1:
+                    _log.warning("Image search failed: %s", e, exc_info=True)
+                if failures >= _IMAGE_MAX_FAILURES and run_id == self._run_id:
+                    # Waiting forever on a screen that can't be read helps no one.
+                    self._set_stop_reason(STOP_ERROR, f"Could not read the screen: {e}")
+                    self._request_stop()
+                    return
                 found = None
             if run_id != self._run_id:
                 return

@@ -11,7 +11,7 @@ from typing import Any
 import pyautogui
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
-from ..core.image_match import ImageTarget, open_template
+from ..core.image_match import DEFAULT_MARGIN, ImageTarget, open_template, search_region
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -46,8 +46,15 @@ class StartClickResult:
     busy: bool = False
 
 
-def _load_image_target(sanitized: dict[str, Any]) -> tuple[ImageTarget | None, str | None]:
-    """The engine's image target from validated settings, or an error message."""
+def _load_image_target(
+    sanitized: dict[str, Any], desktop: ScreenBounds | None = None
+) -> tuple[ImageTarget | None, str | None]:
+    """The engine's image target from validated settings, or an error message.
+
+    ``image_region`` is where the image was captured; the search covers it plus
+    the current ``image_margin`` on each side, clipped to ``desktop`` (#100).
+    Without ``desktop`` the capture rectangle itself is searched.
+    """
     path = str(sanitized.get("image_path", ""))
     if path.replace("/", "\\").startswith("\\\\"):
         # Never open a network path: Windows would send the user's credentials (#98).
@@ -56,7 +63,11 @@ def _load_image_target(sanitized: dict[str, Any]) -> tuple[ImageTarget | None, s
         template = open_template(path)
     except ValueError:
         return None, "The captured image is missing or unreadable; capture it again"
-    return ImageTarget(template=template, region=ScreenBounds(*sanitized["image_region"])), None
+    region = ScreenBounds(*sanitized["image_region"])
+    if desktop is not None:
+        margin = int(sanitized.get("image_margin", DEFAULT_MARGIN))
+        region = search_region(region, margin, desktop)
+    return ImageTarget(template=template, region=region), None
 
 
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
@@ -208,7 +219,8 @@ class AutoclickerController:
         )
         image = None
         if mode == "image":
-            image, error = _load_image_target(sanitized)
+            desktop = screen_bounds or virtual_screen_bounds(pyautogui.size)
+            image, error = _load_image_target(sanitized, desktop)
             if error:
                 return StartClickResult(success=False, validation_errors={"image_path": error})
         interval = sanitized["interval"]
