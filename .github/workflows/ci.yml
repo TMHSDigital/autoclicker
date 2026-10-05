@@ -81,6 +81,28 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
+  real-input:
+    # Drives the real mouse and keyboard against test windows (tests/integration).
+    runs-on: windows-2025
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: tasks.bat install
+
+      - name: Real input tests
+        env:
+          AUTOCLICKER_REAL_INPUT: "1"
+        run: .venv\Scripts\python.exe -m pytest tests/integration --no-cov -v -p no:cacheprovider
+
   build:
     runs-on: windows-2025
     needs: test
