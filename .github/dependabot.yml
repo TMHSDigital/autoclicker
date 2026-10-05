@@ -5,14 +5,22 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Whitelist real project deps. The historical env snapshot under
-    # audit/ has been renamed to *.snapshot so dependabot stops scanning it.
+    # Direct runtime dependencies, the transitive packages pinned in
+    # requirements-lock.txt (they ship inside the exe), and the dev tools.
     allow:
       - dependency-name: "pyautogui"
       - dependency-name: "pywin32"
       - dependency-name: "Pillow"
       - dependency-name: "pystray"
       - dependency-name: "sv-ttk"
+      - dependency-name: "mouseinfo"
+      - dependency-name: "pygetwindow"
+      - dependency-name: "pymsgbox"
+      - dependency-name: "pyperclip"
+      - dependency-name: "pyrect"
+      - dependency-name: "pyscreeze"
+      - dependency-name: "pytweening"
+      - dependency-name: "six"
       - dependency-name: "pytest*"
       - dependency-name: "pytest-cov"
       - dependency-name: "ruff"
@@ -22,6 +30,16 @@ updates:
       - dependency-name: "pip-audit"
       - dependency-name: "pyinstaller"
     groups:
+      runtime-transitive:
+        patterns:
+          - "mouseinfo"
+          - "pygetwindow"
+          - "pymsgbox"
+          - "pyperclip"
+          - "pyrect"
+          - "pyscreeze"
+          - "pytweening"
+          - "six"
       dev-dependencies:
         patterns:
           - "pytest*"
@@ -31,6 +49,18 @@ updates:
           - "pre-commit*"
           - "pip-audit*"
           - "pyinstaller*"
+
+  # Hook revs in .pre-commit-config.yaml. A ruff or mypy bump here should land
+  # with the same version in requirements-dev-lock.txt (see CONTRIBUTING.md).
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      pre-commit-hooks:
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: "/"

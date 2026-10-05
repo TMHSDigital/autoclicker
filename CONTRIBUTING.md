@@ -59,6 +59,8 @@ Tests never start a real Tk window: GUI tests build the app with `AutoclickerApp
 
 Commit the updated lock files. When the ruff or mypy version in the dev lock changes, update the matching `rev` in `.pre-commit-config.yaml` so pre-commit and CI run the same versions.
 
+Dependabot opens weekly pull requests for the direct and transitive runtime packages in `requirements-lock.txt` (the transitive ones grouped together), the dev tools, the pre-commit hook revs and the GitHub Actions. Two things still need a person: a Dependabot bump of ruff or mypy in one place (dev lock or pre-commit) should be matched in the other before merging, and a new transitive dependency only shows up after `make lock`. The `audit` step in CI (`pip-audit` on both lock files) catches known vulnerabilities in between.
+
 ## Pre-commit (optional)
 
 ```bash
