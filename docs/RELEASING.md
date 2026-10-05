@@ -53,7 +53,7 @@ After the first signed release, drop the SmartScreen note from the README and th
 
 ## Package managers
 
-The release job runs `tools/package_manifests.py` with the published checksum and commits the results to `main`:
+The release job runs `tools/package_manifests.py` with the published checksum, which checks what it wrote (version, download URL and hash) before anything is committed, and then pushes the result to `main`, rebasing and retrying if `main` moved in the meantime. That bot commit does not trigger CI. If the step fails after the release is already published, run the **Package manifests** workflow (Actions tab) with the tag: by default it is a dry run that uploads the manifests as an artifact, and with **commit** checked it commits them. The push uses the workflow token, so protecting `main` later means switching this step to a GitHub App token or to opening a pull request.
 
 - **Scoop:** `bucket/windows-autoclicker.json`, so this repository is itself a bucket (`scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker`). Its `checkver` and `autoupdate` entries also let other buckets track new releases.
 - **winget:** `packaging/winget/manifests/t/TMHSDigital/WindowsAutoclicker/<version>/`, in the layout of [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). Check it with `winget validate --manifest <dir>`, then copy the directory into a fork of winget-pkgs and open a pull request (or use `wingetcreate submit <dir>`). After the first version is accepted, later versions can be submitted the same way.

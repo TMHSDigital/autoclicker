@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -89,6 +90,41 @@ def winget_manifests(version: str, sha256: str) -> dict[str, str]:
     }
 
 
+def written_paths(version: str) -> tuple[Path, Path]:
+    """Where main() writes the Scoop manifest and the winget folder for ``version``."""
+    winget = ROOT / "packaging/winget/manifests/t/TMHSDigital/WindowsAutoclicker" / version
+    return ROOT / "bucket" / "windows-autoclicker.json", winget
+
+
+def verify_written(version: str, sha256: str) -> list[str]:
+    """Problems with the manifests on disk for ``version``; empty when they are right.
+
+    Run after writing, before the release job commits them to main, because
+    that bot commit is never tested by CI (#109).
+    """
+    scoop_path, winget = written_paths(version)
+    problems = []
+    try:
+        scoop = json.loads(scoop_path.read_text("utf-8"))
+    except (OSError, ValueError) as e:
+        return [f"{scoop_path.name}: {e}"]
+    expected = {"version": version, "hash": sha256, "url": download_url(version)}
+    for key, value in expected.items():
+        if scoop.get(key) != value:
+            problems.append(f"{scoop_path.name}: {key} is {scoop.get(key)!r}, not {value!r}")
+    for name in winget_manifests(version, sha256):
+        try:
+            text = (winget / name).read_text("utf-8")
+        except OSError as e:
+            problems.append(f"{name}: {e}")
+            continue
+        if f"PackageVersion: {version}" not in text:
+            problems.append(f"{name}: PackageVersion is not {version}")
+        if name.endswith(".installer.yaml") and f"InstallerSha256: {sha256.upper()}" not in text:
+            problems.append(f"{name}: InstallerSha256 does not match")
+    return problems
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("version")
@@ -100,16 +136,21 @@ def main() -> None:
     if not re.fullmatch(r"[0-9a-f]{64}", sha256):
         parser.error("sha256 must be 64 hex characters")
 
-    scoop = ROOT / "bucket" / "windows-autoclicker.json"
+    scoop, winget = written_paths(args.version)
     scoop.parent.mkdir(parents=True, exist_ok=True)
     scoop.write_text(json.dumps(scoop_manifest(args.version, sha256), indent=4) + "\n", "utf-8")
     print(f"Wrote {scoop.relative_to(ROOT)}")
 
-    winget = ROOT / "packaging/winget/manifests/t/TMHSDigital/WindowsAutoclicker" / args.version
     winget.mkdir(parents=True, exist_ok=True)
     for name, text in winget_manifests(args.version, sha256).items():
         (winget / name).write_text(text, "utf-8")
     print(f"Wrote {winget.relative_to(ROOT)}")
+
+    problems = verify_written(args.version, sha256)
+    for problem in problems:
+        print(f"error: {problem}", file=sys.stderr)
+    if problems:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

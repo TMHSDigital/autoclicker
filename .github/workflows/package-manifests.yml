@@ -42,6 +42,7 @@ jobs:
           gh release download $env:TAG --pattern "WindowsAutoclicker.exe.sha256" --dir dist
           $hash = (Get-Content dist\WindowsAutoclicker.exe.sha256).Split(' ')[0]
           python tools/package_manifests.py $env:TAG.TrimStart('v') $hash
+          if ($LASTEXITCODE -ne 0) { exit 1 }
           git status --short
 
       - name: Upload manifests
