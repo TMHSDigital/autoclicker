@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Record a sequence: press Record in the sequence panel and click through the routine once; each click becomes a step with its button and the measured wait, and quick repeat clicks become double clicks. The Stop key or Record again finishes. Only clicks are recorded, and the mouse hook exists only while recording (#86).
 - Info dialog with **Copy diagnostics**: one click copies the app version, Windows and display details, settings (profile names, sequence points and the watched pixel left out) and the log tail for a bug report, after showing exactly what will be copied. Also in the tray menu as About and diagnostics (#88).
 - The repository shows a Sponsor button, and the Info dialog mentions sponsorship once, with no reminders (#90).
 - Install with Scoop: `scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker`, then `scoop install tmhs/windows-autoclicker`. winget manifests are generated with each release (#76).

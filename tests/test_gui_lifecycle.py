@@ -735,3 +735,68 @@ class TestConditionUi(GuiHarness):
         self.assertEqual(app.status_var.get(), "Paused: waiting for the watched pixel to match")
         app._show_pause_state(False)
         self.assertEqual(app.status_var.get(), "Running...")
+
+
+class TestRecordingUi(GuiHarness):
+    """#86: Record captures clicks into sequence steps; stop paths finish it."""
+
+    def setUp(self):
+        super().setUp()
+        self.recorder_cls = self.stack.enter_context(
+            patch("autoclicker.gui.main_window.ClickRecorder")
+        )
+        self.recorder_cls.return_value.start.return_value = True
+        self.stack.enter_context(
+            patch("autoclicker.gui.main_window.root_window_at", side_effect=lambda x, y: x)
+        )
+        self.stack.enter_context(
+            patch("autoclicker.gui.main_window.is_own_window", side_effect=lambda h: h == 999)
+        )
+
+    def feed(self, *clicks):
+        from autoclicker.core.recorder import RecordedClick
+
+        on_click = self.recorder_cls.call_args.kwargs["on_click"]
+        for x, y, t in clicks:
+            on_click(RecordedClick(x, y, "left", t))
+        pump()
+
+    def test_record_then_finish_with_stop(self):
+        app = self.app
+        app.toggle_sequence_recording()
+        self.hotkeys.set_running.assert_called_with(True)
+        self.assertIn("Recording", app.status_var.get())
+        self.feed((100, 100, 0.0), (999, 5, 0.4), (200, 200, 0.6))  # 999 = our own window
+        self.assertIn("2 clicks", app.status_var.get())
+        app.stop_clicking()  # the Stop hotkey/button finishes recording
+        self.recorder_cls.return_value.stop.assert_called_once()
+        self.hotkeys.set_running.assert_called_with(False)
+        self.assertEqual([(s["x"], s["y"]) for s in app.sequence_steps], [(100, 100), (200, 200)])
+        self.assertEqual(app.sequence_steps[0]["delay_ms"], 600)
+        self.assertEqual(app.target_mode_var.get(), "sequence")
+        self.assertEqual(app.status_var.get(), "Recorded 2 steps")
+
+    def test_existing_steps_can_be_kept(self):
+        app = self.app
+        app.sequence_steps = [
+            {"x": 1, "y": 1, "button": "left", "click_type": "single", "delay_ms": 0}
+        ]
+        app.toggle_sequence_recording()
+        self.feed((100, 100, 0.0))
+        self.messagebox.askyesno.return_value = False  # keep, append
+        app.toggle_sequence_recording()
+        self.assertEqual([s["x"] for s in app.sequence_steps], [1, 100])
+
+    def test_no_clicks_and_start_blocked_while_recording(self):
+        app = self.app
+        app.toggle_sequence_recording()
+        app.start_clicking()
+        self.assertFalse(app.click_engine.is_running)
+        self.assertEqual(app.status_var.get(), "Finish recording before starting")
+        app.emergency_stop()
+        self.assertEqual(app.status_var.get(), "Recording ended with no clicks")
+
+    def test_hook_unavailable(self):
+        self.recorder_cls.return_value.start.return_value = False
+        self.app.toggle_sequence_recording()
+        self.assertIn("Could not start recording", self.app.status_var.get())

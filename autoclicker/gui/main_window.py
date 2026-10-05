@@ -32,7 +32,9 @@ from ..core.click_engine import (
 )
 from ..core.diagnostics import build_report
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
+from ..core.recorder import ClickRecorder, RecordedClick, clicks_to_steps
 from ..core.resources import resource_path
+from ..core.safety import is_own_window, root_window_at
 from ..core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS, field_label
 from ..core.updates import RELEASES_PAGE, Release, check_due, newer_release
 from ..utils.coordinate_picker import PROFILE_KEYS, describe_profile
@@ -112,6 +114,8 @@ class AutoclickerApp:
     _countdown_job: str | None = None
     # Release page of a newer version found by the update check.
     _release_url: str | None = None
+    # Active while recording a sequence (#86); the hook exists only then.
+    _recorder: ClickRecorder | None = None
     # Pause reason the status line currently shows; None while running normally.
     _shown_paused: str | None = None
 
@@ -320,7 +324,7 @@ class AutoclickerApp:
 
     def toggle_clicking(self) -> None:
         """Toggle hotkey: stop if running (or counting down), otherwise start."""
-        if self._cancel_countdown():
+        if self._finish_recording() or self._cancel_countdown():
             return
         if self.click_engine.is_running:
             self.stop_clicking()
@@ -429,6 +433,59 @@ class AutoclickerApp:
         self._refresh_sequence_list(select)
         self._refresh_target_summary()
         self.settings.set("sequence", [dict(step) for step in self.sequence_steps])
+
+    def toggle_sequence_recording(self) -> None:
+        """Record button: start capturing real clicks as steps, or finish."""
+        if self._finish_recording():
+            return
+        if self.click_engine.is_running or self._countdown_job is not None:
+            self._set_status_message("Stop clicking before recording", "alert")
+            return
+        self._recorded: list[RecordedClick] = []
+        recorder = ClickRecorder(on_click=lambda click: self._ui(self._on_recorded_click, click))
+        if not recorder.start():
+            self._set_status_message("Could not start recording on this system", "error")
+            return
+        self._recorder = recorder
+        self._hotkeys.set_running(True)  # the Stop and Emergency keys finish recording
+        stop_key = self._hotkey_suffix("stop").strip(" ()") or "Stop"
+        self._set_status_message(
+            f"Recording: click each point in order, then press {stop_key} or Record", "alert"
+        )
+
+    def _on_recorded_click(self, click: RecordedClick) -> None:
+        if self._recorder is None:
+            return
+        window = root_window_at(click.x, click.y)
+        if window is None or is_own_window(window):
+            return  # clicks on the autoclicker itself (e.g. the Record button)
+        self._recorded.append(click)
+        count = len(self._recorded)
+        self._set_status_message(f"Recording: {count} click{'s' * (count != 1)}", "alert")
+
+    def _finish_recording(self) -> bool:
+        """Stop recording and turn the clicks into steps. False if not recording."""
+        recorder, self._recorder = self._recorder, None
+        if recorder is None:
+            return False
+        recorder.stop()
+        self._hotkeys.set_running(False)
+        steps = clicks_to_steps(self._recorded)
+        if not steps:
+            self._set_status_message("Recording ended with no clicks", "alert")
+            return True
+        if self.sequence_steps and not messagebox.askyesno(
+            "Recorded sequence",
+            f"Replace the current {len(self.sequence_steps)} steps with the "
+            f"{len(steps)} recorded ones?\n\nNo adds them after the current steps.",
+        ):
+            steps = self.sequence_steps + steps
+        self.sequence_steps = steps[:MAX_SEQUENCE_STEPS]
+        self.target_mode_var.set("sequence")
+        self._apply_target_mode_state()
+        self._sequence_changed(select=0)
+        self._set_status_message(f"Recorded {len(self.sequence_steps)} steps", "alert")
+        return True
 
     def add_sequence_point(self) -> None:
         """Pick a point and append it as a step using the current button and click type."""
@@ -884,6 +941,9 @@ class AutoclickerApp:
         ``confirmed`` skips the speed-limit-off question when the countdown
         already asked it.
         """
+        if self._recorder is not None:
+            self._set_status_message("Finish recording before starting", "alert")
+            return
         # A Start hotkey during a countdown starts right away.
         self._cancel_countdown(message=None)
         if not confirmed and not self._confirm_guard_off():
@@ -921,8 +981,8 @@ class AutoclickerApp:
             messagebox.showerror("Unexpected Error", user_message)
 
     def stop_clicking(self) -> None:
-        """Stop the autoclicking process (or cancel a pending countdown)."""
-        if self._cancel_countdown():
+        """Stop the autoclicking process (or cancel a countdown, or finish recording)."""
+        if self._finish_recording() or self._cancel_countdown():
             return
         self.controller.stop_clicking()
         self._paint_stopped("Stopped")
@@ -932,7 +992,7 @@ class AutoclickerApp:
         if self.coordinate_picker.is_picking():
             self.coordinate_picker.stop_picking(cancelled=True)
             return
-        if self._cancel_countdown():
+        if self._finish_recording() or self._cancel_countdown():
             return
         self.controller.emergency_stop()
         self._paint_stopped("Emergency stop", "error")
@@ -1129,6 +1189,9 @@ class AutoclickerApp:
 
     def quit_application(self) -> None:
         """Quit the application."""
+        if self._recorder is not None:
+            self._recorder.stop()
+            self._recorder = None
         self.stop_clicking()
         self.coordinate_picker.stop_picking(cancelled=False)
         if hasattr(self, "_hotkeys") and self._hotkeys:

@@ -123,9 +123,10 @@ def _build_sequence_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
     app.sequence_list = tk.Listbox(
         app.sequence_frame, height=5, activestyle="none", exportselection=False
     )
-    app.sequence_list.grid(row=0, column=0, rowspan=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+    app.sequence_list.grid(row=0, column=0, rowspan=6, sticky=(tk.W, tk.E, tk.N, tk.S))
 
     buttons = (
+        ("Record", app.toggle_sequence_recording),
         ("Add point", app.add_sequence_point),
         ("Wait\u2026", app.edit_sequence_delay),
         ("Up", lambda: app.move_sequence_step(-1)),
@@ -138,7 +139,7 @@ def _build_sequence_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
         )
 
     repeat_frame = ttk.Frame(app.sequence_frame)
-    repeat_frame.grid(row=5, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))
+    repeat_frame.grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))
     ttk.Label(repeat_frame, text="Repeat:").pack(side=tk.LEFT)
     app.sequence_repeat_entry = ttk.Entry(repeat_frame, width=7)
     app.sequence_repeat_entry.pack(side=tk.LEFT, padx=(5, 5))

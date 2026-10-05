@@ -211,3 +211,29 @@ class TestRealPixel(RealInputCase):
         mismatch = PixelCondition(target.cx + 60, target.cy, (255, 0, 0), on_mismatch="stop")
         outcome = self.run_engine(x=target.cx, y=target.cy, condition=mismatch)
         self.assertEqual(outcome.message, "Stopped: the watched pixel changed")
+
+
+class TestRealRecording(RealInputCase):
+    def test_hook_records_real_clicks(self):
+        import pyautogui
+
+        from autoclicker.core.recorder import ClickRecorder, clicks_to_steps
+
+        first = Target(self.root, 200, 200)
+        second = Target(self.root, 500, 200)
+        recorded = []
+        recorder = ClickRecorder(on_click=recorded.append)
+        self.assertTrue(recorder.start())
+        try:
+            for x, y in ((first.cx, first.cy), (second.cx, second.cy)):
+                pyautogui.click(x, y)
+                for _ in range(20):
+                    self.root.update()
+                    time.sleep(0.01)
+        finally:
+            recorder.stop()
+        self.assertFalse(recorder.recording)
+        steps = clicks_to_steps(recorded)
+        self.assertEqual(
+            [(s["x"], s["y"]) for s in steps], [(first.cx, first.cy), (second.cx, second.cy)]
+        )
