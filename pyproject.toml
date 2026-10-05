@@ -81,7 +81,8 @@ python_functions = "test_*"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow running tests"
+    "slow: Slow running tests",
+    "real_legacy_dir: use the real legacy settings folder (see tests/conftest.py)"
 ]
 
 [tool.coverage.run]

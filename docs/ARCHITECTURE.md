@@ -73,7 +73,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 
 ## Data flow
 
-1. **Settings:** `SettingsManager` atomically writes `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (legacy CWD file migrated once).
+1. **Settings:** `SettingsManager` atomically writes `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (a legacy file next to the app, not the working folder, is migrated once).
 2. **GUI:** Sections bind Tk widgets; `AutoclickerController` validates and starts/stops clicking.
 3. **Click engine:** Coordinates, interval, burst, safety limits; `pyautogui` with `PAUSE=0`. Waits use `_stop_event.wait`.
 4. **Session log:** Start/stop/safety events appended under AppData.

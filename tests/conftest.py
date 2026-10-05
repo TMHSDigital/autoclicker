@@ -25,3 +25,13 @@ def _primary_screen_only(monkeypatch):
 def _cursor_away_from_corners(monkeypatch):
     """The real cursor may rest in a corner of the host; tests that need it patch this."""
     monkeypatch.setattr("autoclicker.core.click_engine.cursor_position", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_legacy_settings(request, monkeypatch, tmp_path_factory):
+    """Legacy migration reads next to the app, i.e. the checkout; keep a developer's
+    own autoclicker_settings.json there out of every test (#105)."""
+    if request.node.get_closest_marker("real_legacy_dir"):
+        return
+    empty = tmp_path_factory.mktemp("legacy-app-dir")
+    monkeypatch.setattr("autoclicker.core.settings_paths.legacy_app_dir", lambda: empty)
