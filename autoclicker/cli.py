@@ -184,6 +184,27 @@ def _emit(text: str, *, error: bool = False) -> None:
         print(text, file=stream, flush=True)
 
 
+def _launcher_window() -> int | None:
+    """The terminal window this run was typed into, if it has one (#94).
+
+    Read at launch, before the countdown gives the user time to switch to the
+    target. Without a console (shortcut, Task Scheduler, the windowed exe) the
+    window in front may already be the target, so nothing is excluded.
+    """
+    if sys.platform != "win32":
+        return None
+    import ctypes
+
+    from .core.safety import get_foreground_window_handle
+
+    try:
+        if not ctypes.windll.kernel32.GetConsoleWindow():
+            return None
+    except (AttributeError, OSError):
+        return None
+    return get_foreground_window_handle()
+
+
 def run_headless(args: argparse.Namespace) -> int:
     """Run once without a window and return the process exit code."""
     from .app.controller import AutoclickerController
@@ -191,6 +212,7 @@ def run_headless(args: argparse.Namespace) -> int:
     from .core.settings_manager import field_label
     from .core.single_instance import SingleInstance
 
+    launcher = _launcher_window()
     instance = SingleInstance()
     if not instance.acquire():
         _emit("Windows Autoclicker is already running; close it first.", error=True)
@@ -245,6 +267,9 @@ def run_headless(args: argparse.Namespace) -> int:
         on_error=lambda message: _emit(message, error=True),
     )
 
+    if launcher is not None:
+        # Pause when unfocused must not adopt the terminal as the target window.
+        controller.click_engine.launcher_windows = frozenset({launcher})
     started = controller.validate_and_start_clicking(
         raw,
         failsafe=bool(result["sanitized_settings"].get("enable_failsafe", True)),

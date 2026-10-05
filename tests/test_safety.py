@@ -136,25 +136,58 @@ class TestFocusWindowSelection(unittest.TestCase):
 
     def test_hotkey_start_keeps_the_window_in_front(self):
         with patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own):
-            self.assertEqual(ClickEngine._pick_focus_window(self.TARGET, 10, 10), self.TARGET)
+            self.assertEqual(self._engine()._pick_focus_window(self.TARGET, 10, 10), self.TARGET)
 
     def test_button_start_uses_the_window_under_the_target(self):
         with (
             patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
             patch("autoclicker.core.click_engine.root_window_at", return_value=self.TARGET),
         ):
-            self.assertEqual(ClickEngine._pick_focus_window(self.OWN, 10, 10), self.TARGET)
+            self.assertEqual(self._engine()._pick_focus_window(self.OWN, 10, 10), self.TARGET)
 
     def test_button_start_adopts_when_our_window_covers_the_target(self):
         with (
             patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
             patch("autoclicker.core.click_engine.root_window_at", return_value=self.OWN),
         ):
-            self.assertIsNone(ClickEngine._pick_focus_window(self.OWN, 10, 10))
+            self.assertIsNone(self._engine()._pick_focus_window(self.OWN, 10, 10))
 
     def test_cursor_mode_button_start_adopts_next_window(self):
         with patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own):
-            self.assertIsNone(ClickEngine._pick_focus_window(self.OWN, None, None))
+            self.assertIsNone(self._engine()._pick_focus_window(self.OWN, None, None))
+
+    def test_launcher_window_counts_as_ours(self):
+        """#94: a headless run uses the window under the target, not its terminal."""
+        engine = self._engine()
+        engine.launcher_windows = frozenset({self.OTHER})
+        with (
+            patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
+            patch("autoclicker.core.click_engine.root_window_at", return_value=self.TARGET),
+        ):
+            self.assertEqual(engine._pick_focus_window(self.OTHER, 10, 10), self.TARGET)
+            self.assertIsNone(engine._pick_focus_window(self.OTHER, None, None))
+
+    def test_launcher_window_is_never_adopted(self):
+        engine = self._engine()
+        engine.launcher_windows = frozenset({self.OTHER})
+        engine._foreground_hwnd = None
+        foreground = [self.OTHER]
+        with (
+            patch("autoclicker.core.click_engine.is_own_window", side_effect=self._own),
+            patch(
+                "autoclicker.core.click_engine.get_foreground_window_handle",
+                side_effect=lambda: foreground[0],
+            ),
+            patch(
+                "autoclicker.core.click_engine.is_foreground_window",
+                side_effect=lambda hwnd: hwnd == foreground[0],
+            ),
+        ):
+            self.assertTrue(engine._should_pause_for_foreground())
+            self.assertIsNone(engine._foreground_hwnd)
+            foreground[0] = self.TARGET
+            self.assertFalse(engine._should_pause_for_foreground())
+            self.assertEqual(engine._foreground_hwnd, self.TARGET)
 
     def test_adopt_waits_while_our_window_is_in_front_then_follows_the_next(self):
         engine = self._engine()

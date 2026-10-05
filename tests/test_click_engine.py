@@ -327,6 +327,50 @@ class TestRunOutcome(unittest.TestCase):
         self.assertEqual(engine._limit_reached(0, 1), "Done: auto-stopped after 1 minute")
 
 
+class TestFocusPauseLimits(unittest.TestCase):
+    """#94: a run paused for focus still ends on its time limit."""
+
+    def _run_paused(self, pause_side_effect, steps=None):
+        outcomes: list = []
+        with (
+            patch("autoclicker.core.click_engine.pyautogui") as mock_pyautogui,
+            patch.object(
+                ClickEngine, "_should_pause_for_foreground", side_effect=pause_side_effect
+            ),
+        ):
+            mock_pyautogui.size.return_value = (1920, 1080)
+            engine = ClickEngine(enable_performance_monitoring=False)
+            engine.configure_safety(max_cps=0)
+            self.assertTrue(
+                engine.start_clicking(
+                    10, 10, 5, 0, 1, 0, 0, 1, "left", "single", outcomes.append, steps=steps
+                )
+            )
+            time.sleep(0.15)
+            self.assertTrue(engine.is_running)  # paused, not finished
+            engine.start_time -= 61  # one minute passes while paused
+            assert engine.click_thread is not None
+            engine.click_thread.join(timeout=2.0)
+        self.assertEqual(len(outcomes), 1, outcomes)
+        return outcomes[0]
+
+    def test_single_target(self):
+        outcome = self._run_paused(lambda: True)
+        self.assertEqual(outcome.reason, STOP_COMPLETED)
+        self.assertEqual(outcome.message, "Done: auto-stopped after 1 minute")
+        self.assertEqual(outcome.clicks, 0)
+
+    def test_paused_mid_sequence(self):
+        from autoclicker.core.click_engine import ClickStep
+
+        calls = iter([False])  # the round starts in front, then the focus is lost
+        outcome = self._run_paused(
+            lambda: next(calls, True), steps=[ClickStep(10, 10), ClickStep(20, 20)]
+        )
+        self.assertEqual(outcome.reason, STOP_COMPLETED)
+        self.assertEqual(outcome.message, "Done: auto-stopped after 1 minute")
+
+
 class TestClickEnginePerformance(unittest.TestCase):
     """Metrics helpers."""
 

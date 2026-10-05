@@ -152,6 +152,38 @@ class TestHeadless(HeadlessCase):
         code = self.run_cli("--at", "10,10", "--interval", "0ms", "--delay", "0")
         self.assertEqual(code, EXIT_EMERGENCY)
 
+    def test_terminal_is_excluded_from_focus_adoption(self):
+        """#94: the window a headless run was typed into is never its target."""
+        from autoclicker.core.click_engine import ClickEngine
+
+        seen = []
+        real_start = ClickEngine.start_clicking
+
+        def spy(engine, *args, **kwargs):
+            seen.append(engine.launcher_windows)
+            return real_start(engine, *args, **kwargs)
+
+        with (
+            patch.object(cli, "_launcher_window", return_value=4242),
+            patch.object(ClickEngine, "start_clicking", spy),
+        ):
+            code = self.run_cli(
+                "--at", "10,10", "--interval", "0ms", "--clicks", "1", "--delay", "0"
+            )
+        self.assertEqual(code, EXIT_OK)
+        self.assertEqual(seen, [frozenset({4242})])
+
+    def test_launcher_window_needs_a_console(self):
+        import ctypes
+
+        with patch.object(ctypes.windll.kernel32, "GetConsoleWindow", return_value=0):
+            self.assertIsNone(cli._launcher_window())
+        with (
+            patch.object(ctypes.windll.kernel32, "GetConsoleWindow", return_value=7),
+            patch("autoclicker.core.safety.get_foreground_window_handle", return_value=99),
+        ):
+            self.assertEqual(cli._launcher_window(), 99)
+
     def test_failsafe_exit_code(self):
         self.pyautogui.click.side_effect = pyautogui.FailSafeException()
         code = self.run_cli("--at", "10,10", "--interval", "0ms", "--delay", "0")

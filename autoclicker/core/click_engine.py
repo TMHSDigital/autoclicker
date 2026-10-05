@@ -178,6 +178,9 @@ class ClickEngine:
         self._step_hwnds: frozenset[int] = frozenset()
         self._point_target = False  # the run clicks known points (fixed or sequence)
         self._target_seen = False  # a target window has been in front during this run
+        # Windows treated like our own for pause_when_unfocused, such as the console
+        # a headless run was started from (#94): never adopted as the target.
+        self.launcher_windows: frozenset[int] = frozenset()
         self.is_paused = False
         self.pause_reason = ""  # what a paused run waits for (PAUSE_FOCUS / PAUSE_PIXEL)
         self._condition: PixelCondition | None = None
@@ -426,6 +429,11 @@ class ClickEngine:
         try:
             while self.is_running and not self._stop_event.is_set():
                 if self._should_pause_for_foreground():
+                    # A run paused for focus still ends on time (#94).
+                    limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
+                    if limit_message:
+                        self._set_stop_reason(STOP_COMPLETED, limit_message)
+                        break
                     self._stop_event.wait(timeout=0.1)
                     continue
 
@@ -498,8 +506,11 @@ class ClickEngine:
                 except Exception:
                     _log.exception("on_finished callback failed")
 
-    @staticmethod
-    def _pick_focus_window(foreground: int, x: int | None, y: int | None) -> int | None:
+    def _is_ours(self, hwnd: int) -> bool:
+        """Our own window, or one we were launched from (fails closed like is_own_window)."""
+        return hwnd in self.launcher_windows or is_own_window(hwnd)
+
+    def _pick_focus_window(self, foreground: int, x: int | None, y: int | None) -> int | None:
         """Choose the window that must stay in front for pause_when_unfocused.
 
         Started from a hotkey, the window in front is the user's target. Started
@@ -508,11 +519,11 @@ class ClickEngine:
         window covers the target) return None to adopt the next window that
         comes to the front.
         """
-        if not is_own_window(foreground):
+        if not self._is_ours(foreground):
             return foreground
         if x is not None and y is not None:
             under = root_window_at(x, y)
-            if under is not None and not is_own_window(under):
+            if under is not None and not self._is_ours(under):
                 return under
         return None
 
@@ -529,14 +540,14 @@ class ClickEngine:
         if self._target_seen or not self._point_target:
             return False
         current = get_foreground_window_handle()
-        return current is not None and is_own_window(current)
+        return current is not None and self._is_ours(current)
 
     def _windows_under_steps(self) -> frozenset[int]:
         """Top-level windows (not ours) under the sequence's step points."""
         windows = set()
         for step in self._steps:
             hwnd = root_window_at(step.x, step.y)
-            if hwnd is not None and not is_own_window(hwnd):
+            if hwnd is not None and not self._is_ours(hwnd):
                 windows.add(hwnd)
         return frozenset(windows)
 
@@ -554,7 +565,7 @@ class ClickEngine:
         else:
             if self._foreground_hwnd is None:
                 current = get_foreground_window_handle()
-                if current is not None and not is_own_window(current):
+                if current is not None and not self._is_ours(current):
                     self._foreground_hwnd = current
             if self._foreground_hwnd is None:
                 paused = True  # still waiting for a target window (fail closed)
@@ -669,6 +680,10 @@ class ClickEngine:
         for index, step in enumerate(self._steps, start=1):
             while self._should_pause_for_foreground():
                 if self._stop_event.wait(timeout=0.1):
+                    return False
+                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
+                if limit_message:
+                    self._set_stop_reason(STOP_COMPLETED, limit_message)
                     return False
             if not self.is_running or self._stop_event.is_set():
                 return False
