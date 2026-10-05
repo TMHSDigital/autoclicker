@@ -69,19 +69,25 @@ class Target:
         return [e for e in self.events if e[0] == sequence]
 
 
+_ROOT: tk.Tk | None = None
+
+
+def _shared_root() -> tk.Tk:
+    """One Tk interpreter for the whole module: creating a second one in the same
+    process fails intermittently on the CI runner ("Can't find a usable tk.tcl")."""
+    global _ROOT
+    if _ROOT is None:
+        _ROOT = tk.Tk()
+        _ROOT.withdraw()
+    return _ROOT
+
+
 class RealInputCase(unittest.TestCase):
-    # One Tk interpreter per class: creating many in one process is flaky on
-    # the CI runner ("couldn't read file auto.tcl").
     root: tk.Tk
 
     @classmethod
     def setUpClass(cls):
-        cls.root = tk.Tk()
-        cls.root.withdraw()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.root.destroy()
+        cls.root = _shared_root()
 
     def setUp(self):
         self.addCleanup(self._destroy_windows)
