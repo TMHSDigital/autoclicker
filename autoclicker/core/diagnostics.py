@@ -2,8 +2,9 @@
 """Diagnostics text for bug reports (Info > Copy diagnostics).
 
 Everything is read locally and shown to the user before it is copied; nothing
-is sent anywhere. Profile names, sequence points and the watched pixel are
-left out of the settings dump.
+is sent anywhere. Profile names, sequence points, the watched pixel and the
+captured image are left out of the settings dump, and the home folder (which
+contains the account name) is replaced everywhere.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import ctypes
 import json
 import platform
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -24,7 +26,15 @@ LOG_TAIL_LINES = 50
 SESSION_TAIL_LINES = 10
 
 # Settings replaced by a summary in the report.
-_REDACTED = ("presets", "sequence", "condition_x", "condition_y", "condition_color")
+_REDACTED = (
+    "presets",
+    "sequence",
+    "condition_x",
+    "condition_y",
+    "condition_color",
+    "image_path",
+    "image_region",
+)
 
 _DPI_MODES = {0: "unaware", 1: "system", 2: "per-monitor"}
 
@@ -40,7 +50,20 @@ def redact_settings(settings: dict[str, Any]) -> dict[str, Any]:
         result["sequence"] = f"<{len(sequence)} steps>"
     if any(k in settings for k in ("condition_x", "condition_y", "condition_color")):
         result["condition_pixel"] = "<redacted>"
+    if settings.get("image_path"):
+        result["image_path"] = "<captured image>"
+    region = settings.get("image_region")
+    if isinstance(region, list) and len(region) == 4:
+        result["image_region"] = f"<{region[2]}x{region[3]} area>"
     return result
+
+
+def hide_user_folder(text: str) -> str:
+    """Replace the home folder, which contains the Windows account name (#99)."""
+    home = str(Path.home())
+    if len(home) <= 3:  # no real home folder, such as "C:\"
+        return text
+    return re.sub(re.escape(home), lambda _m: "%USERPROFILE%", text, flags=re.IGNORECASE)
 
 
 def _tail(path: Path, lines: int) -> str:
@@ -107,4 +130,4 @@ def build_report(
         _tail(folder / "sessions.log", SESSION_TAIL_LINES),
         "```",
     ]
-    return "\n".join(lines)
+    return hide_user_folder("\n".join(lines))

@@ -60,6 +60,23 @@ class TestReport(unittest.TestCase):
         for secret in ("Bank login", "#123456", '"x": 20', "640"):
             self.assertNotIn(secret, text)
 
+    def test_no_user_folder_in_image_settings_or_logs(self):
+        """#99: the image path and log lines must not reveal the account name."""
+        home = Path("C:/Users/Jane Doe")
+        image = str(home / "AppData/Roaming/WindowsAutoclicker/images/target-1.png")
+        (self.folder / "autoclicker.log").write_text(
+            f"INFO opened {str(home).upper()}\\x.png\n", encoding="utf-8"
+        )
+        settings = {**SETTINGS, "image_path": image, "image_region": [900, 500, 320, 240]}
+        with patch("autoclicker.core.diagnostics.Path.home", return_value=home):
+            text = build_report(settings, monitors=lambda: [], data_dir=self.folder)
+        self.assertNotIn("Jane", text)
+        self.assertNotIn("JANE", text)
+        self.assertIn('"image_path": "<captured image>"', text)
+        self.assertIn('"image_region": "<320x240 area>"', text)
+        self.assertIn("%USERPROFILE%", text)
+        self.assertNotIn("900", text)
+
     def test_missing_logs(self):
         self.assertIn("(not found)", self.report())
 

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emergency stop while the picker is open now stops a running engine too, instead of only closing the picker. Start (button, hotkey, tray) is refused while picking or recording, so a countdown can no longer end on the picker overlay or release the recorder's stop keys (#95).
 - A run paused by **Pause when unfocused** now stops when its auto-stop time is up, instead of staying paused until the window came back. A `--headless` run started from a terminal no longer takes the terminal as its target window, which left it paused for good (and, with the first fix missing, never exiting) (#94).
 - Image target mode no longer clicks the old position again after a click makes the image disappear: each click needs a search that started after the previous click (#96).
+- Copy diagnostics no longer includes the captured image's path or search area, and replaces your Windows user folder (which contains the account name) everywhere in the report, including the log lines (#99).
 - Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
 
 ## [1.6.0] - 2026-10-05

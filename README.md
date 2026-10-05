@@ -351,7 +351,7 @@ Another program may already own the key; the status bar names any key that could
 
 </details>
 
-<p align="center"><sub>Still stuck? Click <b>Info</b>, then <b>Copy diagnostics</b>, and paste it into a <a href="https://github.com/TMHSDigital/autoclicker/issues/new/choose">new issue</a>. It shows you exactly what is copied, and leaves out profile names and sequence points.</sub></p>
+<p align="center"><sub>Still stuck? Click <b>Info</b>, then <b>Copy diagnostics</b>, and paste it into a <a href="https://github.com/TMHSDigital/autoclicker/issues/new/choose">new issue</a>. It shows you exactly what is copied, and leaves out profile names, sequence points, the watched pixel, the captured image and your Windows user folder.</sub></p>
 
 ## Contributing
 
