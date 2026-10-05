@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image target mode: press Capture and drag a rectangle around a button; each click then goes wherever that image is found nearby (searched within a margin around the capture), and the run waits while it isn't on screen. Matching is exact and needs no extra dependencies (#87).
 - Image profiles: a profile saved in Image mode keeps its own captured image, and exporting profiles embeds the picture in the file so it works on another PC. `--image` runs the captured image from the command line, also with `--headless` and `--profile` (#98).
 
+### Changed
+
+- The settings are locked while a countdown or run is in progress, since changes would not reach the running clicks; section headers still open. Action choices a target mode can't run are greyed out (Hold and Key in Sequence, Key in Image), switching to such a mode falls back to Click, and X/Y are off when Key is chosen. The status bar's target line follows what you type in X, Y and Key (#102).
+
 ### Fixed
 
 - Hint, summary and error text now meet WCAG AA contrast in both themes (the gray was 2.9:1 on the light theme, the error red 3.2:1 on the dark one), and follows the theme when you switch it (#104).

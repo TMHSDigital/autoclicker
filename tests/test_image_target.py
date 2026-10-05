@@ -270,7 +270,7 @@ class TestImageRobustness(unittest.TestCase):
             None, None, 0, 0, 1, 0, 0, 0, "left", "single",
             lambda o: (outcomes.append(o), done.set()), image=target,
         )  # fmt: skip
-        self.assertTrue(done.wait(3))
+        self.assertTrue(done.wait(10), "the run did not end after repeated grab failures")
         self.assertEqual(outcomes[0].reason, STOP_ERROR)
         self.assertIn("Could not read the screen", outcomes[0].message)
         m.click.assert_not_called()

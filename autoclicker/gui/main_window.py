@@ -29,7 +29,7 @@ from ..core.click_engine import (
 )
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
-from ..core.settings_manager import field_label
+from ..core.settings_manager import allowed_actions, field_label, uses_point
 from . import dialogs
 from .features import (
     ConditionMixin,
@@ -57,6 +57,50 @@ from .styles import apply_text_styles
 
 # Status-dot state for each way a run can end; anything else is "stopped".
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
+
+# Widget classes locked while a run or countdown uses the settings (#102).
+_LOCKABLE = frozenset(
+    {"TEntry", "TButton", "TRadiobutton", "TCheckbutton", "TCombobox", "TSpinbox", "Listbox"}
+)
+
+
+def _descendants(widget):
+    try:
+        children = widget.winfo_children()
+    except (AttributeError, tk.TclError):
+        return
+    for child in children:
+        yield child
+        yield from _descendants(child)
+
+
+def _lock_widget(widget) -> bool:
+    """Disable an enabled control; True if this call disabled it."""
+    try:
+        if widget.winfo_class() not in _LOCKABLE:
+            return False
+        if hasattr(widget, "instate"):  # ttk
+            # Section headers and the small Import/Export/theme buttons stay usable.
+            if str(widget.cget("style")) == "Toolbutton" or widget.instate(["disabled"]):
+                return False
+            widget.state(["disabled"])
+            return True
+        if str(widget.cget("state")) == tk.DISABLED:
+            return False
+        widget.configure(state=tk.DISABLED)
+        return True
+    except (AttributeError, TypeError, tk.TclError):
+        return False
+
+
+def _unlock_widget(widget) -> None:
+    try:
+        if hasattr(widget, "instate"):
+            widget.state(["!disabled"])
+        else:
+            widget.configure(state=tk.NORMAL)
+    except (AttributeError, TypeError, tk.TclError):
+        pass
 
 
 class AutoclickerApp(
@@ -325,8 +369,26 @@ class AutoclickerApp(
         else:
             self.start_clicking()
 
+    def _set_settings_locked(self, locked: bool) -> None:
+        """Disable the settings while a run or countdown uses them (#102).
+
+        Changes would not reach the running engine, so the form would stop
+        describing the run. Only controls this disabled are re-enabled, so
+        fields that are off for the current mode stay off.
+        """
+        if not locked:
+            widgets, self._locked_widgets = self._locked_widgets, ()
+            for widget in widgets:
+                _unlock_widget(widget)
+            return
+        frame = getattr(self, "main_frame", None)
+        if self._locked_widgets or frame is None:
+            return
+        self._locked_widgets = tuple(w for w in _descendants(frame) if _lock_widget(w))
+
     def _paint_stopped(self, message: str, state: str = "stopped") -> None:
         """Reset start/stop widgets after clicking ends."""
+        self._set_settings_locked(False)
         if hasattr(self, "_hotkeys"):
             self._hotkeys.set_running(False)
         if hasattr(self, "start_btn"):
@@ -368,9 +430,18 @@ class AutoclickerApp(
         )
 
     def _apply_target_mode_state(self) -> None:
-        """Enable X/Y and Pick Location only for a fixed target; show the steps in sequence mode."""
+        """Enable only what the target mode and action use (#102).
+
+        X/Y and Pick Location for a point that is clicked, the Action choices
+        the mode can run, and the steps or image panel for those modes.
+        """
         mode = self.target_mode_var.get()
-        state = tk.NORMAL if mode == "fixed" else tk.DISABLED
+        action_var = getattr(self, "action_var", None)
+        allowed = allowed_actions(mode)
+        for value, radio in getattr(self, "action_radios", {}).items():
+            radio.configure(state=tk.NORMAL if value in allowed else tk.DISABLED)
+        action = action_var.get() if action_var is not None else "click"
+        state = tk.NORMAL if uses_point(mode, action) else tk.DISABLED
         for widget in (self.x_entry, self.y_entry, self.pick_btn):
             widget.configure(state=state)
         for frame, shown in (
@@ -407,13 +478,23 @@ class AutoclickerApp(
 
     def _apply_action_state(self) -> None:
         """Enable the hold time only for Hold and the key only for Key."""
+        self._apply_entry_states()
+        if hasattr(self, "target_mode_var"):
+            self._apply_target_mode_state()  # Key has no point to click
+        self._refresh_target_summary()
+
+    def _apply_entry_states(self) -> None:
         action = self.action_var.get()
         self.hold_entry.configure(state=tk.NORMAL if action == "hold" else tk.DISABLED)
         self.key_entry.configure(state=tk.NORMAL if action == "key" else tk.DISABLED)
-        self._refresh_target_summary()
 
     def _on_target_mode_change(self) -> None:
         """Apply and remember the chosen target mode."""
+        if self.action_var.get() not in allowed_actions(self.target_mode_var.get()):
+            # Picked a mode that can't run the current action: fall back to Click.
+            # (Profiles and flags keep theirs, so Start can say what's wrong.)
+            self.action_var.set("click")
+            self._apply_entry_states()
         self._apply_target_mode_state()
         self.settings.set("target_mode", self.target_mode_var.get())
 
@@ -556,6 +637,7 @@ class AutoclickerApp(
                 self._set_status_message("Running...", "running")
                 self._shown_paused = None
                 self._hotkeys.set_running(True)
+                self._set_settings_locked(True)
                 self._refresh_target_summary()
                 self._start_status_timer()
 

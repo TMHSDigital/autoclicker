@@ -34,6 +34,7 @@ class CountdownMixin(AppBase):
         self.start_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
         self._hotkeys.set_running(True)  # Stop, Emergency and Toggle keys cancel it
+        self._set_settings_locked(True)
         self._countdown_tick(delay)
 
     def _countdown_tick(self, remaining: int) -> None:

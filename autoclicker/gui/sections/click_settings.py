@@ -71,26 +71,30 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.action_var = tk.StringVar(
         value=saved_action if saved_action in ("click", "hold", "key") else "click"
     )
+    app.action_radios = {}
     for text, value in (("Click", "click"), ("Hold", "hold")):
-        ttk.Radiobutton(
+        app.action_radios[value] = ttk.Radiobutton(
             action_frame,
             text=text,
             variable=app.action_var,
             value=value,
             command=app._apply_action_state,
-        ).pack(side=tk.LEFT, padx=(0, 6))
+        )
+        app.action_radios[value].pack(side=tk.LEFT, padx=(0, 6))
     app.hold_entry = ttk.Entry(action_frame, width=6)
     app.hold_entry.pack(side=tk.LEFT)
     app.hold_entry.insert(0, str(settings.get("hold_ms", "500")))
     ttk.Label(action_frame, text="ms").pack(side=tk.LEFT, padx=(3, 12))
-    ttk.Radiobutton(
+    app.action_radios["key"] = ttk.Radiobutton(
         action_frame,
         text="Key",
         variable=app.action_var,
         value="key",
         command=app._apply_action_state,
-    ).pack(side=tk.LEFT, padx=(0, 6))
+    )
+    app.action_radios["key"].pack(side=tk.LEFT, padx=(0, 6))
     app.key_entry = ttk.Entry(action_frame, width=10)
     app.key_entry.pack(side=tk.LEFT)
     app.key_entry.insert(0, str(settings.get("key", "")))
+    app.key_entry.bind("<KeyRelease>", lambda _e: app._refresh_target_summary(), add="+")
     app._apply_action_state()

@@ -163,6 +163,26 @@ def field_label(key: str) -> str:
     return FIELD_LABELS.get(key, key.replace("_", " ").capitalize())
 
 
+def allowed_actions(mode: str) -> tuple[str, ...]:
+    """What each click may do in a target mode. Validation and the form share it (#102)."""
+    if mode == "sequence":
+        return ("click",)
+    if mode == "image":
+        return ("click", "hold")
+    return ("click", "hold", "key")
+
+
+def uses_point(mode: str, action: str) -> bool:
+    """True when the run clicks the X/Y point: Fixed mode, unless it presses a key."""
+    return mode == "fixed" and action != "key"
+
+
+_ACTION_ERRORS = {
+    "sequence": "Sequences always click; choose Click",
+    "image": "Image targets click or hold; choose Click or Hold",
+}
+
+
 class SettingsManager:
     """Manages application settings with validation and persistence"""
 
@@ -561,7 +581,7 @@ class SettingsManager:
         if mode != "image":
             unused |= {"image_path", "image_region"}
         action = str(settings.get("action", "click")).strip()
-        if mode in ("cursor", "sequence", "image") or action == "key":
+        if not uses_point(mode, action):
             unused |= {"x_coord", "y_coord"}
         if action != "key":
             unused.add("key")
@@ -667,14 +687,12 @@ class SettingsManager:
                     )
             elif "image_region" not in errors:
                 errors["image_region"] = "Capture the image again"
-            if parsed.get("action") == "key":
-                errors["action"] = "Image targets click or hold; choose Click or Hold"
         margin = parsed.get("image_margin")
         if margin is not None and not 0 <= margin <= MAX_IMAGE_MARGIN:
             errors["image_margin"] = f"Must be between 0 and {MAX_IMAGE_MARGIN:,} px"
 
-        if parsed.get("action") in ("hold", "key") and mode == "sequence":
-            errors["action"] = "Sequences always click; choose Click"
+        if parsed.get("action", "click") not in allowed_actions(mode) and mode in _ACTION_ERRORS:
+            errors["action"] = _ACTION_ERRORS[mode]
         hold = parsed.get("hold_ms")
         if hold is not None and not 0 < hold <= MAX_HOLD_MS:
             errors["hold_ms"] = f"Must be between 1 and {MAX_HOLD_MS:,} ms"

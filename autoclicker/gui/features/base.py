@@ -47,6 +47,8 @@ class AppBase:
     button_var: tk.StringVar
     click_type_var: tk.StringVar
     action_var: tk.StringVar
+    # Click / Hold / Key radios, enabled per target mode (#102)
+    action_radios: dict[str, ttk.Radiobutton]
     hold_entry: ttk.Entry
     key_entry: ttk.Entry
     condition_var: tk.StringVar
@@ -97,6 +99,8 @@ class AppBase:
     _release_url: str | None = None
     # Active while recording a sequence (#86); the hook exists only then.
     _recorder: ClickRecorder | None = None
+    # Controls disabled while a run or countdown uses the settings (#102).
+    _locked_widgets: tuple[Any, ...] = ()
     # True while the Hotkeys dialog is open; global keys are released then (#93).
     _hotkeys_dialog_open: bool = False
     # Pause reason the status line currently shows; None while running normally.
@@ -117,6 +121,7 @@ class AppBase:
         def show_window(self) -> None: ...
         def start_clicking(self, confirmed: bool = False) -> None: ...
         def _start_blocked_reason(self) -> str | None: ...
+        def _set_settings_locked(self, locked: bool) -> None: ...
         def start_coordinate_picker(
             self, on_selected: Callable[[int, int], None] | None = None
         ) -> None: ...

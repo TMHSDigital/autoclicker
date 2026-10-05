@@ -272,3 +272,57 @@ class TestMouseWheel(unittest.TestCase):
         app._on_mousewheel(self._event(app, -120, cls="Listbox"))
         app._on_mousewheel(self._event(app, -120, cls="Text"))
         app.canvas.yview_scroll.assert_not_called()
+
+
+class _Widget:
+    """Minimal stand-in for a Tk widget in the settings frame."""
+
+    def __init__(self, cls, *children, disabled=False, style=""):
+        self.cls, self.children, self.disabled, self.style = cls, list(children), disabled, style
+
+    def winfo_class(self):
+        return self.cls
+
+    def winfo_children(self):
+        return self.children
+
+    def cget(self, key):
+        return self.style if key == "style" else ("disabled" if self.disabled else "normal")
+
+    def instate(self, spec):
+        return self.disabled
+
+    def state(self, spec):
+        self.disabled = spec == ["disabled"]
+
+
+class TestSettingsLock(unittest.TestCase):
+    """#102: the form is locked while a run or countdown uses it."""
+
+    def test_locks_enabled_controls_and_restores_exactly(self):
+        entry = _Widget("TEntry")
+        off_entry = _Widget("TEntry", disabled=True)
+        radio = _Widget("TRadiobutton")
+        header = _Widget("TButton", style="Toolbutton")
+        label = _Widget("TLabel")
+        app = _bare_app()
+        app.main_frame = _Widget(
+            "TFrame", _Widget("TFrame", entry, off_entry, label), radio, header
+        )
+        app._set_settings_locked(True)
+        self.assertTrue(entry.disabled and radio.disabled)
+        self.assertFalse(header.disabled)  # section headers stay usable
+        self.assertFalse(label.disabled)
+        app._set_settings_locked(True)  # idempotent
+        self.assertEqual(len(app._locked_widgets), 2)
+        app._set_settings_locked(False)
+        self.assertFalse(entry.disabled or radio.disabled)
+        self.assertTrue(off_entry.disabled)  # was off before the lock; stays off
+
+    def test_stop_unlocks(self):
+        app = _bare_app()
+        entry = _Widget("TEntry")
+        app.main_frame = _Widget("TFrame", entry)
+        app._set_settings_locked(True)
+        app._paint_stopped("Stopped")
+        self.assertFalse(entry.disabled)

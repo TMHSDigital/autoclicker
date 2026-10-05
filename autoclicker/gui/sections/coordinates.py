@@ -61,6 +61,9 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
     app.y_entry = ttk.Entry(coord_frame, width=8)
     app.y_entry.grid(row=1, column=3, padx=(0, 15), sticky=(tk.W, tk.E))
     app.y_entry.insert(0, str(settings.get("y_coord", "100")))
+    # Keep the status bar's "Target:" line in step with what is typed (#102).
+    for entry in (app.x_entry, app.y_entry):
+        entry.bind("<KeyRelease>", lambda _e: app._refresh_target_summary(), add="+")
 
     app.pick_btn = ttk.Button(
         coord_frame,

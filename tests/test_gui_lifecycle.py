@@ -750,6 +750,32 @@ class TestActionUi(GuiHarness):
         log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log").read_text("utf-8")
         self.assertIn("target=key:f5", log)
 
+    def test_key_has_no_point_to_click(self):
+        """#102: X/Y are off for Key even in Fixed mode."""
+        app = self.app
+        self.assertEqual(app.x_entry.cget("state"), "normal")
+        app.action_var.set("key")
+        app._apply_action_state()
+        self.assertEqual(app.x_entry.cget("state"), "disabled")
+
+    def test_switching_to_a_mode_that_cannot_run_the_action_falls_back_to_click(self):
+        app = self.app
+        app.action_var.set("key")
+        app._apply_action_state()
+        app.target_mode_var.set("sequence")
+        app._on_target_mode_change()
+        self.assertEqual(app.action_var.get(), "click")
+        self.assertEqual(app.key_entry.cget("state"), "disabled")
+
+    def test_a_profile_keeps_its_action_so_start_can_explain(self):
+        app = self.app
+        app.apply_form_values({"target_mode": "image", "action": "key", "key": "f5"})
+        self.assertEqual(app.action_var.get(), "key")
+        app.start_clicking()
+        self.assertFalse(app.click_engine.is_running)
+        _title, message = self.messagebox.showerror.call_args.args
+        self.assertIn("Image targets click or hold", message)
+
 
 class TestKeyTargetSummary(GuiHarness):
     def test_key_action_names_the_focused_window(self):

@@ -15,7 +15,7 @@ from ..core.image_match import DEFAULT_MARGIN, ImageTarget, open_template, searc
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
-from ..core.settings_manager import SettingsManager
+from ..core.settings_manager import SettingsManager, uses_point
 from ..utils.profiles import PresetManager
 
 _log = logging.getLogger(__name__)
@@ -211,7 +211,7 @@ class AutoclickerController:
 
         mode = sanitized.get("target_mode", "fixed")
         action = sanitized.get("action", "click")
-        has_point = mode == "fixed" and action != "key"
+        has_point = uses_point(mode, action)
         x = sanitized["x_coord"] if has_point else None
         y = sanitized["y_coord"] if has_point else None
         steps = (

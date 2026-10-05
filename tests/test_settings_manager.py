@@ -440,3 +440,24 @@ class TestUnreadableSettingsFile(unittest.TestCase):
         self._write('{"presets": {"ok": {"x": 5, "y": 6}, "bad": {"x": "a"}, "worse": 7}}')
         manager = SettingsManager(self.path)
         self.assertEqual(manager.get("presets"), {"ok": {"x": 5, "y": 6}})
+
+
+class TestModeRules(unittest.TestCase):
+    """#102: one definition of which actions and fields each target mode uses."""
+
+    def test_allowed_actions(self):
+        from autoclicker.core.settings_manager import allowed_actions
+
+        self.assertEqual(allowed_actions("fixed"), ("click", "hold", "key"))
+        self.assertEqual(allowed_actions("cursor"), ("click", "hold", "key"))
+        self.assertEqual(allowed_actions("image"), ("click", "hold"))
+        self.assertEqual(allowed_actions("sequence"), ("click",))
+
+    def test_uses_point(self):
+        from autoclicker.core.settings_manager import uses_point
+
+        self.assertTrue(uses_point("fixed", "click"))
+        self.assertTrue(uses_point("fixed", "hold"))
+        self.assertFalse(uses_point("fixed", "key"))
+        for mode in ("cursor", "sequence", "image"):
+            self.assertFalse(uses_point(mode, "click"))
