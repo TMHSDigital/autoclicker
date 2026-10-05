@@ -174,10 +174,20 @@ class TestRealClicks(RealInputCase):
 
 class TestRealPixel(RealInputCase):
     def test_pixel_condition_reads_the_window_color(self):
+        import pyautogui
+
         from autoclicker.core.click_engine import PixelCondition
 
         target = Target(self.root, 200, 200)
         rgb = (0x33, 0x66, 0xCC)
+        for _ in range(20):  # let the window paint
+            self.root.update()
+            time.sleep(0.02)
+        seen = tuple(pyautogui.pixel(target.cx + 60, target.cy))[:3]
+        self.assertTrue(
+            all(abs(a - b) <= 8 for a, b in zip(seen, rgb, strict=True)),
+            f"screen pixel is {seen}, window color is {rgb}",
+        )
         condition = PixelCondition(target.cx + 60, target.cy, rgb, tolerance=8, on_mismatch="stop")
         outcome = self.run_engine(x=target.cx, y=target.cy, max_clicks=2, condition=condition)
         self.assertEqual(outcome.message, "Done: reached 2 clicks")
