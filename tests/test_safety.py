@@ -242,3 +242,41 @@ class TestRunawayGuardCounting(unittest.TestCase):
             for _ in range(MAX_CPS_CEILING + 1):
                 engine._recent_click_ts.append(1.5)
             self.assertTrue(engine._check_runaway_cps())
+
+
+class TestOwnWindowAtStart(unittest.TestCase):
+    """#81: started from our own button, the first click may bring the target forward."""
+
+    OWN, TARGET = 1, 200
+
+    def _engine(self, point_target=True):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.pause_when_unfocused = True
+        engine._foreground_hwnd = self.TARGET
+        engine._point_target = point_target
+        return engine
+
+    def _check(self, engine, current):
+        with (
+            patch(
+                "autoclicker.core.click_engine.get_foreground_window_handle", return_value=current
+            ),
+            patch(
+                "autoclicker.core.click_engine.is_own_window", side_effect=lambda h: h == self.OWN
+            ),
+            patch(
+                "autoclicker.core.click_engine.is_foreground_window",
+                side_effect=lambda h: h == current,
+            ),
+        ):
+            return engine._should_pause_for_foreground()
+
+    def test_own_window_allowed_until_target_seen(self):
+        engine = self._engine()
+        self.assertFalse(self._check(engine, self.OWN))  # first click activates the target
+        self.assertFalse(self._check(engine, self.TARGET))
+        self.assertTrue(self._check(engine, self.OWN))  # user switched back to us: pause
+
+    def test_cursor_mode_never_allows_own_window(self):
+        engine = self._engine(point_target=False)
+        self.assertTrue(self._check(engine, self.OWN))

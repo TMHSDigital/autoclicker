@@ -168,6 +168,10 @@ class ClickEngine:
         # Window that must stay in front while pause_when_unfocused is on.
         # None during a run means "adopt the next window in front that isn't ours".
         self._foreground_hwnd: int | None = None
+        # Sequence mode: windows under the step points, any of which may be in front.
+        self._step_hwnds: frozenset[int] = frozenset()
+        self._point_target = False  # the run clicks known points (fixed or sequence)
+        self._target_seen = False  # a target window has been in front during this run
         self.is_paused = False
         self.pause_reason = ""  # what a paused run waits for (PAUSE_FOCUS / PAUSE_PIXEL)
         self._condition: PixelCondition | None = None
@@ -279,8 +283,13 @@ class ClickEngine:
             if self._steps:
                 x, y = self._steps[0].x, self._steps[0].y
             self._foreground_hwnd = self._pick_focus_window(hwnd, x, y)
+            # A sequence may click into several windows; any of them counts as in front.
+            self._step_hwnds = self._windows_under_steps()
+            self._point_target = x is not None and y is not None and self._action != "key"
+            self._target_seen = False
         else:
             self._foreground_hwnd = None
+            self._step_hwnds = frozenset()
         self.is_paused = False
 
         # Reset state
@@ -475,18 +484,54 @@ class ClickEngine:
                 return under
         return None
 
+    def _own_window_ok(self) -> bool:
+        """True while our own window may be in front without pausing.
+
+        Started from the Start button, the autoclicker itself is in front, and
+        the run's first click is what activates the target. That is allowed for
+        a fixed point or a sequence (whose points were checked to be on other
+        windows) until a target window has been in front once; after that, the
+        user switching to the autoclicker pauses as usual. Never in cursor mode,
+        where the cursor may be over our own buttons.
+        """
+        if self._target_seen or not self._point_target:
+            return False
+        current = get_foreground_window_handle()
+        return current is not None and is_own_window(current)
+
+    def _windows_under_steps(self) -> frozenset[int]:
+        """Top-level windows (not ours) under the sequence's step points."""
+        windows = set()
+        for step in self._steps:
+            hwnd = root_window_at(step.x, step.y)
+            if hwnd is not None and not is_own_window(hwnd):
+                windows.add(hwnd)
+        return frozenset(windows)
+
     def _should_pause_for_foreground(self) -> bool:
         if not self.pause_when_unfocused:
             self.is_paused = False
             return False
-        if self._foreground_hwnd is None:
+        if self._step_hwnds:
+            # Sequence mode: in front means any window a step clicks into.
+            allowed = set(self._step_hwnds)
+            if self._foreground_hwnd is not None:
+                allowed.add(self._foreground_hwnd)
             current = get_foreground_window_handle()
-            if current is not None and not is_own_window(current):
-                self._foreground_hwnd = current
-        if self._foreground_hwnd is None:
-            paused = True  # still waiting for a target window (fail closed)
+            paused = current is None or current not in allowed  # fail closed
         else:
-            paused = not is_foreground_window(self._foreground_hwnd)
+            if self._foreground_hwnd is None:
+                current = get_foreground_window_handle()
+                if current is not None and not is_own_window(current):
+                    self._foreground_hwnd = current
+            if self._foreground_hwnd is None:
+                paused = True  # still waiting for a target window (fail closed)
+            else:
+                paused = not is_foreground_window(self._foreground_hwnd)
+        if paused and self._own_window_ok():
+            paused = False  # the first click brings the target window forward
+        elif not paused:
+            self._target_seen = True
         self.is_paused = paused
         if paused:
             self.pause_reason = PAUSE_FOCUS

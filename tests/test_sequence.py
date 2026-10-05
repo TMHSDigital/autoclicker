@@ -193,3 +193,67 @@ class TestSequenceValidation(unittest.TestCase):
         result = self.settings.validate_all_settings(raw, 1920, 1080)
         self.assertTrue(result["valid"], result["errors"])
         self.assertNotIn("sequence", result["sanitized_settings"])
+
+
+class TestSequenceFocus(unittest.TestCase):
+    """#81: a sequence spanning two windows keeps running with Pause when unfocused."""
+
+    OWN, WIN_A, WIN_B, OTHER = 1, 100, 200, 300
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_any_step_window_counts_as_in_front(self, m):
+        _mock(m)
+        windows = {(10, 10): self.WIN_A, (20, 20): self.WIN_B}
+        foreground = [self.OWN]  # started from our own Start button
+
+        def click(**kwargs):
+            # Clicking a step activates the window under it
+            foreground[0] = windows[(kwargs["x"], kwargs["y"])]
+
+        m.click.side_effect = click
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.configure_safety(failsafe=False, max_cps=0, pause_when_unfocused=True)
+        done = threading.Event()
+        outcomes = []
+        with (
+            patch(
+                "autoclicker.core.click_engine.is_own_window", side_effect=lambda h: h == self.OWN
+            ),
+            patch(
+                "autoclicker.core.click_engine.root_window_at",
+                side_effect=lambda x, y: windows.get((x, y)),
+            ),
+            patch(
+                "autoclicker.core.click_engine.get_foreground_window_handle",
+                side_effect=lambda: foreground[0],
+            ),
+        ):
+            engine.start_clicking(
+                None, None, 0, 0, 1, 0, 0, 0, "left", "single",
+                lambda o: (outcomes.append(o), done.set()),
+                steps=[ClickStep(10, 10), ClickStep(20, 20)],
+                repeat=3,
+            )  # fmt: skip
+            self.assertTrue(done.wait(3))
+        self.assertEqual(outcomes[0].message, "Done: ran the sequence 3 times")
+        self.assertEqual(m.click.call_count, 6)
+
+    def test_unrelated_window_pauses(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.pause_when_unfocused = True
+        engine._step_hwnds = frozenset({self.WIN_A, self.WIN_B})
+        engine._foreground_hwnd = self.WIN_A
+        for current, paused in (
+            (self.WIN_A, False),
+            (self.WIN_B, False),
+            (self.OTHER, True),
+            (None, True),
+        ):
+            with (
+                self.subTest(current=current),
+                patch(
+                    "autoclicker.core.click_engine.get_foreground_window_handle",
+                    return_value=current,
+                ),
+            ):
+                self.assertEqual(engine._should_pause_for_foreground(), paused)

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Pause when unfocused: a sequence whose steps click into different windows no longer pauses for good after the first switch; any step's window counts as in front. A run started from the Start button no longer waits for you to activate the target window yourself: the first click brings it forward (#81).
+
 ## [1.5.0] - 2026-10-04
 
 ### Added
