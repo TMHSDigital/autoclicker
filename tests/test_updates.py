@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from autoclicker.core import updates
-from autoclicker.core.updates import Release, check_due, is_newer, newer_release
+from autoclicker.core.updates import RELEASES_PAGE, Release, check_due, is_newer
 
 
 class TestVersions(unittest.TestCase):
@@ -25,12 +25,6 @@ class TestVersions(unittest.TestCase):
         self.assertTrue(check_due(now - 25 * 3600, now))
         self.assertTrue(check_due(now + 3600, now))  # clock moved back: check again
 
-    def test_newer_release(self):
-        found = Release("9.0.0", "https://example.invalid/r")
-        self.assertEqual(newer_release("1.0.0", lambda: found), found)
-        self.assertIsNone(newer_release("9.0.0", lambda: found))
-        self.assertIsNone(newer_release("1.0.0", lambda: None))
-
 
 class TestFetch(unittest.TestCase):
     def _response(self, payload):
@@ -40,10 +34,29 @@ class TestFetch(unittest.TestCase):
         return response
 
     def test_reads_tag_and_page(self):
-        payload = {"tag_name": "v1.6.0", "html_url": "https://github.com/x/releases/tag/v1.6.0"}
+        payload = {
+            "tag_name": "v1.6.0",
+            "html_url": "https://github.com/TMHSDigital/autoclicker/releases/tag/v1.6.0",
+        }
         with patch.object(updates.urllib.request, "urlopen", return_value=self._response(payload)):
             release = updates.fetch_latest_release()
         self.assertEqual(release, Release("1.6.0", payload["html_url"]))
+
+    def test_only_this_repositorys_release_pages_are_opened(self):
+        for url in (
+            "file:///C:/Windows/System32/calc.exe",
+            "https://github.com/someone-else/autoclicker/releases/tag/v9.9.9",
+            "https://example.invalid/TMHSDigital/autoclicker/releases/",
+            None,
+            42,
+        ):
+            with self.subTest(url=url):
+                payload = {"tag_name": "v9.9.9", "html_url": url}
+                with patch.object(
+                    updates.urllib.request, "urlopen", return_value=self._response(payload)
+                ):
+                    release = updates.fetch_latest_release()
+                self.assertEqual(release, Release("9.9.9", RELEASES_PAGE))
 
     def test_failures_are_quiet(self):
         with patch.object(updates.urllib.request, "urlopen", side_effect=OSError("offline")):
@@ -92,26 +105,43 @@ class TestGuiUpdateCheck(unittest.TestCase):
 
     @patch("autoclicker.gui.features.updates.threading.Thread")
     @patch("autoclicker.gui.dialogs.messagebox")
-    def test_on_checks_at_most_daily_and_never_while_clicking(self, _messagebox, thread):
-        app = _app(True)
+    def test_on_checks_at_most_daily_and_never_while_clicking(self, messagebox, thread):
+        app = _app(None)
         app.click_engine.is_running = True
         app._maybe_check_for_updates()
         thread.assert_not_called()
+        messagebox.askyesno.assert_not_called()  # no dialog over a run (#103)
+        _delay, retry = app.root.after.call_args.args
+        self.assertEqual(retry, app._maybe_check_for_updates)
+        app.stored["check_for_updates"] = True
         app.click_engine.is_running = False
         app._maybe_check_for_updates()
         thread.assert_called_once()
+        self._finish_check(app, Release("1.0.0", RELEASES_PAGE))
         app._maybe_check_for_updates()  # just checked
         thread.assert_called_once()
 
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    def test_failed_check_is_retried_next_launch(self, thread):
+        """#103: starting offline must not skip a day."""
+        app = _app(True)
+        self._finish_check(app, None)
+        self.assertEqual(app.stored["last_update_check"], 0)
+        app._maybe_check_for_updates()
+        thread.assert_called_once()
+
+    @staticmethod
+    def _finish_check(app, release):
+        app.root.after.reset_mock()
+        with patch("autoclicker.gui.features.updates.fetch_latest_release", return_value=release):
+            app._check_for_updates()
+        for call in app.root.after.call_args_list:
+            _delay, callback, *args = call.args
+            callback(*args)
+
     def test_newer_version_shows_the_button(self):
         app = _app(True)
-        with patch(
-            "autoclicker.gui.features.updates.newer_release",
-            return_value=Release("9.9.9", "https://example.invalid/r"),
-        ):
-            app._check_for_updates()
-        _delay, callback = app.root.after.call_args.args
-        callback()
+        self._finish_check(app, Release("9.9.9", "https://example.invalid/r"))
         app.update_button.grid.assert_called_once()
         self.assertIn("9.9.9", app.update_button.configure.call_args.kwargs["text"])
         with patch("autoclicker.gui.features.updates.webbrowser.open") as open_:

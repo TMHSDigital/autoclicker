@@ -216,10 +216,29 @@ class AutoclickerApp(
         build_disclaimer_section(self, bottom)
 
     def _on_mousewheel(self, event) -> None:
-        """Scroll the canvas with the mouse wheel when content overflows."""
+        """Scroll the canvas with the mouse wheel when content overflows.
+
+        Only for widgets in the main window that don't scroll themselves (#103):
+        dialogs and lists keep their own wheel. Precision touchpads send deltas
+        smaller than one notch; they add up instead of rounding to nothing.
+        """
+        widget = getattr(event, "widget", None)
+        try:
+            if widget is not None and (
+                widget.winfo_toplevel() is not self.root
+                or widget.winfo_class() in ("Listbox", "Text", "TCombobox")
+            ):
+                return
+        except (AttributeError, tk.TclError):
+            return
         bbox = self.canvas.bbox("all")
-        if bbox and bbox[3] > self.canvas.winfo_height():
-            self.canvas.yview_scroll(int(-event.delta / 120), "units")
+        if not (bbox and bbox[3] > self.canvas.winfo_height()):
+            return
+        self._wheel_delta = getattr(self, "_wheel_delta", 0) - event.delta
+        steps = int(self._wheel_delta / 120)
+        if steps:
+            self._wheel_delta -= steps * 120
+            self.canvas.yview_scroll(steps, "units")
 
     def _ui(self, fn: Callable, *args) -> None:
         """Marshal a callback onto the Tk main thread."""
@@ -562,6 +581,8 @@ class AutoclickerApp(
                 return
         if self._finish_recording() or self._cancel_countdown():
             return
+        if not self.click_engine.is_running:
+            return  # nothing to stop; don't paint a red error (#103)
         self.controller.emergency_stop()
         self._paint_stopped("Emergency stop", "error")
 

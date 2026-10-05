@@ -217,6 +217,13 @@ class TestRunLifecycle(GuiHarness):
         _settle(app)
         self.assertEqual(app.status_var.get(), "Emergency stop")
 
+    def test_emergency_stop_when_idle_paints_no_error(self):
+        """#103: nothing was running, so there is nothing to report in red."""
+        app = self.app
+        app._set_status_message("Hotkeys saved")
+        app.emergency_stop()
+        self.assertEqual(app.status_var.get(), "Hotkeys saved")
+
     def test_emergency_stop_with_picker_open_still_stops_the_run(self):
         """#95: cancelling the picker must not swallow the emergency stop."""
         app = self.app
@@ -838,9 +845,34 @@ class TestRecordingUi(GuiHarness):
         ]
         app.toggle_sequence_recording()
         self.feed((100, 100, 0.0))
-        self.messagebox.askyesno.return_value = False  # keep, append
+        self.messagebox.askyesnocancel.return_value = False  # keep, append
         app.toggle_sequence_recording()
         self.assertEqual([s["x"] for s in app.sequence_steps], [1, 100])
+
+    def test_recording_can_be_discarded(self):
+        """#103: Cancel throws the recording away instead of appending it."""
+        app = self.app
+        app.sequence_steps = [
+            {"x": 1, "y": 1, "button": "left", "click_type": "single", "delay_ms": 0}
+        ]
+        app.toggle_sequence_recording()
+        self.feed((100, 100, 0.0))
+        self.messagebox.askyesnocancel.return_value = None
+        app.toggle_sequence_recording()
+        self.assertEqual([s["x"] for s in app.sequence_steps], [1])
+        self.assertEqual(app.status_var.get(), "Recording discarded")
+
+    def test_truncation_is_reported(self):
+        from autoclicker.core.settings_manager import MAX_SEQUENCE_STEPS
+
+        app = self.app
+        app.toggle_sequence_recording()
+        self.feed(*[(10 + i * 10, 100, i * 1.0) for i in range(MAX_SEQUENCE_STEPS + 3)])
+        app.toggle_sequence_recording()
+        self.assertEqual(len(app.sequence_steps), MAX_SEQUENCE_STEPS)
+        self.assertIn(
+            f"Kept {MAX_SEQUENCE_STEPS} of {MAX_SEQUENCE_STEPS + 3}", app.status_var.get()
+        )
 
     def test_no_clicks_and_start_blocked_while_recording(self):
         app = self.app

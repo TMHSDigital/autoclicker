@@ -237,3 +237,38 @@ class TestThemeToggle(unittest.TestCase):
             app.toggle_theme()
         apply.assert_called_once_with("dark", app.root)
         app.settings.set.assert_called_with("theme", "dark")
+
+
+class TestMouseWheel(unittest.TestCase):
+    """#103: the settings canvas scrolls only for its own widgets, touchpads add up."""
+
+    def _app(self):
+        app = _bare_app()
+        app.canvas = MagicMock()
+        app.canvas.bbox.return_value = (0, 0, 400, 2000)
+        app.canvas.winfo_height.return_value = 500
+        return app
+
+    def _event(self, app, delta, toplevel=None, cls="TLabel"):
+        widget = MagicMock()
+        widget.winfo_toplevel.return_value = toplevel if toplevel is not None else app.root
+        widget.winfo_class.return_value = cls
+        return MagicMock(widget=widget, delta=delta)
+
+    def test_notch_scrolls(self):
+        app = self._app()
+        app._on_mousewheel(self._event(app, -120))
+        app.canvas.yview_scroll.assert_called_once_with(1, "units")
+
+    def test_touchpad_deltas_accumulate(self):
+        app = self._app()
+        for _ in range(3):
+            app._on_mousewheel(self._event(app, 40))
+        app.canvas.yview_scroll.assert_called_once_with(-1, "units")
+
+    def test_dialogs_and_lists_keep_their_wheel(self):
+        app = self._app()
+        app._on_mousewheel(self._event(app, -120, toplevel=MagicMock()))
+        app._on_mousewheel(self._event(app, -120, cls="Listbox"))
+        app._on_mousewheel(self._event(app, -120, cls="Text"))
+        app.canvas.yview_scroll.assert_not_called()

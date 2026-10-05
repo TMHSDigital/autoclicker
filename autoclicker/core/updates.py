@@ -14,7 +14,6 @@ import logging
 import re
 import time
 import urllib.request
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -23,6 +22,8 @@ _log = logging.getLogger(__name__)
 REPOSITORY = "TMHSDigital/autoclicker"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPOSITORY}/releases/latest"
+# The Update button only ever opens one of this repository's release pages.
+_RELEASE_PAGE_PREFIX = f"https://github.com/{REPOSITORY}/releases/"
 CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 
 _VERSION = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
@@ -74,14 +75,7 @@ def fetch_latest_release(timeout: float = 5.0) -> Release | None:
     tag = str(data.get("tag_name", ""))
     if parse_version(tag) is None:
         return None
-    return Release(version=tag.lstrip("v"), url=str(data.get("html_url") or RELEASES_PAGE))
-
-
-def newer_release(
-    current: str, fetch: Callable[[], Release | None] = fetch_latest_release
-) -> Release | None:
-    """The latest release if it is newer than ``current``."""
-    release = fetch()
-    if release is not None and is_newer(release.version, current):
-        return release
-    return None
+    url = data.get("html_url")
+    if not isinstance(url, str) or not url.startswith(_RELEASE_PAGE_PREFIX):
+        url = RELEASES_PAGE
+    return Release(version=tag.lstrip("v"), url=url)

@@ -51,15 +51,29 @@ class RecordingMixin(AppBase):
         if not steps:
             self._set_status_message("Recording ended with no clicks", "alert")
             return True
-        if self.sequence_steps and not dialogs.messagebox.askyesno(
-            "Recorded sequence",
-            f"Replace the current {len(self.sequence_steps)} steps with the "
-            f"{len(steps)} recorded ones?\n\nNo adds them after the current steps.",
-        ):
-            steps = self.sequence_steps + steps
+        if self.sequence_steps:
+            replace = dialogs.messagebox.askyesnocancel(
+                "Recorded sequence",
+                f"Replace the current {len(self.sequence_steps)} steps with the "
+                f"{len(steps)} recorded ones?\n\nYes replaces them, No adds the recording "
+                "after them, Cancel discards the recording.",
+            )
+            if replace is None:
+                self._set_status_message("Recording discarded", "alert")
+                return True
+            if not replace:
+                steps = self.sequence_steps + steps
+        recorded = len(steps)
         self.sequence_steps = steps[:MAX_SEQUENCE_STEPS]
         self.target_mode_var.set("sequence")
         self._apply_target_mode_state()
         self._sequence_changed(select=0)
-        self._set_status_message(f"Recorded {len(self.sequence_steps)} steps", "alert")
+        kept = len(self.sequence_steps)
+        if kept < recorded:
+            self._set_status_message(
+                f"Kept {kept} of {recorded} steps (a sequence holds up to {MAX_SEQUENCE_STEPS})",
+                "alert",
+            )
+        else:
+            self._set_status_message(f"Recorded {kept} steps", "alert")
         return True
