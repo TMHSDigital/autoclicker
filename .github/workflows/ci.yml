@@ -182,7 +182,8 @@ jobs:
 
   release:
     runs-on: windows-2025
-    needs: [test, build]
+    # real-input is the only job that drives actual input; it gates releases too (#106).
+    needs: [test, real-input, build]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
