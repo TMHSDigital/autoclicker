@@ -137,7 +137,7 @@ class ProfilesMixin(AppBase):
         if isinstance(values.get("sequence"), list):
             self.sequence_steps = [dict(step) for step in values["sequence"]]
             self._refresh_sequence_list()
-        if values.get("target_mode") in ("fixed", "cursor", "sequence"):
+        if values.get("target_mode") in ("fixed", "cursor", "sequence", "image"):
             self.target_mode_var.set(values["target_mode"])
             self._apply_target_mode_state()
         self._refresh_target_summary()

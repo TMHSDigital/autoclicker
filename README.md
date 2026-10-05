@@ -41,6 +41,7 @@ built around safety stops that are on by default.
 [Features](#features) ·
 [How timing works](#how-timing-works) ·
 [Sequences](#sequences) ·
+[Image targets](#image-targets) ·
 [Command line](#command-line) ·
 [Hotkeys](#hotkeys) ·
 [Safety](#safety) ·
@@ -58,7 +59,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
+      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order, or wherever a captured <b>image</b> appears. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -171,6 +172,15 @@ Choose **Sequence** under Target to click several points in order, for example *
 
 Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles. Recording only notes where you click and when, never keystrokes, and uses a mouse hook that exists only while recording.
 
+## Image targets
+
+Choose **Image** under Target to click a button wherever it shows up, even after its window moves.
+
+1. Press **Capture...** and drag a rectangle around the button. The app saves that image and searches for it within **Search** px around the spot (150 by default).
+2. Start as usual. Each click goes to the center of the image where it was last found; while it isn't on screen the run waits and the status bar says so.
+
+Matching is exact, so recapture if the button changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Every stop path, limit and the runaway guard work as usual.
+
 ## Command line
 
 Flags override your saved settings for one launch: they fill in the window, and `--start` presses Start for you (with the usual countdown). Handy for desktop shortcuts, Task Scheduler or a macro pad.
@@ -266,7 +276,9 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | Key | Default | Meaning |
 | :-- | :-: | :-- |
-| `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is; `"sequence"` clicks the steps in `sequence` |
+| `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is; `"sequence"` clicks the steps in `sequence`; `"image"` clicks wherever the captured image appears |
+| `image_path`, `image_region` | `""`, `[]` | Image mode: the captured PNG (saved under `%APPDATA%\WindowsAutoclicker\images\`) and the `[left, top, width, height]` area searched for it |
+| `image_margin` | `150` | Pixels around a new capture to search, 0 to 2 000 |
 | `sequence` | `[]` | Steps for sequence mode: `[{"x": 800, "y": 600, "button": "left", "click_type": "single", "delay_ms": 500}, ...]`; `delay_ms` is the wait before the next step |
 | `sequence_repeat` | `0` | Rounds to run in sequence mode; `0` = until stopped |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |

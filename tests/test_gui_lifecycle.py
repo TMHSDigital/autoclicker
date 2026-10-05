@@ -802,3 +802,53 @@ class TestRecordingUi(GuiHarness):
         self.recorder_cls.return_value.start.return_value = False
         self.app.toggle_sequence_recording()
         self.assertIn("Could not start recording", self.app.status_var.get())
+
+
+class TestImageUi(GuiHarness):
+    """#87: capture an image, then a run clicks wherever it is found."""
+
+    def test_capture_then_run(self):
+        from PIL import Image
+
+        from autoclicker.core.screen import ScreenBounds
+
+        app = self.app
+        picker = self.picker_cls.return_value
+        picker.start_selecting_area.return_value = True
+        app.capture_image()
+        on_selected = picker.start_selecting_area.call_args.kwargs["on_selected"]
+        with patch.object(app.root, "after") as after:
+            on_selected(ScreenBounds(500, 400, 40, 20))
+        _delay, grab_later, area = after.call_args.args
+        with (
+            patch(
+                "autoclicker.gui.features.image.grab",
+                return_value=Image.new("RGB", (40, 20), (9, 9, 9)),
+            ),
+            patch(
+                "autoclicker.gui.features.image.virtual_screen_bounds",
+                return_value=ScreenBounds(0, 0, 1920, 1080),
+            ),
+        ):
+            grab_later(area)
+        self.assertEqual(app.target_mode_var.get(), "image")
+        self.assertEqual(app.image_region, [350, 250, 340, 320])  # 150 px margin
+        self.assertTrue(Path(app.image_path).is_file())
+        self.assertIn("Searching 340x320", app.image_info_var.get())
+        self.assertEqual(app.coord_var.get(), "Target: wherever the captured image appears")
+
+        self.set_fields(interval="0")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="2")
+        with patch("autoclicker.core.image_match.ImageTarget.locate", return_value=(520, 410)):
+            app.start_clicking()
+            _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
+        self.pyautogui.click.assert_called_with(x=520, y=410, button="left", clicks=1)
+
+    def test_run_without_capture_is_reported(self):
+        app = self.app
+        app.target_mode_var.set("image")
+        app.start_clicking()
+        _title, message = self.messagebox.showerror.call_args.args
+        self.assertIn("Capture an image first", message)

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Image target mode: press Capture and drag a rectangle around a button; each click then goes wherever that image is found nearby (searched within a margin around the capture), and the run waits while it isn't on screen. Matching is exact and needs no extra dependencies (#87).
+
+### Fixed
+
+- Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
+
 ## [1.6.0] - 2026-10-05
 
 ### Added

@@ -81,6 +81,12 @@ class AppBase:
     theme_button: ttk.Button
     bottom_frame: ttk.Frame
     sequence_frame: ttk.Frame
+    image_frame: ttk.Frame
+    image_info_var: tk.StringVar
+    image_margin_entry: ttk.Entry
+    # Image target mode: the captured PNG and the area searched for it
+    image_path: str
+    image_region: list[int]
     sequence_list: tk.Listbox
     sequence_repeat_entry: ttk.Entry
     # Steps of the sequence target mode: {"x", "y", "button", "click_type", "delay_ms"}
@@ -118,3 +124,5 @@ class AppBase:
         def _cancel_countdown(self, message: str | None = ...) -> bool: ...
         def _finish_recording(self) -> bool: ...
         def show_info(self) -> None: ...
+        def _on_coordinate_picker_cancelled(self) -> None: ...
+        def _refresh_image_label(self) -> None: ...

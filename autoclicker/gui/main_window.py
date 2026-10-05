@@ -34,6 +34,7 @@ from . import dialogs
 from .features import (
     ConditionMixin,
     CountdownMixin,
+    ImageMixin,
     InfoMixin,
     ProfilesMixin,
     RecordingMixin,
@@ -58,6 +59,7 @@ _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "er
 
 
 class AutoclickerApp(
+    ImageMixin,
     SequenceMixin,
     RecordingMixin,
     ConditionMixin,
@@ -328,12 +330,16 @@ class AutoclickerApp(
         state = tk.NORMAL if mode == "fixed" else tk.DISABLED
         for widget in (self.x_entry, self.y_entry, self.pick_btn):
             widget.configure(state=state)
-        frame = getattr(self, "sequence_frame", None)
-        if frame is not None:
-            if mode == "sequence":
-                frame.grid()
-            else:
-                frame.grid_remove()
+        for frame, shown in (
+            (getattr(self, "sequence_frame", None), mode == "sequence"),
+            (getattr(self, "image_frame", None), mode == "image"),
+        ):
+            if frame is not None:
+                if shown:
+                    frame.grid()
+                else:
+                    frame.grid_remove()
+        if hasattr(self, "sequence_frame"):
             self._refresh_target_summary()
 
     def _target_summary(self) -> str:
@@ -345,6 +351,8 @@ class AutoclickerApp(
                 return f"Target: the focused window (press {key})"
         if mode == "cursor":
             return "Target: current cursor position"
+        if mode == "image":
+            return "Target: wherever the captured image appears"
         if mode == "sequence":
             count = len(self.sequence_steps)
             return f"Target: sequence of {count} point{'s' * (count != 1)}"
@@ -432,6 +440,9 @@ class AutoclickerApp(
                 "start_delay_seconds": self.start_delay_entry.get(),
                 "sequence": [dict(step) for step in self.sequence_steps],
                 "sequence_repeat": self.sequence_repeat_entry.get(),
+                "image_path": self.image_path,
+                "image_region": list(self.image_region),
+                "image_margin": self.image_margin_entry.get(),
                 "action": self.action_var.get(),
                 "hold_ms": self.hold_entry.get(),
                 "key": self.key_entry.get(),

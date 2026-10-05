@@ -21,6 +21,7 @@ from .exceptions import (
     SafetyError,
     create_user_friendly_error,
 )
+from .image_match import ImageTarget
 from .safety import (
     apply_failsafe,
     get_foreground_window_handle,
@@ -102,6 +103,9 @@ _CONDITION_POLL_SECONDS = 0.05
 _CONDITION_WAIT_SECONDS = 0.02
 PAUSE_FOCUS = "the target window to be in front"
 PAUSE_PIXEL = "the watched pixel to match"
+PAUSE_IMAGE = "the captured image to appear"
+# How often an image target is searched for, on its own thread.
+_IMAGE_POLL_SECONDS = 0.1
 
 
 @dataclass
@@ -179,6 +183,9 @@ class ClickEngine:
         self._condition: PixelCondition | None = None
         # Latest pixel reading for this run: True/False, or None before the first read.
         self._condition_state: bool | None = None
+        # Image target mode: where the captured image was last found (None = not found).
+        self._image: ImageTarget | None = None
+        self._image_pos: tuple[int, int] | None = None
         self._run_id = 0  # lets a stale pixel watcher from an earlier run notice and exit
         self._safety_fired = False
         # Sequence mode: the steps of one round and how many rounds to run
@@ -234,6 +241,7 @@ class ClickEngine:
         hold_ms: float = 0.0,
         key: str = "",
         condition: PixelCondition | None = None,
+        image: ImageTarget | None = None,
     ) -> bool:
         """
         Start the clicking process
@@ -259,6 +267,9 @@ class ClickEngine:
                 release; released on every stop path) or "key" (press ``key``,
                 such as "f5" or "ctrl+r", wherever the focus is)
             condition: Only click while this pixel condition holds
+            image: Image target mode: click the center of this image wherever it
+                is found in its search region (x and y are ignored); wait while
+                it isn't there
 
         Returns:
             True if started successfully, False otherwise
@@ -277,6 +288,8 @@ class ClickEngine:
         self._key = key
         self._condition = condition
         self._condition_state = None
+        self._image = image
+        self._image_pos = None
         self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
@@ -312,6 +325,13 @@ class ClickEngine:
                 args=(condition, self._run_id),
                 daemon=True,
                 name="PixelWatch",
+            ).start()
+        if image is not None:
+            threading.Thread(
+                target=self._watch_image,
+                args=(image, self._run_id),
+                daemon=True,
+                name="ImageWatch",
             ).start()
 
         self.click_thread = threading.Thread(
@@ -427,6 +447,16 @@ class ClickEngine:
                 if verdict == "wait":
                     self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
                     continue
+
+                if self._image is not None:
+                    found = self._image_pos
+                    if found is None:
+                        self.is_paused = True
+                        self.pause_reason = PAUSE_IMAGE
+                        self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
+                        continue
+                    self.is_paused = False
+                    x, y = found
 
                 # Perform clicks
                 if self._steps:
@@ -557,6 +587,19 @@ class ClickEngine:
         self.is_paused = True
         self.pause_reason = PAUSE_PIXEL
         return "wait"
+
+    def _watch_image(self, image: ImageTarget, run_id: int) -> None:
+        """(ImageWatch thread) keep _image_pos current until this run ends."""
+        while run_id == self._run_id and self.is_running and not self._stop_event.is_set():
+            try:
+                found = image.locate()
+            except Exception:
+                _log.debug("Image search failed", exc_info=True)
+                found = None
+            if run_id != self._run_id:
+                return
+            self._image_pos = found
+            self._stop_event.wait(timeout=_IMAGE_POLL_SECONDS)
 
     def _watch_condition(self, condition: PixelCondition, run_id: int) -> None:
         """(PixelWatch thread) keep _condition_state current until this run ends."""

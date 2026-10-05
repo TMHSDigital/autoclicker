@@ -39,6 +39,7 @@ _INT_FIELDS = frozenset(
         "condition_x",
         "condition_y",
         "condition_tolerance",
+        "image_margin",
     }
 )
 _FLOAT_FIELDS = frozenset({"interval", "burst_pause", "hold_ms"})
@@ -46,7 +47,7 @@ _CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
     "mouse_button": ("left", "right", "middle"),
     "click_type": ("single", "double"),
     "interval_unit": ("ms", "seconds"),
-    "target_mode": ("fixed", "cursor", "sequence"),
+    "target_mode": ("fixed", "cursor", "sequence", "image"),
     "action": ("click", "hold", "key"),
     "condition": ("none", "wait", "stop"),
 }
@@ -81,9 +82,15 @@ FIELD_LABELS: dict[str, str] = {
     "condition_y": "Watched pixel Y",
     "condition_color": "Watched color",
     "condition_tolerance": "Color tolerance",
+    "image_path": "Image",
+    "image_region": "Image search area",
+    "image_margin": "Search margin",
 }
 
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+# Largest search margin around a captured image, in pixels (see core/image_match.py).
+MAX_IMAGE_MARGIN = 2000
 
 # Longest mouse-button hold, in milliseconds.
 MAX_HOLD_MS = 60_000
@@ -112,8 +119,8 @@ _STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click typ
 # because the UI stores what was typed, and validation reports bad values.
 _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
-_LIST_KEYS = frozenset({"sequence"})
-_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key", "condition_color"})
+_LIST_KEYS = frozenset({"sequence", "image_region"})
+_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path"})
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
 
@@ -185,6 +192,9 @@ class SettingsManager:
         "condition_y": 0,
         "condition_color": "#000000",
         "condition_tolerance": 16,
+        "image_path": "",
+        "image_region": [],
+        "image_margin": 150,
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -481,6 +491,16 @@ class SettingsManager:
             return (int(number) if number.is_integer() else number), None
         if key == "sequence":
             return self._parse_sequence(value)
+        if key == "image_region":
+            if (
+                not isinstance(value, list)
+                or len(value) != 4
+                or not all(isinstance(v, int) and not isinstance(v, bool) for v in value)
+                or value[2] <= 0
+                or value[3] <= 0
+            ):
+                return None, "Capture the image again"
+            return list(value), None
         if key == "key":
             if not isinstance(value, str):
                 return None, "Enter a key such as F5, space or ctrl+r"
@@ -538,8 +558,10 @@ class SettingsManager:
         # cursor and sequence mode, the sequence outside sequence mode.
         mode = str(settings.get("target_mode", "fixed")).strip()
         unused = {"sequence", "sequence_repeat"} if mode != "sequence" else set()
+        if mode != "image":
+            unused |= {"image_path", "image_region"}
         action = str(settings.get("action", "click")).strip()
-        if mode in ("cursor", "sequence") or action == "key":
+        if mode in ("cursor", "sequence", "image") or action == "key":
             unused |= {"x_coord", "y_coord"}
         if action != "key":
             unused.add("key")
@@ -628,6 +650,28 @@ class SettingsManager:
             tolerance = parsed.get("condition_tolerance")
             if tolerance is not None and not 0 <= tolerance <= 255:
                 errors["condition_tolerance"] = "Must be between 0 and 255"
+
+        if mode == "image":
+            if not str(parsed.get("image_path") or "").strip():
+                errors["image_path"] = "Capture an image first"
+            region = parsed.get("image_region")
+            if region:
+                area = ScreenBounds(*region)
+                desktop = ScreenBounds(screen_left, screen_top, screen_width, screen_height)
+                if not (
+                    desktop.contains(area.left, area.top)
+                    and desktop.contains(area.right - 1, area.bottom - 1)
+                ):
+                    errors["image_region"] = (
+                        "The search area is off screen; capture the image again"
+                    )
+            elif "image_region" not in errors:
+                errors["image_region"] = "Capture the image again"
+            if parsed.get("action") == "key":
+                errors["action"] = "Image targets click or hold; choose Click or Hold"
+        margin = parsed.get("image_margin")
+        if margin is not None and not 0 <= margin <= MAX_IMAGE_MARGIN:
+            errors["image_margin"] = f"Must be between 0 and {MAX_IMAGE_MARGIN:,} px"
 
         if parsed.get("action") in ("hold", "key") and mode == "sequence":
             errors["action"] = "Sequences always click; choose Click"

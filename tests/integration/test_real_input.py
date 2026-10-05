@@ -243,3 +243,30 @@ class TestRealRecording(RealInputCase):
         self.assertEqual(
             [(s["x"], s["y"]) for s in steps], [(first.cx, first.cy), (second.cx, second.cy)]
         )
+
+
+class TestRealImageTarget(RealInputCase):
+    def test_click_follows_the_captured_image(self):
+        from autoclicker.core.image_match import ImageTarget, grab
+        from autoclicker.core.screen import ScreenBounds
+
+        target = Target(self.root, 200, 200)
+        canvas = tk.Canvas(target.window, width=240, height=160, highlightthickness=0, bg=TARGET_BG)
+        canvas.pack()
+        canvas.create_rectangle(90, 60, 150, 100, fill="#ffcc00", outline="")
+        canvas.create_oval(105, 70, 135, 90, fill="#cc0033", outline="")
+        canvas.bind("<ButtonPress-1>", target._record("<ButtonPress-1>"))
+        for _ in range(20):
+            self.root.update()
+            time.sleep(0.02)
+        template = grab(ScreenBounds(200 + 85, 200 + 55, 70, 50))
+
+        target.window.geometry("+420+260")  # move the window after capturing
+        for _ in range(20):
+            self.root.update()
+            time.sleep(0.02)
+        image = ImageTarget(template=template, region=ScreenBounds(150, 150, 600, 400))
+        outcome = self.run_engine(max_clicks=1, image=image)
+        self.assertEqual(outcome.clicks, 1)
+        (_seq, x, y, _t) = target.of("<ButtonPress-1>")[0]
+        self.assertEqual((x, y), (420 + 85 + 35, 260 + 55 + 25))

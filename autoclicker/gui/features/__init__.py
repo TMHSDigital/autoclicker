@@ -3,6 +3,7 @@
 
 from .condition import ConditionMixin
 from .countdown import CountdownMixin
+from .image import ImageMixin
 from .info import InfoMixin
 from .profiles import ProfilesMixin
 from .recording import RecordingMixin
@@ -12,6 +13,7 @@ from .updates import UpdatesMixin
 __all__ = [
     "ConditionMixin",
     "CountdownMixin",
+    "ImageMixin",
     "InfoMixin",
     "ProfilesMixin",
     "RecordingMixin",

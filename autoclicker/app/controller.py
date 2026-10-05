@@ -9,8 +9,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import pyautogui
+from PIL import Image
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
+from ..core.image_match import ImageTarget
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -30,6 +32,17 @@ class StartClickResult:
     interval_ms: float | None = None
     # True when Start was refused because the previous run is still shutting down
     busy: bool = False
+
+
+def _load_image_target(sanitized: dict[str, Any]) -> tuple[ImageTarget | None, str | None]:
+    """The engine's image target from validated settings, or an error message."""
+    path = str(sanitized.get("image_path", ""))
+    try:
+        with Image.open(path) as captured:
+            template = captured.convert("RGB")
+    except (OSError, ValueError):
+        return None, "The captured image is missing or unreadable; capture it again"
+    return ImageTarget(template=template, region=ScreenBounds(*sanitized["image_region"])), None
 
 
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
@@ -121,6 +134,9 @@ class AutoclickerController:
             "condition_y": ui_fields.get("condition_y", 0),
             "condition_color": ui_fields.get("condition_color", "#000000"),
             "condition_tolerance": ui_fields.get("condition_tolerance", 16),
+            "image_path": ui_fields.get("image_path", ""),
+            "image_region": ui_fields.get("image_region", []),
+            "image_margin": ui_fields.get("image_margin", 150),
         }
 
     def validate(
@@ -176,6 +192,11 @@ class AutoclickerController:
         steps = (
             [ClickStep(**step) for step in sanitized["sequence"]] if mode == "sequence" else None
         )
+        image = None
+        if mode == "image":
+            image, error = _load_image_target(sanitized)
+            if error:
+                return StartClickResult(success=False, validation_errors={"image_path": error})
         interval = sanitized["interval"]
         interval_unit = sanitized["interval_unit"]
         variation = sanitized["variation"]
@@ -222,11 +243,14 @@ class AutoclickerController:
             hold_ms=float(sanitized.get("hold_ms", 0) or 0),
             key=str(sanitized.get("key", "")),
             condition=_pixel_condition(sanitized),
+            image=image,
         )
 
         if started:
             if action == "key":
                 target = f"key:{sanitized['key']}"
+            elif image is not None:
+                target = "image"
             elif steps:
                 target = f"sequence:{len(steps)}"
             else:

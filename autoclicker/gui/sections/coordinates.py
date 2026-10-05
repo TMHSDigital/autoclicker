@@ -17,7 +17,7 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
     settings = app.controller.settings
     mode = settings.get("target_mode", "fixed")
     app.target_mode_var = tk.StringVar(
-        value=mode if mode in ("fixed", "cursor", "sequence") else "fixed"
+        value=mode if mode in ("fixed", "cursor", "sequence", "image") else "fixed"
     )
     mode_frame = ttk.Frame(coord_frame)
     mode_frame.grid(row=0, column=0, columnspan=6, sticky=tk.W, pady=(0, 10))
@@ -40,6 +40,13 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
         text="Sequence",
         variable=app.target_mode_var,
         value="sequence",
+        command=app._on_target_mode_change,
+    ).pack(side=tk.LEFT, padx=(0, 15))
+    ttk.Radiobutton(
+        mode_frame,
+        text="Image",
+        variable=app.target_mode_var,
+        value="image",
         command=app._on_target_mode_change,
     ).pack(side=tk.LEFT)
 
@@ -107,8 +114,35 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
     )
 
     _build_sequence_panel(app, coord_frame, settings)
+    _build_image_panel(app, coord_frame, settings)
 
     app._apply_target_mode_state()
+
+
+def _build_image_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
+    """Image mode: capture a button image; clicks go wherever it appears nearby."""
+    app.image_path = str(settings.get("image_path", "") or "")
+    region = settings.get("image_region", [])
+    app.image_region = list(region) if isinstance(region, list) else []
+
+    app.image_frame = ttk.Frame(coord_frame)
+    app.image_frame.grid(row=5, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(10, 0))
+    row = ttk.Frame(app.image_frame)
+    row.pack(fill=tk.X)
+    ttk.Button(row, text="Capture\u2026", command=app.capture_image).pack(side=tk.LEFT)
+    app.image_info_var = tk.StringVar(value="")
+    ttk.Label(row, textvariable=app.image_info_var).pack(side=tk.LEFT, padx=(10, 0))
+    margin_row = ttk.Frame(app.image_frame)
+    margin_row.pack(fill=tk.X, pady=(6, 0))
+    ttk.Label(margin_row, text="Search").pack(side=tk.LEFT)
+    app.image_margin_entry = ttk.Entry(margin_row, width=6)
+    app.image_margin_entry.pack(side=tk.LEFT, padx=(5, 5))
+    app.image_margin_entry.insert(0, str(settings.get("image_margin", "150")))
+    ttk.Label(
+        margin_row,
+        text="px around it (used by the next capture)",
+    ).pack(side=tk.LEFT)
+    app._refresh_image_label()
 
 
 def _build_sequence_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
