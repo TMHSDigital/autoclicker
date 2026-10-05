@@ -156,3 +156,37 @@ class TestHotkeyClash(unittest.TestCase):
             with self.subTest(key=key):
                 raw = {"target_mode": "fixed", "action": "key", "key": key}
                 self.assertTrue(self.controller.validate(raw, BOUNDS)["valid"])
+
+
+class TestHoldFailsafe(unittest.TestCase):
+    """#82: the corner failsafe works during a long hold."""
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_corner_during_hold_releases_and_stops(self, m):
+        from autoclicker.core.screen import ScreenBounds
+
+        _mock(m)
+        positions = [None]  # cursor away from corners at first
+        with (
+            patch(
+                "autoclicker.core.click_engine.monitor_rects",
+                return_value=[ScreenBounds(0, 0, 1920, 1080)],
+            ),
+            patch(
+                "autoclicker.core.click_engine.cursor_position", side_effect=lambda: positions[0]
+            ),
+        ):
+            run = Run.__new__(Run)
+            run.engine = ClickEngine(enable_performance_monitoring=False)
+            run.engine.configure_safety(failsafe=True, max_cps=0)
+            run.done = threading.Event()
+            run.outcome = None
+            run.engine.start_clicking(
+                50, 60, 0, 0, 1, 0, 0, 0, "left", "single", run._finished,
+                action="hold", hold_ms=30_000,
+            )  # fmt: skip
+            threading.Event().wait(0.2)
+            positions[0] = (0, 0)  # slam into the corner mid-hold
+            outcome = run.wait()
+        self.assertEqual(outcome.reason, STOP_SAFETY)
+        m.mouseUp.assert_called_once_with(button="left")

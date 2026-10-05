@@ -45,6 +45,8 @@ _log = logging.getLogger(__name__)
 
 # How close (in pixels) to a monitor corner counts as "in the corner".
 _CORNER_MARGIN = 2
+# During a Hold, how often the corner failsafe is checked.
+_HOLD_CHECK_SECONDS = 0.05
 
 # Why a run ended. Exactly one is reported per run via RunOutcome.
 STOP_COMPLETED = "completed"  # max clicks or auto-stop limit reached
@@ -756,8 +758,15 @@ class ClickEngine:
         """Press ``button`` for the hold time; always release it, even when stopping."""
         pyautogui.mouseDown(**position, button=button)
         try:
-            # A stop request ends the hold early; the button is released either way.
-            self._stop_event.wait(timeout=self._hold_ms / 1000)
+            # Wait in short slices so a stop request or the corner failsafe ends
+            # the hold early; the button is released either way.
+            deadline = time.monotonic() + self._hold_ms / 1000
+            x, y = position.get("x"), position.get("y")
+            while (remaining := deadline - time.monotonic()) > 0:
+                if self._stop_event.wait(timeout=min(remaining, _HOLD_CHECK_SECONDS)):
+                    return
+                if self._cursor_in_failsafe_corner(x, y):
+                    raise SafetyError("fail_safe", "detected", "Mouse moved to a screen corner")
         finally:
             self._release(button)
 

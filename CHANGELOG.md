@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Install with Scoop: `scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker`, then `scoop install tmhs/windows-autoclicker`. winget manifests are generated with each release (#76).
+- Project website at https://tmhsdigital.github.io/autoclicker/ and GitHub Discussions for questions, linked from the new-issue page (#77).
+
 ### Fixed
 
+- The corner failsafe now works during a Hold; previously a hold of up to 60 seconds ignored the corner until it ended. The button is released and the run stops within about 50 ms (#82).
 - Pause when unfocused: a sequence whose steps click into different windows no longer pauses for good after the first switch; any step's window counts as in front. A run started from the Start button no longer waits for you to activate the target window yourself: the first click brings it forward (#81).
+
+### Documentation
+
+- CONTRIBUTING.md records the license decision (CC BY-NC 4.0 kept) and that contributions are licensed under the same terms (#71).
 
 ## [1.5.0] - 2026-10-04
 
