@@ -40,6 +40,17 @@ Options considered:
 
 Decision: deferred. Revisit if download volume grows or users report blocked installs; Trusted Signing would be the first choice.
 
+### Turning signing on
+
+The release build already contains the signing steps; they run on `v*` tags once these **repository variables** (Settings, Secrets and variables, Actions, Variables) exist. No secrets are needed: the workflow logs in to Azure with OpenID Connect.
+
+1. In Azure, create an Artifact Signing (Trusted Signing) account, complete identity validation, and create a public-trust certificate profile.
+2. Create an app registration (or user-assigned managed identity), give it the *Artifact Signing Certificate Profile Signer* role on the account, and add a federated credential for this repository with subject `repo:TMHSDigital/autoclicker:ref:refs/tags/*`.
+3. Set the variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `SIGNING_ENDPOINT` (for example `https://eus.codesigning.azure.net/`), `SIGNING_ACCOUNT_NAME` and `SIGNING_CERTIFICATE_PROFILE`.
+4. Push the next tag. The build signs `WindowsAutoclicker.exe` before the checksum is computed and fails if `Get-AuthenticodeSignature` doesn't report a valid signature.
+
+After the first signed release, drop the SmartScreen note from the README and the website FAQ.
+
 ## Package managers
 
 The release job runs `tools/package_manifests.py` with the published checksum and commits the results to `main`:
