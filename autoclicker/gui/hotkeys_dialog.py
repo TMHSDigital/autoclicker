@@ -9,6 +9,7 @@ from tkinter import ttk
 from typing import Any
 
 from ..app.hotkeys import ACTIONS, HotkeyError, normalize_hotkey, validate_bindings
+from .styles import ERROR, MUTED
 
 ACTION_LABELS = {
     "start": "Start",
@@ -102,13 +103,13 @@ class HotkeysDialog:
             entry.bind("<KeyPress>", self._capture_handler(action))
 
         self._error = tk.StringVar()
-        ttk.Label(body, textvariable=self._error, foreground="#cf222e").grid(
+        ttk.Label(body, textvariable=self._error, style=ERROR).grid(
             row=len(ACTIONS) + 1, column=0, columnspan=2, sticky=tk.W, pady=(8, 0)
         )
         ttk.Label(
             body,
             text="Stop and Emergency keys are only claimed while clicking.",
-            foreground="#8b949e",
+            style=MUTED,
         ).grid(row=len(ACTIONS) + 2, column=0, columnspan=2, sticky=tk.W, pady=(4, 0))
 
         buttons = ttk.Frame(body)

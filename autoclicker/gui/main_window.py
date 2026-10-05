@@ -53,6 +53,7 @@ from .sections import (
     build_title_section,
 )
 from .sections.status import STATUS_COLORS
+from .styles import apply_text_styles
 
 # Status-dot state for each way a run can end; anything else is "stopped".
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
@@ -135,6 +136,7 @@ class AutoclickerApp(
         theme = "dark" if str(self.settings.get("theme", "light")) == "dark" else "light"
         self.theme_var = tk.StringVar(value=theme)
         sv_ttk.set_theme(theme)
+        apply_text_styles(theme, self.root)
         self.root.option_add("*Font", ("Segoe UI", 10))
 
     def toggle_theme(self) -> None:
@@ -142,6 +144,7 @@ class AutoclickerApp(
         new_theme = "dark" if self.theme_var.get() == "light" else "light"
         self.theme_var.set(new_theme)
         sv_ttk.set_theme(new_theme)
+        apply_text_styles(new_theme, self.root)
         self.settings.set("theme", new_theme)
         if hasattr(self, "theme_button"):
             label = "\u2600 Light" if new_theme == "dark" else "\u263d Dark"

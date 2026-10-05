@@ -4,6 +4,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ..styles import MUTED
+
 
 def build_coordinate_section(app, parent: ttk.Frame) -> None:
     """Create coordinate input section."""
@@ -102,7 +104,7 @@ def build_coordinate_section(app, parent: ttk.Frame) -> None:
     ttk.Label(
         coord_frame,
         textvariable=app.preset_summary_var,
-        foreground="#8b949e",
+        style=MUTED,
     ).grid(row=3, column=1, columnspan=3, padx=(0, 10), pady=(4, 0), sticky=tk.W)
     io_frame = ttk.Frame(coord_frame)
     io_frame.grid(row=3, column=4, columnspan=2, pady=(4, 0), sticky=tk.W)

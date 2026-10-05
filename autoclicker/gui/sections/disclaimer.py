@@ -4,6 +4,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ..styles import MUTED
+
 
 def build_disclaimer_section(app, parent: ttk.Frame) -> None:
     """Create a one-line disclaimer footer with an info button."""
@@ -14,7 +16,7 @@ def build_disclaimer_section(app, parent: ttk.Frame) -> None:
     ttk.Label(
         footer,
         text="For legitimate automation only. Use responsibly.",
-        foreground="#8b949e",
+        style=MUTED,
     ).grid(row=0, column=0, sticky=tk.W)
 
     ttk.Button(

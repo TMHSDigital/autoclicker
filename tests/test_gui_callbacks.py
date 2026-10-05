@@ -222,3 +222,18 @@ class TestPauseStatus(unittest.TestCase):
         app.status_var.set.assert_not_called()
         app._show_pause_state(False)
         app.status_var.set.assert_called_with("Running...")
+
+
+class TestThemeToggle(unittest.TestCase):
+    def test_text_styles_follow_the_theme(self):
+        """#104: muted and error text colors are reapplied for the new theme."""
+        app = _bare_app()
+        app.theme_var = MagicMock()
+        app.theme_var.get.return_value = "light"
+        with (
+            patch("autoclicker.gui.main_window.sv_ttk"),
+            patch("autoclicker.gui.main_window.apply_text_styles") as apply,
+        ):
+            app.toggle_theme()
+        apply.assert_called_once_with("dark", app.root)
+        app.settings.set.assert_called_with("theme", "dark")

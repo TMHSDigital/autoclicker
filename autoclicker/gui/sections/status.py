@@ -4,6 +4,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ..styles import MUTED
+
 _DOT = "\u25cf"  # ●
 
 # Status dot colors by explicit state (set by AutoclickerApp._set_status_message).
@@ -46,6 +48,6 @@ def build_status_section(app, parent: ttk.Frame) -> None:
     ttk.Label(metrics, textvariable=app.performance_var).pack(side=tk.LEFT)
 
     app.coord_var = tk.StringVar(value=app._target_summary())
-    ttk.Label(status_frame, textvariable=app.coord_var, foreground=STATUS_COLORS["stopped"]).grid(
+    ttk.Label(status_frame, textvariable=app.coord_var, style=MUTED).grid(
         row=2, column=0, columnspan=2, sticky=tk.W, pady=(6, 0)
     )
