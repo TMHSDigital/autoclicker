@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-05
+
 ### Added
 
 - Record a sequence: press Record in the sequence panel and click through the routine once; each click becomes a step with its button and the measured wait, and quick repeat clicks become double clicks. The Stop key or Record again finishes. Only clicks are recorded, and the mouse hook exists only while recording (#86).
@@ -168,7 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Baseline release prior to the structured audit and refactor pass.
 
-[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.6.0
 [1.5.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.5.0
 [1.4.1]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.1
 [1.4.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.0
