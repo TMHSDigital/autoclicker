@@ -1,0 +1,68 @@
+name: Package manifests
+
+# Regenerate the Scoop and winget manifests for an existing release, the same
+# way the release job does. Dry run (default) uploads them as an artifact;
+# with "commit" checked it commits them to main.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v1.5.0"
+        required: true
+      commit:
+        description: "Commit the manifests to main (otherwise dry run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    runs-on: windows-2025
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Generate manifests from the published checksum
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download $env:TAG --pattern "WindowsAutoclicker.exe.sha256" --dir dist
+          $hash = (Get-Content dist\WindowsAutoclicker.exe.sha256).Split(' ')[0]
+          python tools/package_manifests.py $env:TAG.TrimStart('v') $hash
+          git status --short
+
+      - name: Upload manifests
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package-manifests-${{ inputs.tag }}
+          path: |
+            bucket/
+            packaging/
+
+      - name: Commit to main
+        if: inputs.commit
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket packaging
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "chore(packaging): Scoop and winget manifests for $env:TAG"
+            git push origin main
+          }
