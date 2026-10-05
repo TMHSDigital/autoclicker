@@ -87,6 +87,30 @@ class TestEngineImageTarget(unittest.TestCase):
         self.assertEqual(outcomes[0].reason, STOP_COMPLETED)
         m.click.assert_called_with(x=640, y=360, button="left", clicks=1)
 
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_no_click_on_a_match_seen_before_the_last_click(self, m):
+        """#96: clicking the image closes it; the old position must not be clicked again."""
+        _mock(m)
+        clicked = threading.Event()
+        m.click.side_effect = lambda **_k: clicked.set()
+
+        def locate():
+            on_screen = not clicked.is_set()  # what the screenshot shows
+            time.sleep(0.03)  # the search itself takes time
+            return (640, 360) if on_screen else None
+
+        target = MagicMock(spec=ImageTarget)
+        target.locate.side_effect = locate
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.configure_safety(failsafe=False, max_cps=0)
+        engine.start_clicking(
+            None, None, 0, 0, 1, 0, 0, 0, "left", "single", None, image=target
+        )  # fmt: skip
+        time.sleep(0.6)
+        engine.stop_clicking()
+        self.assertEqual(m.click.call_count, 1)
+        self.assertTrue(engine.click_thread is None or not engine.click_thread.is_alive())
+
 
 class TestImageSettings(unittest.TestCase):
     def setUp(self):

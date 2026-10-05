@@ -106,6 +106,10 @@ PAUSE_PIXEL = "the watched pixel to match"
 PAUSE_IMAGE = "the captured image to appear"
 # How often an image target is searched for, on its own thread.
 _IMAGE_POLL_SECONDS = 0.1
+# A match is clicked only if its screenshot was taken at least this long after
+# the previous click, so a click that closes the image is never repeated on
+# whatever is underneath (#96). Gives the clicked window time to repaint.
+_IMAGE_SETTLE_SECONDS = 0.05
 
 
 @dataclass
@@ -186,9 +190,11 @@ class ClickEngine:
         self._condition: PixelCondition | None = None
         # Latest pixel reading for this run: True/False, or None before the first read.
         self._condition_state: bool | None = None
-        # Image target mode: where the captured image was last found (None = not found).
+        # Image target mode: where the captured image was last found (None = not
+        # found) and when that search began; and when it was last clicked.
         self._image: ImageTarget | None = None
-        self._image_pos: tuple[int, int] | None = None
+        self._image_match: tuple[tuple[int, int] | None, float] = (None, 0.0)
+        self._image_clicked_at = float("-inf")
         self._run_id = 0  # lets a stale pixel watcher from an earlier run notice and exit
         self._safety_fired = False
         # Sequence mode: the steps of one round and how many rounds to run
@@ -292,7 +298,8 @@ class ClickEngine:
         self._condition = condition
         self._condition_state = None
         self._image = image
-        self._image_pos = None
+        self._image_match = (None, 0.0)
+        self._image_clicked_at = float("-inf")
         self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
@@ -457,13 +464,17 @@ class ClickEngine:
                     continue
 
                 if self._image is not None:
-                    found = self._image_pos
+                    found, searched_at = self._image_match
                     if found is None:
                         self.is_paused = True
                         self.pause_reason = PAUSE_IMAGE
                         self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
                         continue
                     self.is_paused = False
+                    if searched_at < self._image_clicked_at + _IMAGE_SETTLE_SECONDS:
+                        # Seen before the last click took effect: it may be gone now.
+                        self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
+                        continue
                     x, y = found
 
                 # Perform clicks
@@ -479,6 +490,8 @@ class ClickEngine:
                         break
                 else:
                     self._perform_burst(x, y, burst_clicks, burst_pause, mouse_button, click_type)
+                    if self._image is not None:
+                        self._image_clicked_at = time.monotonic()
                 if self._safety_fired:
                     break
 
@@ -600,8 +613,9 @@ class ClickEngine:
         return "wait"
 
     def _watch_image(self, image: ImageTarget, run_id: int) -> None:
-        """(ImageWatch thread) keep _image_pos current until this run ends."""
+        """(ImageWatch thread) keep _image_match current until this run ends."""
         while run_id == self._run_id and self.is_running and not self._stop_event.is_set():
+            searched_at = time.monotonic()
             try:
                 found = image.locate()
             except Exception:
@@ -609,7 +623,7 @@ class ClickEngine:
                 found = None
             if run_id != self._run_id:
                 return
-            self._image_pos = found
+            self._image_match = (found, searched_at)
             self._stop_event.wait(timeout=_IMAGE_POLL_SECONDS)
 
     def _watch_condition(self, condition: PixelCondition, run_id: int) -> None:

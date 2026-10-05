@@ -179,7 +179,7 @@ Choose **Image** under Target to click a button wherever it shows up, even after
 1. Press **Capture...** and drag a rectangle around the button. The app saves that image and searches for it within **Search** px around the spot (150 by default).
 2. Start as usual. Each click goes to the center of the image where it was last found; while it isn't on screen the run waits and the status bar says so.
 
-Matching is exact, so recapture if the button changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Every stop path, limit and the runaway guard work as usual.
+Matching is exact, so recapture if the button changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Each click waits for a fresh search that started after the previous click, so a click that closes the image is never repeated on whatever is underneath; image mode therefore clicks at most about 10 times a second. Every stop path, limit and the runaway guard work as usual.
 
 ## Command line
 
