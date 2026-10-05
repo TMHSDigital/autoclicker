@@ -6,3 +6,6 @@ contact_links:
   - name: Troubleshooting guide
     url: https://github.com/TMHSDigital/autoclicker#troubleshooting
     about: Common fixes for clicks not registering, hotkeys not responding, and runs stopping early.
+  - name: Ask a question
+    url: https://github.com/TMHSDigital/autoclicker/discussions
+    about: How-to questions and ideas that aren't bugs.
