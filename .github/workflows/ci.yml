@@ -164,3 +164,23 @@ jobs:
             dist/WindowsAutoclicker.exe.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update the Scoop and winget manifests on main
+        # Keeps bucket/ (installable with scoop) and packaging/winget/ current.
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --depth 1 origin main
+          git checkout -B main origin/main
+          $hash = (Get-Content dist\WindowsAutoclicker.exe.sha256).Split(' ')[0]
+          $version = $env:TAG.TrimStart('v')
+          python tools/package_manifests.py $version $hash
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket packaging
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "chore(packaging): Scoop and winget manifests for $version"
+            git push origin main
+          }
