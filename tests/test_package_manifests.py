@@ -29,4 +29,4 @@ class TestManifests(unittest.TestCase):
         self.assertIn(f"InstallerSha256: {SHA.upper()}", installer)
         for text in files.values():
             self.assertIn("PackageVersion: 1.5.0", text)
-            self.assertIn("ManifestVersion: 1.9.0", text)
+            self.assertIn("ManifestVersion: 1.12.0", text)

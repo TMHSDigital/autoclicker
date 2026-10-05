@@ -52,13 +52,13 @@ def scoop_manifest(version: str, sha256: str) -> dict:
 
 
 def winget_manifests(version: str, sha256: str) -> dict[str, str]:
-    schema = "https://aka.ms/winget-manifest.{kind}.1.9.0.schema.json"
+    schema = "https://aka.ms/winget-manifest.{kind}.1.12.0.schema.json"
     header = "# yaml-language-server: $schema=" + schema
     base = f"PackageIdentifier: {PACKAGE_ID}\nPackageVersion: {version}\n"
     return {
         f"{PACKAGE_ID}.yaml": (
             f"{header.format(kind='version')}\n{base}"
-            "DefaultLocale: en-US\nManifestType: version\nManifestVersion: 1.9.0\n"
+            "DefaultLocale: en-US\nManifestType: version\nManifestVersion: 1.12.0\n"
         ),
         f"{PACKAGE_ID}.installer.yaml": (
             f"{header.format(kind='installer')}\n{base}"
@@ -68,7 +68,7 @@ def winget_manifests(version: str, sha256: str) -> dict[str, str]:
             "- Architecture: x64\n"
             f"  InstallerUrl: {download_url(version)}\n"
             f"  InstallerSha256: {sha256.upper()}\n"
-            "ManifestType: installer\nManifestVersion: 1.9.0\n"
+            "ManifestType: installer\nManifestVersion: 1.12.0\n"
         ),
         f"{PACKAGE_ID}.locale.en-US.yaml": (
             f"{header.format(kind='defaultLocale')}\n{base}"
@@ -84,7 +84,7 @@ def winget_manifests(version: str, sha256: str) -> dict[str, str]:
             f"Description: {json.dumps(DESCRIPTION)}\n"
             "Tags:\n- autoclicker\n- automation\n- clicker\n- mouse\n- productivity\n"
             f"ReleaseNotesUrl: https://github.com/{REPO}/releases/tag/v{version}\n"
-            "ManifestType: defaultLocale\nManifestVersion: 1.9.0\n"
+            "ManifestType: defaultLocale\nManifestVersion: 1.12.0\n"
         ),
     }
 
