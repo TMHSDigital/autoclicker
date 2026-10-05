@@ -70,10 +70,26 @@ class Target:
 
 
 class RealInputCase(unittest.TestCase):
+    # One Tk interpreter per class: creating many in one process is flaky on
+    # the CI runner ("couldn't read file auto.tcl").
+    root: tk.Tk
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = tk.Tk()
+        cls.root.withdraw()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.root.destroy()
+
     def setUp(self):
-        self.root = tk.Tk()
-        self.root.withdraw()
-        self.addCleanup(self.root.destroy)
+        self.addCleanup(self._destroy_windows)
+
+    def _destroy_windows(self):
+        for child in self.root.winfo_children():
+            child.destroy()
+        self.root.update()
 
     def run_engine(self, timeout=10.0, **kwargs):
         """Start the real engine and pump Tk until the run ends."""
