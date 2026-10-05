@@ -21,6 +21,19 @@ from ..utils.profiles import PresetManager
 
 _log = logging.getLogger(__name__)
 
+# Settings behind a validation error key that names a group or a combination;
+# none of them is saved at quit while the error stands. Other keys name the field.
+_ERROR_FIELDS: dict[str, tuple[str, ...]] = {
+    "coordinates": ("x_coord", "y_coord"),
+    "interval": ("interval", "interval_unit", "variation"),
+    "burst": ("burst_clicks", "burst_pause"),
+    "auto_stop": ("auto_stop_minutes",),
+    "condition_x": ("condition_x", "condition_y"),
+    "image_path": ("image_path", "image_region"),
+    "image_region": ("image_path", "image_region"),
+    "action": ("action", "target_mode"),
+}
+
 
 @dataclass
 class StartClickResult:
@@ -332,10 +345,19 @@ class AutoclickerController:
         settings_manager: SettingsManager | None = None,
         screen_bounds: ScreenBounds | None = None,
     ) -> None:
-        """Validate and persist settings when the application exits."""
+        """Validate and persist settings when the application exits.
+
+        Fields that fail validation keep their last saved value; every other
+        field is saved, so one bad entry no longer discards all changes (#101).
+        """
         settings = settings_manager or self.settings
         validation_result = self._validate(raw_settings, settings, screen_bounds)
-        if validation_result["valid"]:
-            settings.update(validation_result["sanitized_settings"])
-        else:
-            _log.warning("Quit settings invalid; keeping last-good file")
+        sanitized = dict(validation_result["sanitized_settings"])
+        if not validation_result["valid"]:
+            dropped: set[str] = set()
+            for field in validation_result["errors"]:
+                dropped.update(_ERROR_FIELDS.get(field, (field,)))
+            for key in dropped:
+                sanitized.pop(key, None)
+            _log.warning("Quit settings: kept the last saved %s", ", ".join(sorted(dropped)))
+        settings.update(sanitized)

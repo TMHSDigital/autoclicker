@@ -263,7 +263,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | File | Contents |
 | :-- | :-- |
-| `autoclicker_settings.json` | Your settings and profiles, saved when you start clicking, change the theme or profiles, and on exit |
+| `autoclicker_settings.json` | Your settings and profiles, saved when you start clicking, change the theme or profiles, and on exit (a field that is invalid then keeps its last saved value) |
 | `autoclicker.log` | Application log, rotated at 1 MB (keeps 2 backups) |
 | `sessions.log` | One line per run start and stop, with the stop reason and click count; rotated at 1 MB (keeps 3 backups) |
 

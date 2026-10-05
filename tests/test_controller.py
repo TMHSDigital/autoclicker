@@ -12,12 +12,57 @@ from autoclicker.core.settings_manager import SettingsManager
 
 
 class TestPersistSettingsOnQuit(unittest.TestCase):
-    def test_invalid_quit_keeps_last_good_file(self):
+    def _quit(self, raw, **saved):
+        fd, path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+        self.addCleanup(lambda: os.path.exists(path) and os.unlink(path))
+        settings = SettingsManager(path)
+        for key, value in saved.items():
+            settings.set(key, value)
+        controller = AutoclickerController.__new__(AutoclickerController)
+        controller.settings = settings
+        controller.persist_settings_on_quit(
+            raw, settings_manager=settings, screen_bounds=ScreenBounds(0, 0, 1920, 1080)
+        )
+        return SettingsManager(path)
+
+    def test_one_bad_field_keeps_its_last_value_and_saves_the_rest(self):
+        """#101: a single invalid entry must not discard every other change."""
+        raw = {
+            "x_coord": 100,
+            "y_coord": 120,
+            "interval": "abc",
+            "interval_unit": "s",
+            "variation": 5,
+            "mouse_button": "right",
+            "click_type": "double",
+            "burst_clicks": 1,
+            "burst_pause": 1000,
+            "max_clicks": 0,
+            "auto_stop_minutes": 2000,
+        }
+        reloaded = self._quit(raw, x_coord=250, interval=500, interval_unit="ms", variation=0)
+        self.assertEqual((reloaded.get("x_coord"), reloaded.get("y_coord")), (100, 120))
+        self.assertEqual(reloaded.get("mouse_button"), "right")
+        self.assertEqual(reloaded.get("click_type"), "double")
+        # The interval group stays consistent: none of it is saved while it is invalid.
+        self.assertEqual(reloaded.get("interval"), 500)
+        self.assertEqual(reloaded.get("interval_unit"), "ms")
+        self.assertEqual(reloaded.get("variation"), 0)
+        self.assertNotEqual(reloaded.get("auto_stop_minutes"), 2000)
+
+    def test_off_screen_point_keeps_both_coordinates(self):
+        raw = {"x_coord": 5000, "y_coord": 10, "mouse_button": "middle"}
+        reloaded = self._quit(raw, x_coord=250, y_coord=40)
+        self.assertEqual((reloaded.get("x_coord"), reloaded.get("y_coord")), (250, 40))
+        self.assertEqual(reloaded.get("mouse_button"), "middle")
+
+    def test_invalid_quit_keeps_last_good_value(self):
         fd, path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
         try:
             settings = SettingsManager(path)
-            settings.set("x_coord", 250)
+            settings.set("auto_stop_minutes", 30)
             controller = AutoclickerController.__new__(AutoclickerController)
             controller.settings = settings
             raw = {
@@ -39,7 +84,8 @@ class TestPersistSettingsOnQuit(unittest.TestCase):
                 screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
             reloaded = SettingsManager(path)
-            self.assertEqual(reloaded.get("x_coord"), 250)
+            self.assertEqual(reloaded.get("auto_stop_minutes"), 30)
+            self.assertEqual(reloaded.get("x_coord"), 100)
         finally:
             if os.path.exists(path):
                 os.unlink(path)
