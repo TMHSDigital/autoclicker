@@ -3,16 +3,79 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Windows Autoclicker</title>
-  <meta name="description" content="A fast, careful autoclicker for Windows: fixed points, sequences, hold and key actions, profiles and a command line, with safety stops on by default. Single free .exe, no installer." />
+  <title>Free Auto Clicker for Windows 10 and 11 | Windows Autoclicker</title>
+  <meta name="description" content="Free auto clicker for Windows 10 and 11. Record a click routine and replay it, click a button wherever it appears, sequences, hold and key actions, with safety stops on by default. Single .exe, no installer." />
   <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/" />
   <link rel="icon" href="images/logo.svg" type="image/svg+xml" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Windows Autoclicker" />
-  <meta property="og:description" content="Pick a spot, set the pace, press F6. Safety stops on by default. Single free .exe." />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Windows Autoclicker: a free, careful auto clicker" />
+  <meta property="og:description" content="Record a routine, click a button wherever it appears, or pick a spot and press F6. Safety stops on by default. Single free .exe." />
   <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/" />
   <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta property="og:image:width" content="1280" />
+  <meta property="og:image:height" content="640" />
+  <meta property="og:image:alt" content="Windows Autoclicker window next to its name and tagline" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Windows Autoclicker: a free, careful auto clicker" />
+  <meta name="twitter:description" content="Record a routine, click a button wherever it appears, or pick a spot and press F6. Safety stops on by default." />
+  <meta name="twitter:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Windows Autoclicker",
+    "operatingSystem": "Windows 10, Windows 11",
+    "applicationCategory": "UtilitiesApplication",
+    "softwareVersion": "1.6.0",
+    "fileSize": "22MB",
+    "description": "Free auto clicker for Windows: record a click routine and replay it, click wherever a captured image appears, sequences, hold and key actions, with safety stops on by default.",
+    "url": "https://tmhsdigital.github.io/autoclicker/",
+    "downloadUrl": "https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe",
+    "screenshot": "https://tmhsdigital.github.io/autoclicker/images/screenshot-light.png",
+    "license": "https://creativecommons.org/licenses/by-nc/4.0/",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Organization", "name": "TM Hospitality Strategies" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is it safe to download?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Every release is built by GitHub Actions from the public repository and ships with a SHA-256 checksum and a build provenance attestation, so you can confirm the file came from that build." }
+      },
+      {
+        "@type": "Question",
+        "name": "Why does Windows SmartScreen warn about it?",
+        "acceptedAnswer": { "@type": "Answer", "text": "The executable isn't code-signed yet, and SmartScreen warns about unsigned programs it hasn't seen often. Choose More info, then Run anyway, or verify the checksum first." }
+      },
+      {
+        "@type": "Question",
+        "name": "My antivirus flags it. Is something wrong?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Probably not. Unsigned single-file Python apps, especially ones that move the mouse, are a common false positive. Check that the file's SHA-256 matches the release's .sha256 file and, if you like, look the hash up on VirusTotal. If it matches, restore it, and please report the false positive to your antivirus vendor." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it send any data?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. It makes no network requests unless you turn on the daily update check, which only reads the public latest-release page on GitHub." }
+      },
+      {
+        "@type": "Question",
+        "name": "Will it work in my game or app?",
+        "acceptedAnswer": { "@type": "Answer", "text": "It works with most Windows programs. Apps running as administrator need the autoclicker to run as administrator too, and some games ignore synthetic input. Only automate software whose terms allow it." }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use it at work?",
+        "acceptedAnswer": { "@type": "Answer", "text": "It's free for non-commercial use under CC BY-NC 4.0. For commercial licensing, contact TM Hospitality Strategies." }
+      }
+    ]
+  }
+  </script>
   <style>
     :root {
       --bg: #f6f8fb;
@@ -161,7 +224,7 @@
           <a class="button primary" href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download for Windows</a>
           <a class="button ghost" href="https://github.com/TMHSDigital/autoclicker">View on GitHub</a>
         </div>
-        <p class="fine">Free single <code>.exe</code>. No installer, no Python, no ads. Windows 10 and 11.</p>
+        <p class="fine">Version <span data-version>1.6.0</span>, about 22 MB. Free single <code>.exe</code>: no installer, no Python, no ads. Windows 10 and 11.</p>
       </div>
       <div class="shot">
         <picture>
@@ -179,11 +242,11 @@
         <p class="sub">From one spot clicked every second to a multi-step routine run from a shortcut.</p>
         <div class="grid">
           <div class="card"><h3>Pick and click</h3><p>Type X and Y, or Pick Location with a live readout on any monitor. Or click wherever the cursor is.</p></div>
-          <div class="card"><h3>Sequences</h3><p>Click several points in order, each with its own wait, repeated a set number of times or until you stop it.</p></div>
+          <div class="card"><h3>Record a routine</h3><p>Press Record and click through it once. Every click becomes a step with its own wait, ready to replay as often as you like.</p></div>
+          <div class="card"><h3>Click a button wherever it appears</h3><p>Capture a button once. Each click goes wherever that image is on screen, and the run waits while it isn't there.</p></div>
           <div class="card"><h3>Precise timing</h3><p>Intervals from 0 ms to 60 s, random variation, and bursts of quick clicks between waits.</p></div>
           <div class="card"><h3>Hold and key actions</h3><p>Hold a mouse button for a set time, or press a key such as F5 or Ctrl+R instead of clicking.</p></div>
-          <div class="card"><h3>Profiles</h3><p>Save a target and all its click settings by name. Export them to a file and share them.</p></div>
-          <div class="card"><h3>Command line</h3><p>Start a profile from a shortcut or Task Scheduler, or run headless with an exit code.</p></div>
+          <div class="card"><h3>Profiles and command line</h3><p>Save everything by name and share it as a file. Start a profile from a shortcut or Task Scheduler, or run headless.</p></div>
         </div>
       </div>
     </section>
@@ -213,6 +276,10 @@
           <li><strong>Pick a target</strong><br />with Pick Location, or use the cursor.</li>
           <li><strong>Press <kbd>F6</kbd>.</strong><br /><kbd>F7</kbd> or <kbd>Esc</kbd> stops it.</li>
         </ol>
+        <p class="sub">Prefer a package manager? With <a href="https://scoop.sh/">Scoop</a>:</p>
+        <pre><code>scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker
+scoop install tmhs/windows-autoclicker</code></pre>
+        <p class="sub">From a shortcut or a script:</p>
         <pre><code>WindowsAutoclicker.exe --profile Work --start --minimized
 WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code></pre>
       </div>

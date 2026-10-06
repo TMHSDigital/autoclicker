@@ -2,6 +2,8 @@
 
 ## How a release is built
 
+Before tagging, the `chore(release): X.Y.Z` commit sets the version in `pyproject.toml`, `autoclicker/__init__.py` and the website (`docs/index.html`: the `softwareVersion` in the JSON-LD and the `data-version` text next to Download, plus the size if it changed), and moves the `[Unreleased]` notes under the new version in `CHANGELOG.md`. `tests/test_project_metadata.py` fails if any of these versions disagree.
+
 Pushing a `vX.Y.Z` tag runs the CI workflow on GitHub Actions:
 
 1. Lint, type check, dependency audit and tests on Python 3.10 to 3.14.

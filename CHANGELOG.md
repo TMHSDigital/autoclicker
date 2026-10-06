@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - Troubleshooting covers antivirus false positives (how to verify the download and report it) and an image that is never found; the website FAQ answers the antivirus question too (#114).
+- The website shows recording and image targets, the Scoop install command and the current version and size, with a search-friendly title, structured data (app and FAQ), complete social preview tags, robots.txt and a sitemap (#116).
 
 ## [1.6.0] - 2026-10-05
 

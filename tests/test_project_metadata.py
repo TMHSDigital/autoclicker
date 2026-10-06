@@ -3,6 +3,7 @@
 Parsed with regular expressions: tomllib is Python 3.11+ and CI covers 3.10.
 """
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -43,6 +44,28 @@ class TestDependencies(unittest.TestCase):
         requirements = (ROOT / "requirements.txt").read_text("utf-8").splitlines()
         for name in _requirement_names(requirements):
             self.assertIn(name.replace("_", "-"), pinned)
+
+
+class TestWebsite(unittest.TestCase):
+    """#116: the landing page's version and structured data stay in step."""
+
+    def setUp(self):
+        self.page = (ROOT / "docs" / "index.html").read_text("utf-8")
+        blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', self.page, re.S)
+        self.data = {block["@type"]: block for block in (json.loads(b) for b in blocks)}
+
+    def test_version_matches_the_package(self):
+        self.assertEqual(
+            self.data["SoftwareApplication"]["softwareVersion"], autoclicker.__version__
+        )
+        shown = re.search(r"<span data-version>([^<]+)</span>", self.page)
+        assert shown is not None
+        self.assertEqual(shown.group(1), autoclicker.__version__)
+
+    def test_faq_structured_data_matches_the_visible_questions(self):
+        visible = re.findall(r"<summary>(.*?)</summary>", self.page)
+        listed = [q["name"] for q in self.data["FAQPage"]["mainEntity"]]
+        self.assertEqual(sorted(visible), sorted(listed))
 
 
 class TestDeprecatedAlias(unittest.TestCase):
