@@ -51,7 +51,9 @@ class TestReleaseNotes(unittest.TestCase):
 
     def test_notes_include_verification_footer(self):
         notes = release_notes.release_notes(SAMPLE, "v1.5.0")
-        self.assertTrue(notes.startswith("### Fixed"))
+        self.assertTrue(notes.startswith("**Install:**"))  # #117: how to get it, first
+        self.assertIn("scoop install tmhs/windows-autoclicker", notes)
+        self.assertIn("\n\n### Fixed\n\n- Stop really stops.", notes)
         self.assertIn("gh attestation verify", notes)
         self.assertIn("/blob/v1.5.0/CHANGELOG.md", notes)
 

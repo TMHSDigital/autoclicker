@@ -91,7 +91,14 @@ built around safety stops that are on by default.
 - **Stops when you need it to.** Corner failsafe on every monitor, an emergency key, click and time limits, a runaway-speed guard, pause when your target window loses focus, and an optional "only while this pixel matches" check. All on by default where it makes sense, and a held button is always released.
 - **Builds you can check.** Every release is built by GitHub Actions from this repository and ships with a SHA-256 checksum and a build provenance attestation. The source is right here to read.
 - **Quiet on your system.** One `.exe`: no installer, no ads, no bundled offers. Hotkeys use Windows `RegisterHotKey` instead of a system-wide keyboard hook, and the app makes no network requests unless you turn on the daily update check.
-- **More than one spot.** Click sequences, hold and key actions, profiles you can export and share, and a command line with a headless mode for scripts and shortcuts.
+- **More than one spot.** Record a routine by clicking through it once, click a button wherever it appears on screen, hold and key actions, profiles you can export and share, and a command line with a headless mode for scripts and shortcuts.
+
+## Who it's for
+
+- **Easing repetitive strain.** If clicking hurts (RSI, tendon problems, limited hand mobility), let the app do the repeated clicks: long holds, key repeat and a start/stop key mean you press once instead of hundreds of times. It does not replace accessibility software or medical advice.
+- **Testing and QA.** Repeat a click path to reproduce a bug, soak-test a button, or keep a test app busy; the command line exits with a code that says how the run ended.
+- **Repetitive data entry and admin work.** Click through the same dialog or form step after step, with waits that match how fast the app responds.
+- **Idle and incremental games**, where the game's rules allow it. Many online games forbid automation; check before you use it.
 
 ## Quick start
 

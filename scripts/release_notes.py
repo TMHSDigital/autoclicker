@@ -42,6 +42,11 @@ def release_notes(changelog: str, version: str) -> str | None:
     if body is None:
         return None
     tag = f"v{version.lstrip('v')}"
+    header = (
+        "**Install:** download `WindowsAutoclicker.exe` below and run it (no installer), "
+        "or with Scoop: `scoop bucket add tmhs " + REPO_URL + "`, then "
+        "`scoop install tmhs/windows-autoclicker`.\n\n"
+    )
     footer = (
         "\n\n---\n\n"
         "**Verify the download:** compare `certutil -hashfile WindowsAutoclicker.exe SHA256` "
@@ -49,7 +54,7 @@ def release_notes(changelog: str, version: str) -> str | None:
         "`gh attestation verify WindowsAutoclicker.exe --repo TMHSDigital/autoclicker`.\n\n"
         f"Full changelog: {REPO_URL}/blob/{tag}/CHANGELOG.md"
     )
-    return body + footer
+    return header + body + footer
 
 
 def package_version(init_text: str) -> str | None:

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Click a button wherever it appears on screen, saved in profiles and runnable from the command line. Safer edges: no run can start with its stop keys released, a paused run still ends on time, and image clicks never land where the image used to be. Settings lock while clicking, and the screen is searched about three times faster.
+
 ### Added
 
 - Image target mode: press Capture and drag a rectangle around a button; each click then goes wherever that image is found nearby (searched within a margin around the capture), and the run waits while it isn't on screen. Matching is exact and needs no extra dependencies (#87).
@@ -35,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Troubleshooting covers antivirus false positives (how to verify the download and report it) and an image that is never found; the website FAQ answers the antivirus question too (#114).
 - The website shows recording and image targets, the Scoop install command and the current version and size, with a search-friendly title, structured data (app and FAQ), complete social preview tags, robots.txt and a sitemap (#116).
+- README and website say who the app is for (easing repetitive strain, testing, repetitive work, games where allowed), and release notes now open with how to install and a short summary (#117).
 
 ## [1.6.0] - 2026-10-05
 
