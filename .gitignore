@@ -87,3 +87,6 @@ CLAUDE.md
 
 # Playwright MCP previews
 .playwright-mcp/
+
+# Python package built by CI and tools/pypi_readme.py (#118)
+pydist/
