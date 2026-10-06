@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Record a click routine and replay it | Windows Autoclicker</title>
+  <meta name="description" content="Click through a routine once and Windows Autoclicker replays it: every click becomes a step with its own wait, repeated as often as you like." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/guides/record-a-click-routine.html" />
+  <link rel="icon" href="../images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Record a click routine and replay it" />
+  <meta property="og:description" content="Click through a routine once and Windows Autoclicker replays it: every click becomes a step with its own wait, repeated as often as you like." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/guides/record-a-click-routine.html" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../images/logo.svg" alt="" /> Windows Autoclicker</a>
+      <nav>
+        <a href="./">Guides</a>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download</a>
+        <a href="https://github.com/TMHSDigital/autoclicker">GitHub</a>
+      </nav>
+    </div>
+  </div>
+  <main class="guide">
+    <p class="crumbs"><a href="../">Home</a> / <a href="./">Guides</a></p>
+    <h1>Record a click routine and replay it</h1>
+    <p class="lede">Instead of placing points one by one, click through the routine once while the app watches. Every click becomes a step, with the wait you took before it.</p>
+    <h2>Record it</h2>
+    <ol>
+      <li>Under <b>Target</b>, choose <b>Sequence</b>.</li>
+      <li>Press <b>Record</b>. The status bar says it is recording.</li>
+      <li>Click through the routine at a normal pace: <i>claim</i>, <i>close</i>, <i>next</i>. Clicks on the autoclicker itself are ignored.</li>
+      <li>Press <b>Record</b> again, or your Stop key (<kbd>F7</kbd> by default), to finish.</li>
+    </ol>
+    <p>Each click becomes a step with the mouse button you used, and the time since the previous click becomes that step's wait. Two quick clicks on the same spot become a double click. If the sequence already has steps, you choose whether to replace them, add the recording after them, or discard it.</p>
+    <div class="note">Recording only notes where you click and when, never keystrokes. The mouse hook that sees the clicks exists only while recording and is removed as soon as you finish.</div>
+    <h2>Tidy it up</h2>
+    <ul>
+      <li>Select a step and use <b>Wait...</b> to change how long to wait before the next one.</li>
+      <li><b>Up</b>, <b>Down</b> and <b>Remove</b> rearrange steps; <b>Add point</b> picks one more by hand.</li>
+      <li>A sequence holds up to 50 steps.</li>
+    </ul>
+    <h2>Replay it</h2>
+    <ol>
+      <li>Set <b>Repeat</b> to the number of rounds (0 keeps going until you stop it). The main <b>Interval</b> is the wait between rounds.</li>
+      <li>Press <b>Start</b> (it counts down 3 seconds) or your Start key (<kbd>F6</kbd>, immediately).</li>
+      <li>Stop any time with <kbd>F7</kbd>, <kbd>Esc</kbd>, or by pushing the mouse into a screen corner.</li>
+    </ol>
+    <p>To keep it, press <b>Save Profile</b>: the steps and all the click settings are saved under a name, and you can run it later from a shortcut with <code>WindowsAutoclicker.exe --profile "Daily" --start</code>.</p>
+
+    <p class="next">More: <a href="./">all guides</a> · <a href="https://github.com/TMHSDigital/autoclicker#readme">the full README</a> · <a href="https://github.com/TMHSDigital/autoclicker/discussions">ask a question</a></p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker · free for non-commercial use (CC BY-NC 4.0)</span>
+      <span>For legitimate automation only. Use responsibly.</span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Run the autoclicker on a schedule | Windows Autoclicker</title>
+  <meta name="description" content="Start Windows Autoclicker at a set time today with Start at, or every day with Windows Task Scheduler and the command line." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/guides/run-on-a-schedule.html" />
+  <link rel="icon" href="../images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Run the autoclicker on a schedule" />
+  <meta property="og:description" content="Start Windows Autoclicker at a set time today with Start at, or every day with Windows Task Scheduler and the command line." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/guides/run-on-a-schedule.html" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../images/logo.svg" alt="" /> Windows Autoclicker</a>
+      <nav>
+        <a href="./">Guides</a>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download</a>
+        <a href="https://github.com/TMHSDigital/autoclicker">GitHub</a>
+      </nav>
+    </div>
+  </div>
+  <main class="guide">
+    <p class="crumbs"><a href="../">Home</a> / <a href="./">Guides</a></p>
+    <h1>Run the autoclicker on a schedule</h1>
+    <h2>Later today: Start at</h2>
+    <ol>
+      <li>Open <b>Timing</b> and type a 24-hour time in <b>Start at</b>, such as <code>09:30</code>.</li>
+      <li>Press <b>Start</b>. The status bar counts down: <i>Starting at 09:30 (in 1:59:30)</i>.</li>
+      <li>Stop, the tray's Stop or the toggle key cancel it. The global Stop and Emergency keys are claimed only for the last minute, so <kbd>Esc</kbd> keeps working in other apps while you wait.</li>
+    </ol>
+    <p>The same works from the command line: <code>WindowsAutoclicker.exe --profile Work --start-at 09:30 --start</code>.</p>
+    <h2>Every day: Task Scheduler</h2>
+    <ol>
+      <li>Save your setup as a profile (<b>Save Profile</b>), and give it a click or time limit so an unattended run ends on its own.</li>
+      <li>Open <b>Task Scheduler</b> and choose <b>Create Basic Task</b>. Pick a trigger such as <i>Daily</i> or <i>When I log on</i>.</li>
+      <li>Action: <b>Start a program</b>. Program: the full path to <code>WindowsAutoclicker.exe</code>. Arguments: <code>--profile Work --start --minimized</code>, or <code>--profile Work --headless</code> to run without a window and exit when done.</li>
+      <li>In the task's properties keep <b>Run only when user is logged on</b>.</li>
+    </ol>
+    <div class="note">Windows only accepts mouse and keyboard input on a signed-in, unlocked desktop. A task that runs at the lock screen, or for another user, clicks nothing.</div>
+    <p>A headless run exits with a code that says how it ended: 0 done or stopped, 2 bad options, 3 emergency stop, 4 failsafe or speed guard, 5 error, 6 already running.</p>
+
+    <p class="next">More: <a href="./">all guides</a> · <a href="https://github.com/TMHSDigital/autoclicker#readme">the full README</a> · <a href="https://github.com/TMHSDigital/autoclicker/discussions">ask a question</a></p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker · free for non-commercial use (CC BY-NC 4.0)</span>
+      <span>For legitimate automation only. Use responsibly.</span>
+    </div>
+  </footer>
+</body>
+</html>

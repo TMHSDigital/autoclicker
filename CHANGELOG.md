@@ -44,6 +44,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 - Troubleshooting covers antivirus false positives (how to verify the download and report it) and an image that is never found; the website FAQ answers the antivirus question too (#114).
 - The website shows recording and image targets, the Scoop install command and the current version and size, with a search-friendly title, structured data (app and FAQ), complete social preview tags, robots.txt and a sitemap (#116).
 - README and website say who the app is for (easing repetitive strain, testing, repetitive work, games where allowed), and release notes now open with how to install and a short summary (#117).
+- Six step-by-step guides on the website (record a routine, click an image, run on a schedule, easing clicking strain, verifying a download, SmartScreen and antivirus warnings), linked from the home page and listed in the sitemap (#125).
 
 ## [1.6.0] - 2026-10-05
 

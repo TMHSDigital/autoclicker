@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Click a button wherever it appears on screen | Windows Autoclicker</title>
+  <meta name="description" content="Capture a button once and Windows Autoclicker clicks it wherever it shows up, waiting while it isn't there. Exact or tolerant matching, no extra software." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/guides/click-a-button-wherever-it-appears.html" />
+  <link rel="icon" href="../images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Click a button wherever it appears on screen" />
+  <meta property="og:description" content="Capture a button once and Windows Autoclicker clicks it wherever it shows up, waiting while it isn't there. Exact or tolerant matching, no extra software." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/guides/click-a-button-wherever-it-appears.html" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../images/logo.svg" alt="" /> Windows Autoclicker</a>
+      <nav>
+        <a href="./">Guides</a>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download</a>
+        <a href="https://github.com/TMHSDigital/autoclicker">GitHub</a>
+      </nav>
+    </div>
+  </div>
+  <main class="guide">
+    <p class="crumbs"><a href="../">Home</a> / <a href="./">Guides</a></p>
+    <h1>Click a button wherever it appears on screen</h1>
+    <p class="lede">When a button moves, or only shows up now and then, give the app a picture of it instead of a position. Each click goes wherever that picture is found.</p>
+    <h2>Capture the button</h2>
+    <ol>
+      <li>Under <b>Target</b>, choose <b>Image</b>.</li>
+      <li>Press <b>Capture...</b> and drag a rectangle around the button. A small preview appears next to the button.</li>
+      <li>Capture it the way it looks when the mouse is <i>not</i> on it; many buttons change color on hover, and the cursor rests on the button after a click.</li>
+    </ol>
+    <h2>Run it</h2>
+    <p>Press <b>Start</b>. While the button is on screen, each click goes to its center; while it isn't, the run waits and the status bar says <i>Paused: waiting for the captured image to appear</i>. After a click, the next one waits for a fresh look at the screen, so a click that closes the button is never repeated on whatever is underneath.</p>
+    <h2>When it isn't found</h2>
+    <ul>
+      <li><b>Search</b> sets how far around the capture spot to look (150 px by default). Raise it if the window moves further; it applies at the next Start, no recapture needed.</li>
+      <li><b>Tolerance</b> (0 to 64, 0 = exact) lets colors differ a little, for HDR, Night light or translucent themes. Keep it as low as works: a high tolerance can match something else of the same shape.</li>
+      <li>If display scaling changed or the button really looks different now, press <b>Capture...</b> again. <b>Clear</b> forgets the image.</li>
+    </ul>
+    <div class="note">Image profiles keep their own picture, and an exported profile file carries it along, so you can share a ready-made setup.</div>
+
+    <p class="next">More: <a href="./">all guides</a> · <a href="https://github.com/TMHSDigital/autoclicker#readme">the full README</a> · <a href="https://github.com/TMHSDigital/autoclicker/discussions">ask a question</a></p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker · free for non-commercial use (CC BY-NC 4.0)</span>
+      <span>For legitimate automation only. Use responsibly.</span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -68,6 +68,33 @@ class TestWebsite(unittest.TestCase):
         self.assertEqual(sorted(visible), sorted(listed))
 
 
+class TestGuides(unittest.TestCase):
+    """#125: every guide is reachable, listed in the sitemap, and its links resolve."""
+
+    def test_guides_are_linked_and_listed(self):
+        docs = ROOT / "docs"
+        guides = sorted(p.name for p in (docs / "guides").glob("*.html") if p.name != "index.html")
+        self.assertGreaterEqual(len(guides), 5)
+        landing = (docs / "index.html").read_text("utf-8")
+        index = (docs / "guides" / "index.html").read_text("utf-8")
+        sitemap = (docs / "sitemap.xml").read_text("utf-8")
+        for name in guides:
+            with self.subTest(guide=name):
+                self.assertIn(f'href="guides/{name}"', landing)
+                self.assertIn(f'href="{name}"', index)
+                self.assertIn(f"/guides/{name}</loc>", sitemap)
+
+    def test_relative_links_resolve(self):
+        docs = ROOT / "docs"
+        for page in [docs / "index.html", *(docs / "guides").glob("*.html")]:
+            for link in re.findall(r'(?:href|src)="([^"#:]+)(?:#[^"]*)?"', page.read_text("utf-8")):
+                with self.subTest(page=page.name, link=link):
+                    target = (page.parent / link).resolve()
+                    if link.endswith("/") or target.is_dir():
+                        target = target / "index.html"
+                    self.assertTrue(target.is_file(), f"{page.name} links to missing {link}")
+
+
 class TestDeprecatedAlias(unittest.TestCase):
     def test_coordinate_picker_still_exports_profiles(self):
         """utils.coordinate_picker was renamed to utils.profiles in 1.6.0; remove in 2.0."""

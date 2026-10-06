@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verify your Windows Autoclicker download | Windows Autoclicker</title>
+  <meta name="description" content="Check that WindowsAutoclicker.exe is the file GitHub Actions built from the public source: compare the SHA-256 checksum and the build provenance attestation." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/guides/verify-your-download.html" />
+  <link rel="icon" href="../images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Verify your Windows Autoclicker download" />
+  <meta property="og:description" content="Check that WindowsAutoclicker.exe is the file GitHub Actions built from the public source: compare the SHA-256 checksum and the build provenance attestation." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/guides/verify-your-download.html" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../images/logo.svg" alt="" /> Windows Autoclicker</a>
+      <nav>
+        <a href="./">Guides</a>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download</a>
+        <a href="https://github.com/TMHSDigital/autoclicker">GitHub</a>
+      </nav>
+    </div>
+  </div>
+  <main class="guide">
+    <p class="crumbs"><a href="../">Home</a> / <a href="./">Guides</a></p>
+    <h1>Verify your Windows Autoclicker download</h1>
+    <p class="lede">Every release is built by GitHub Actions from the public repository. Two checks confirm that the file you have is that build.</p>
+    <h2>1. The checksum</h2>
+    <p>Each release has a <code>WindowsAutoclicker.exe.sha256</code> file next to the exe. In PowerShell, in the folder with the download:</p>
+    <pre><code>Get-FileHash .\WindowsAutoclicker.exe</code></pre>
+    <p>The hash it prints must match the one in the <code>.sha256</code> file (ignore upper or lower case). In Command Prompt, <code>certutil -hashfile WindowsAutoclicker.exe SHA256</code> does the same.</p>
+    <h2>2. The build provenance</h2>
+    <p>With the <a href="https://cli.github.com/">GitHub CLI</a> (version 2.60 or newer):</p>
+    <pre><code>gh attestation verify WindowsAutoclicker.exe --repo TMHSDigital/autoclicker</code></pre>
+    <p>This proves the file was built by this repository's workflow from a specific commit, so it can't have been swapped after the build.</p>
+    <h2>3. Optional: other scanners</h2>
+    <p>Search the hash on <a href="https://www.virustotal.com/">VirusTotal</a> to see what other antivirus engines say. A few may flag it anyway; see <a href="smartscreen-and-antivirus.html">SmartScreen and antivirus warnings</a>.</p>
+
+    <p class="next">More: <a href="./">all guides</a> · <a href="https://github.com/TMHSDigital/autoclicker#readme">the full README</a> · <a href="https://github.com/TMHSDigital/autoclicker/discussions">ask a question</a></p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker · free for non-commercial use (CC BY-NC 4.0)</span>
+      <span>For legitimate automation only. Use responsibly.</span>
+    </div>
+  </footer>
+</body>
+</html>

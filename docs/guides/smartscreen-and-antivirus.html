@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windows SmartScreen and antivirus warnings | Windows Autoclicker</title>
+  <meta name="description" content="Why Windows SmartScreen or your antivirus may warn about WindowsAutoclicker.exe, how to check the file is genuine, and how to report a false positive." />
+  <link rel="canonical" href="https://tmhsdigital.github.io/autoclicker/guides/smartscreen-and-antivirus.html" />
+  <link rel="icon" href="../images/logo.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Windows Autoclicker" />
+  <meta property="og:title" content="Windows SmartScreen and antivirus warnings" />
+  <meta property="og:description" content="Why Windows SmartScreen or your antivirus may warn about WindowsAutoclicker.exe, how to check the file is genuine, and how to report a false positive." />
+  <meta property="og:url" content="https://tmhsdigital.github.io/autoclicker/guides/smartscreen-and-antivirus.html" />
+  <meta property="og:image" content="https://tmhsdigital.github.io/autoclicker/images/social-preview.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="../site.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../images/logo.svg" alt="" /> Windows Autoclicker</a>
+      <nav>
+        <a href="./">Guides</a>
+        <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe">Download</a>
+        <a href="https://github.com/TMHSDigital/autoclicker">GitHub</a>
+      </nav>
+    </div>
+  </div>
+  <main class="guide">
+    <p class="crumbs"><a href="../">Home</a> / <a href="./">Guides</a></p>
+    <h1>Windows SmartScreen and antivirus warnings</h1>
+    <h2>"Windows protected your PC"</h2>
+    <p>SmartScreen warns about programs that aren't code-signed and that it hasn't seen often. The exe isn't signed yet, so you may see it. If you downloaded it from the <a href="https://github.com/TMHSDigital/autoclicker/releases/latest">official release page</a>, choose <b>More info</b>, then <b>Run anyway</b>. To be sure first, <a href="verify-your-download.html">verify the download</a>.</p>
+    <h2>Antivirus flags or deletes it</h2>
+    <p>Some engines flag tools like this even when they are clean. Two things trigger it: the exe is a PyInstaller bundle (a Python app packed into one file), and it moves the mouse, which heuristics find suspicious.</p>
+    <ol>
+      <li><a href="verify-your-download.html">Verify the file</a>: checksum and build provenance.</li>
+      <li>If it matches, restore it from quarantine and add an exclusion for it.</li>
+      <li>Please report the false positive to your vendor. For Microsoft Defender, <a href="https://www.microsoft.com/en-us/wdsi/filesubmission">submit the file</a> as "incorrectly detected". Each report helps the next person.</li>
+    </ol>
+    <div class="note">Prefer not to run an exe at all? You can <a href="https://github.com/TMHSDigital/autoclicker#run-from-source">run it from source</a> with Python 3.10 or newer.</div>
+
+    <p class="next">More: <a href="./">all guides</a> · <a href="https://github.com/TMHSDigital/autoclicker#readme">the full README</a> · <a href="https://github.com/TMHSDigital/autoclicker/discussions">ask a question</a></p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <span>Windows Autoclicker · free for non-commercial use (CC BY-NC 4.0)</span>
+      <span>For legitimate automation only. Use responsibly.</span>
+    </div>
+  </footer>
+</body>
+</html>

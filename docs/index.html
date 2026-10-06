@@ -76,142 +76,7 @@
     ]
   }
   </script>
-  <style>
-    :root {
-      --bg: #f6f8fb;
-      --surface: #ffffff;
-      --text: #1b2330;
-      --muted: #5b6676;
-      --line: #e1e6ee;
-      --accent: #0067d6;
-      --accent-strong: #0050a8;
-      --accent-text: #ffffff;
-      --hero-a: #3b8cff;
-      --hero-b: #0058c9;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f141b;
-        --surface: #171e27;
-        --text: #e6ebf2;
-        --muted: #9aa6b6;
-        --line: #26303c;
-        --accent: #4aa3ff;
-        --accent-strong: #7bbcff;
-        --accent-text: #08111c;
-        --hero-a: #1d4f9a;
-        --hero-b: #0b2d62;
-      }
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
-    }
-    a { color: var(--accent); }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-    header.hero {
-      background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
-      color: #fff;
-      padding: 56px 0 64px;
-    }
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 40px;
-      align-items: center;
-    }
-    .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; opacity: 0.95; }
-    .brand img { width: 40px; height: 40px; }
-    h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; margin: 20px 0 14px; }
-    .lede { font-size: 1.2rem; color: #dce9ff; margin: 0 0 28px; max-width: 34ch; }
-    .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .button {
-      display: inline-block;
-      padding: 13px 22px;
-      border-radius: 8px;
-      font-weight: 600;
-      text-decoration: none;
-    }
-    .button.primary { background: #fff; color: #0050a8; }
-    .button.primary:hover { background: #e8f1ff; }
-    .button.ghost { color: #fff; border: 1px solid rgba(255, 255, 255, 0.55); }
-    .button.ghost:hover { background: rgba(255, 255, 255, 0.12); }
-    .fine { font-size: 0.9rem; color: #cfe0ff; margin-top: 14px; }
-    .shot { width: 100%; max-width: 440px; justify-self: center; }
-    .shot img {
-      width: 100%;
-      height: auto;
-      border-radius: 10px;
-      box-shadow: 0 24px 60px rgba(0, 20, 60, 0.45);
-    }
-    section { padding: 64px 0; border-bottom: 1px solid var(--line); }
-    h2 { font-size: 1.8rem; margin: 0 0 8px; }
-    .sub { color: var(--muted); margin: 0 0 32px; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 20px;
-    }
-    .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
-    .card p { margin: 0; color: var(--muted); }
-    .steps { counter-reset: step; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-    .steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
-    .steps li::before {
-      counter-increment: step;
-      content: counter(step);
-      display: grid;
-      place-items: center;
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: var(--accent-text);
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    kbd {
-      font: 600 0.85em "Cascadia Mono", Consolas, monospace;
-      border: 1px solid var(--line);
-      border-bottom-width: 2px;
-      border-radius: 4px;
-      padding: 1px 6px;
-      background: var(--surface);
-    }
-    code, pre { font-family: "Cascadia Mono", Consolas, monospace; }
-    pre {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 16px;
-      overflow-x: auto;
-      font-size: 0.9rem;
-    }
-    details {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 12px;
-    }
-    summary { cursor: pointer; font-weight: 600; }
-    details p { color: var(--muted); margin: 10px 0 0; }
-    footer { padding: 36px 0 48px; color: var(--muted); font-size: 0.92rem; }
-    footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
-    @media (max-width: 860px) {
-      .hero-grid { grid-template-columns: 1fr; }
-      .grid { grid-template-columns: 1fr 1fr; }
-      .steps { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 560px) {
-      .grid, .steps { grid-template-columns: 1fr; }
-      header.hero { padding: 40px 0 48px; }
-    }
-  </style>
+  <link rel="stylesheet" href="site.css" />
 </head>
 <body>
   <header class="hero">
@@ -293,6 +158,21 @@ WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code>
           <div class="card"><h3>Easing repetitive strain</h3><p>If clicking hurts, press one key instead of clicking hundreds of times. Long holds and key repeat help too. It doesn't replace accessibility software or medical advice.</p></div>
           <div class="card"><h3>Testing and QA</h3><p>Repeat a click path to reproduce a bug or soak-test a button. Headless runs exit with a code that says how they ended.</p></div>
           <div class="card"><h3>Repetitive work and games</h3><p>Click through the same form or dialog step after step, or play idle games where the rules allow it.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Guides</h2>
+        <p class="sub">Step by step, for the things people do most. <a href="guides/">All guides</a>.</p>
+        <div class="grid guide-cards">
+          <a class="card" href="guides/record-a-click-routine.html"><h3>Record a click routine and replay it</h3><p>Click through it once; replay it as often as you like.</p></a>
+          <a class="card" href="guides/click-a-button-wherever-it-appears.html"><h3>Click a button wherever it appears on screen</h3><p>Capture a button; clicks follow it, and wait while it's gone.</p></a>
+          <a class="card" href="guides/run-on-a-schedule.html"><h3>Run the autoclicker on a schedule</h3><p>Start at a time today, or every day with Task Scheduler.</p></a>
+          <a class="card" href="guides/auto-clicker-for-repetitive-strain.html"><h3>Using an auto clicker to reduce clicking strain</h3><p>Press one key instead of clicking hundreds of times.</p></a>
+          <a class="card" href="guides/verify-your-download.html"><h3>Verify your Windows Autoclicker download</h3><p>Check the checksum and the build provenance.</p></a>
+          <a class="card" href="guides/smartscreen-and-antivirus.html"><h3>Windows SmartScreen and antivirus warnings</h3><p>Why the warnings happen and what to do about them.</p></a>
         </div>
       </div>
     </section>
