@@ -585,7 +585,7 @@ class TestStartCountdown(GuiHarness):
             Clock.current += timedelta(seconds=31)
             app._countdown_tick(0)
         _settle(app)
-        self.assertEqual(app.status_var.get(), "Done: reached 1 clicks")
+        self.assertEqual(app.status_var.get(), "Done: reached 1 click")
         self.assertIsNone(app._countdown_until)
 
     def test_scheduled_start_can_be_cancelled(self):

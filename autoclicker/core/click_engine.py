@@ -695,7 +695,7 @@ class ClickEngine:
     def _limit_reached(self, max_clicks: int, auto_stop_minutes: int) -> str | None:
         """Return a completion message if a click or time limit was reached."""
         if max_clicks > 0 and self.click_count >= max_clicks:
-            return f"Done: reached {max_clicks:,} clicks"
+            return f"Done: reached {max_clicks:,} click{'s' * (max_clicks != 1)}"
 
         if auto_stop_minutes > 0:
             elapsed_minutes = (time.monotonic() - self.start_time) / 60

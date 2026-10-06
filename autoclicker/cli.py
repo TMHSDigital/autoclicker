@@ -325,5 +325,5 @@ def run_headless(args: argparse.Namespace) -> int:
         controller.finish_run()
 
     outcome = outcomes[0] if outcomes else RunOutcome(STOP_ERROR, "No result", 0)
-    _emit(f"{outcome.message} ({outcome.clicks:,} clicks)")
+    _emit(f"{outcome.message} ({outcome.clicks:,} click{'s' * (outcome.clicks != 1)})")
     return EXIT_CODES.get(outcome.reason, EXIT_ERROR)
