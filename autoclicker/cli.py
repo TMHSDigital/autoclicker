@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from . import __version__
@@ -27,6 +28,7 @@ from .core.click_engine import (
     STOP_USER,
     RunOutcome,
 )
+from .core.schedule import next_start, parse_start_at
 
 # Process exit codes for --headless.
 EXIT_OK = 0  # completed, or stopped with the Stop key
@@ -99,6 +101,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--minutes", metavar="N", help="stop after N minutes")
     parser.add_argument("--repeat", metavar="N", help="sequence rounds (0 = until stopped)")
     parser.add_argument("--delay", metavar="SECONDS", help="countdown before clicking starts")
+    parser.add_argument(
+        "--start-at", metavar="HH:MM", help="wait until this time of day (24-hour) to start"
+    )
     parser.add_argument("--start", action="store_true", help="start clicking after launch")
     parser.add_argument("--minimized", action="store_true", help="start hidden in the tray")
     parser.add_argument(
@@ -116,7 +121,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
         "at", "cursor", "sequence", "image", "profile", "interval", "variation", "spread", "button", "double",
-        "single", "burst", "clicks", "minutes", "repeat", "delay", "hold", "key",
+        "single", "burst", "clicks", "minutes", "repeat", "delay", "start_at", "hold", "key",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
 
@@ -164,6 +169,7 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
         "minutes": "auto_stop_minutes",
         "repeat": "sequence_repeat",
         "delay": "start_delay_seconds",
+        "start_at": "start_at",
     }
     for flag, key in simple.items():
         value = getattr(args, flag)
@@ -246,6 +252,17 @@ def run_headless(args: argparse.Namespace) -> int:
     try:
         delay = int(result["sanitized_settings"].get("start_delay_seconds", 0))
     except (TypeError, ValueError):
+        delay = 0
+    start_at = parse_start_at(str(result["sanitized_settings"].get("start_at") or ""))
+    if start_at is not None:
+        until = next_start(*start_at, datetime.now())
+        _emit(f"Starting at {until:%H:%M}. Ctrl+C to cancel.")
+        try:
+            while (left := (until - datetime.now()).total_seconds()) > 0:
+                time.sleep(min(1.0, left))
+        except KeyboardInterrupt:
+            _emit("Cancelled.")
+            return EXIT_OK
         delay = 0
     for remaining in range(delay, 0, -1):
         _emit(f"Starting in {remaining}... (Ctrl+C to cancel)")

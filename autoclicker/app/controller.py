@@ -150,6 +150,7 @@ class AutoclickerController:
             "pause_when_unfocused": ui_fields["pause_when_unfocused"],
             "max_cps_ceiling": ui_fields.get("max_cps_ceiling", 50),
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
+            "start_at": ui_fields.get("start_at", ""),
             "sequence": ui_fields.get("sequence", []),
             "sequence_repeat": ui_fields.get("sequence_repeat", 0),
             "action": ui_fields.get("action", "click"),

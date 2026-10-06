@@ -98,6 +98,7 @@ class ProfilesMixin(AppBase):
             "auto_stop_minutes": self.auto_stop_entry,
             "sequence_repeat": self.sequence_repeat_entry,
             "start_delay_seconds": self.start_delay_entry,
+            "start_at": self.start_at_entry,
             "hold_ms": self.hold_entry,
             "click_spread": self.spread_entry,
             "key": self.key_entry,

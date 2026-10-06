@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .exceptions import ValidationError
+from .schedule import parse_start_at
 from .screen import ScreenBounds
 from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
 
@@ -74,6 +75,7 @@ FIELD_LABELS: dict[str, str] = {
     "max_cps_ceiling": "Max clicks per second",
     "pause_when_unfocused": "Pause when unfocused",
     "start_delay_seconds": "Start delay",
+    "start_at": "Start at",
     "sequence": "Sequence",
     "sequence_repeat": "Repeat",
     "action": "Action",
@@ -128,7 +130,9 @@ _STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click typ
 _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
 _LIST_KEYS = frozenset({"sequence", "image_region"})
-_STR_KEYS = frozenset({*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path"})
+_STR_KEYS = frozenset(
+    {*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path", "start_at"}
+)
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
 
@@ -210,6 +214,7 @@ class SettingsManager:
         "enable_failsafe": True,
         "max_cps_ceiling": 50,
         "start_delay_seconds": 3,
+        "start_at": "",
         "sequence": [],
         "sequence_repeat": 0,
         "action": "click",
@@ -727,6 +732,9 @@ class SettingsManager:
             errors["start_delay_seconds"] = (
                 f"Must be between 0 and {MAX_START_DELAY_SECONDS} seconds (0 = start at once)"
             )
+        start_at = str(parsed.get("start_at") or "").strip()
+        if start_at and parse_start_at(start_at) is None:
+            errors["start_at"] = "Use a 24-hour time such as 09:30, or leave it blank"
 
         return {
             "valid": not errors,

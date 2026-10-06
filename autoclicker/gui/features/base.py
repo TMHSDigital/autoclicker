@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from collections.abc import Callable
+from datetime import datetime
 from tkinter import ttk
 from typing import TYPE_CHECKING, Any
 
@@ -51,6 +52,7 @@ class AppBase:
     action_radios: dict[str, ttk.Radiobutton]
     hold_entry: ttk.Entry
     spread_entry: ttk.Entry
+    start_at_entry: ttk.Entry
     key_entry: ttk.Entry
     condition_var: tk.StringVar
     condition_label_var: tk.StringVar
@@ -101,6 +103,8 @@ class AppBase:
     sequence_steps: list[dict]
     # Pending root.after id while a Start-button countdown is running.
     _countdown_job: str | None = None
+    # Time of day a scheduled start waits for (#121); None for a plain countdown.
+    _countdown_until: datetime | None = None
     # Release page of a newer version found by the update check.
     _release_url: str | None = None
     # Active while recording a sequence (#86); the hook exists only then.

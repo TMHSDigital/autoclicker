@@ -59,6 +59,15 @@ def _build_timing(app, body: ttk.Frame, settings) -> None:
         side=tk.LEFT, padx=(5, 0)
     )
 
+    # Or wait for a time of day (#121); blank uses the delay above.
+    start_at = _row(body, 2, "Start at:")
+    app.start_at_entry = ttk.Entry(start_at, width=6)
+    app.start_at_entry.pack(side=tk.LEFT)
+    app.start_at_entry.insert(0, str(settings.get("start_at", "") or ""))
+    ttk.Label(start_at, text="24-hour time, such as 09:30 (blank = use the delay)").pack(
+        side=tk.LEFT, padx=(5, 0)
+    )
+
 
 def _build_safety(app, body: ttk.Frame, settings) -> None:
     limits = _row(body, 0, "Limits:")

@@ -558,6 +558,46 @@ class TestStartCountdown(GuiHarness):
         _settle(app)
         self.assertEqual(app.status_var.get(), "Done: reached 2 clicks")
 
+    def test_scheduled_start_waits_for_the_time(self):
+        """#121: Start at HH:MM counts down to that time; stop keys only near the end."""
+        from datetime import datetime, timedelta
+
+        class Clock:
+            current = datetime(2026, 10, 5, 7, 0, 0)
+
+            @classmethod
+            def now(cls):
+                return cls.current
+
+        app = self.app
+        self.set_fields(interval="5", start_delay="3", start_at="09:00")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="1")
+        with patch("autoclicker.gui.features.countdown.datetime", Clock):
+            app.start_from_button()
+            self.assertEqual(app.status_var.get(), "Starting at 09:00 (in 2:00:00)")
+            self.hotkeys.set_running.assert_called_with(False)  # Esc stays free for hours
+            self.assertIsNotNone(app._countdown_job)
+            Clock.current = datetime(2026, 10, 5, 8, 59, 30)
+            app._countdown_tick(0)  # the argument is ignored: the clock decides
+            self.assertEqual(app.status_var.get(), "Starting in 30...")
+            self.hotkeys.set_running.assert_called_with(True)
+            Clock.current += timedelta(seconds=31)
+            app._countdown_tick(0)
+        _settle(app)
+        self.assertEqual(app.status_var.get(), "Done: reached 1 clicks")
+        self.assertIsNone(app._countdown_until)
+
+    def test_scheduled_start_can_be_cancelled(self):
+        app = self.app
+        self.set_fields(interval="5", start_at="23:59")
+        app.start_from_button()
+        self.assertIn("Starting at 23:59", app.status_var.get())
+        app.stop_clicking()
+        self.assertIsNone(app._countdown_job)
+        self.assertIsNone(app._countdown_until)
+        self.assertEqual(app.status_var.get(), "Start cancelled")
+
     def test_invalid_input_is_reported_before_counting(self):
         app = self.app
         self.set_fields(interval="abc")

@@ -210,10 +210,23 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--hold MS`, `--key KEY` | Hold the button, or press a key, instead of clicking |
 | `--burst N:MS`, `--clicks N`, `--minutes N`, `--repeat N` | Bursts, limits and sequence rounds |
 | `--delay SECONDS` | Countdown before clicking starts |
+| `--start-at HH:MM` | Wait until this time of day (24-hour) before starting |
 | `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
 | `--headless` | No window: run once, then exit. Hotkeys, the corner failsafe and every limit still apply, and saved settings are left alone |
 
 A headless run exits with `0` when it finishes or you press Stop, `2` for bad options, `3` after an emergency stop, `4` for the failsafe or runaway guard, `5` on an error and `6` if the app is already running. `--help` lists everything; the `.exe` shows it in a dialog.
+
+### Start on a schedule
+
+For a one-off start later today, set **Timing, Start at** (24-hour, such as `09:30`) and press Start: the status bar counts down to that time, and Stop, the tray's Stop or the toggle key cancel it. The global Stop and Emergency keys are claimed only for the last minute, so Esc keeps working in other apps while you wait. From the command line, `--start-at 09:30` does the same.
+
+To start every day, or while you're away, use Windows **Task Scheduler**:
+
+1. Open Task Scheduler and choose **Create Basic Task**. Name it, pick the trigger (Daily, At log on, ...).
+2. Action: **Start a program**. Program: the full path to `WindowsAutoclicker.exe`. Arguments, for example: `--profile Work --start --minimized`, or `--profile Work --headless` to run without a window and exit when done.
+3. In the task's properties, keep **Run only when user is logged on**: Windows only accepts mouse and keyboard input on a signed-in, unlocked desktop, so a task that runs at the lock screen or for another user clicks nothing.
+
+Set a click or time limit in the profile (or add `--clicks` / `--minutes`) so an unattended run ends on its own.
 
 ## Hotkeys
 
@@ -313,6 +326,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `enable_failsafe` | `true` | Corner failsafe |
 | `pause_when_unfocused` | `false` | Pause while the starting window isn't in front |
 | `start_delay_seconds` | `3` | Countdown before a Start-button or tray start, 0 to 60; `0` = start at once. Hotkey starts are immediate |
+| `start_at` | `""` | A 24-hour time such as `09:30`: Start waits until then instead of the delay; blank = off |
 | `max_cps_ceiling` | `50` | Runaway guard (Safety, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
