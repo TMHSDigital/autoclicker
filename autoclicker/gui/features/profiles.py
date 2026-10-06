@@ -99,6 +99,7 @@ class ProfilesMixin(AppBase):
             "sequence_repeat": self.sequence_repeat_entry,
             "start_delay_seconds": self.start_delay_entry,
             "hold_ms": self.hold_entry,
+            "click_spread": self.spread_entry,
             "key": self.key_entry,
         }
         for key, entry in entries.items():

@@ -44,6 +44,7 @@ PROFILE_KEYS = (
     "image_region",
     "image_margin",
     "image_tolerance",
+    "click_spread",
 )
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"

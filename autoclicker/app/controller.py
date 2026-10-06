@@ -164,6 +164,7 @@ class AutoclickerController:
             "image_region": ui_fields.get("image_region", []),
             "image_margin": ui_fields.get("image_margin", 150),
             "image_tolerance": ui_fields.get("image_tolerance", 0),
+            "click_spread": ui_fields.get("click_spread", 0),
         }
 
     def validate(
@@ -272,6 +273,7 @@ class AutoclickerController:
             key=str(sanitized.get("key", "")),
             condition=_pixel_condition(sanitized),
             image=image,
+            spread=int(sanitized.get("click_spread", 0)),
         )
 
         if started:

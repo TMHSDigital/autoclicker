@@ -84,6 +84,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--interval", metavar="TIME", help="wait between clicks or bursts, e.g. 100ms or 2s"
     )
     parser.add_argument("--variation", metavar="MS", help="random +/- milliseconds per interval")
+    parser.add_argument(
+        "--spread", metavar="PX", help="land each click up to PX pixels from the target"
+    )
     parser.add_argument("--button", choices=("left", "right", "middle"))
     clicks = parser.add_mutually_exclusive_group()
     clicks.add_argument("--double", action="store_true", help="double click")
@@ -112,7 +115,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
-        "at", "cursor", "sequence", "image", "profile", "interval", "variation", "button", "double",
+        "at", "cursor", "sequence", "image", "profile", "interval", "variation", "spread", "button", "double",
         "single", "burst", "clicks", "minutes", "repeat", "delay", "hold", "key",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
@@ -155,6 +158,7 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
         values.update(burst_clicks=parts[0], burst_pause=parts[1])
     simple = {
         "variation": "variation",
+        "spread": "click_spread",
         "button": "mouse_button",
         "clicks": "max_clicks",
         "minutes": "auto_stop_minutes",

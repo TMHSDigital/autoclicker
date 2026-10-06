@@ -50,6 +50,7 @@ class AppBase:
     # Click / Hold / Key radios, enabled per target mode (#102)
     action_radios: dict[str, ttk.Radiobutton]
     hold_entry: ttk.Entry
+    spread_entry: ttk.Entry
     key_entry: ttk.Entry
     condition_var: tk.StringVar
     condition_label_var: tk.StringVar

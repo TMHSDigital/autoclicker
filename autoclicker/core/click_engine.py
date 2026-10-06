@@ -197,6 +197,11 @@ class ClickEngine:
         self._image: ImageTarget | None = None
         self._image_match: tuple[tuple[int, int] | None, float] = (None, 0.0)
         self._image_clicked_at = float("-inf")
+        # Click spread (#120): each click lands up to this many px from the target.
+        self._spread = 0
+        # Where the last click actually went, so the corner failsafe knows the
+        # cursor resting there was put there by us.
+        self._last_click_pos: tuple[int, int] | None = None
         self._run_id = 0  # lets a stale pixel watcher from an earlier run notice and exit
         self._safety_fired = False
         # Sequence mode: the steps of one round and how many rounds to run
@@ -253,6 +258,7 @@ class ClickEngine:
         key: str = "",
         condition: PixelCondition | None = None,
         image: ImageTarget | None = None,
+        spread: int = 0,
     ) -> bool:
         """
         Start the clicking process
@@ -281,6 +287,9 @@ class ClickEngine:
             image: Image target mode: click the center of this image wherever it
                 is found in its search region (x and y are ignored); wait while
                 it isn't there
+            spread: Click up to this many px away from the target, at random,
+                in fixed, sequence and image modes (kept inside the image and
+                on screen); ignored at the cursor and for key presses
 
         Returns:
             True if started successfully, False otherwise
@@ -302,6 +311,8 @@ class ClickEngine:
         self._image = image
         self._image_match = (None, 0.0)
         self._image_clicked_at = float("-inf")
+        self._spread = max(0, int(spread))
+        self._last_click_pos = None
         self.current_step = 0
         if self.pause_when_unfocused:
             hwnd = get_foreground_window_handle()
@@ -793,9 +804,11 @@ class ClickEngine:
                         f"Coordinates ({x}, {y}) are off screen (valid: {bounds.describe()})",
                     )
 
+                x, y = self._spread_point(x, y, bounds)
                 # Pass the target on every click: the user may have moved the
                 # mouse since the last one, and the click must not follow it.
                 position = {"x": x, "y": y}
+                self._last_click_pos = (x, y)
 
             if mouse_button not in ("left", "right", "middle"):
                 raise ClickEngineError("perform_click", f"Unsupported mouse button: {mouse_button}")
@@ -868,13 +881,27 @@ class ClickEngine:
                 pyautogui.FAILSAFE = previous
             raise
 
+    def _spread_point(self, x: int, y: int, bounds: ScreenBounds) -> tuple[int, int]:
+        """The target moved by up to ``_spread`` px, inside the image and on screen."""
+        if self._spread <= 0:
+            return x, y
+        sx = sy = self._spread
+        if self._image is not None:
+            # (x, y) is the image's center: stay on the image.
+            sx = min(sx, max(0, (self._image.prepared.width - 1) // 2))
+            sy = min(sy, max(0, (self._image.prepared.height - 1) // 2))
+        nx = min(max(x + random.randint(-sx, sx), bounds.left), bounds.right - 1)
+        ny = min(max(y + random.randint(-sy, sy), bounds.top), bounds.bottom - 1)
+        return nx, ny
+
     def _cursor_in_failsafe_corner(self, x: int | None, y: int | None) -> bool:
         """True if the user has moved the cursor into a failsafe corner of any monitor."""
         if not self.failsafe_enabled or not self._failsafe_corners:
             return False
         position = cursor_position()
-        # Resting on a fixed target that happens to be a corner is not a request to stop.
-        if position is None or position == (x, y):
+        # Resting on a fixed target that happens to be a corner is not a request to
+        # stop, nor resting where the last (spread) click put the cursor.
+        if position is None or position in ((x, y), self._last_click_pos):
             return False
         px, py = position
         return any(

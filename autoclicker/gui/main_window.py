@@ -479,6 +479,11 @@ class AutoclickerApp(
         state = tk.NORMAL if uses_point(mode, action) else tk.DISABLED
         for widget in (self.x_entry, self.y_entry, self.pick_btn):
             widget.configure(state=state)
+        spread = getattr(self, "spread_entry", None)
+        if spread is not None:  # the cursor is never moved; keys have no point
+            spread.configure(
+                state=tk.DISABLED if mode == "cursor" or action == "key" else tk.NORMAL
+            )
         for frame, shown in (
             (getattr(self, "sequence_frame", None), mode == "sequence"),
             (getattr(self, "image_frame", None), mode == "image"),
@@ -603,6 +608,7 @@ class AutoclickerApp(
                 "image_region": list(self.image_region),
                 "image_margin": self.image_margin_entry.get(),
                 "image_tolerance": self.image_tolerance_entry.get(),
+                "click_spread": self.spread_entry.get(),
                 "action": self.action_var.get(),
                 "hold_ms": self.hold_entry.get(),
                 "key": self.key_entry.get(),

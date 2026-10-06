@@ -4,6 +4,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ..styles import MUTED
+
 
 def build_click_settings_section(app, parent: ttk.Frame) -> None:
     """Create the essential click settings section."""
@@ -97,4 +99,18 @@ def build_click_settings_section(app, parent: ttk.Frame) -> None:
     app.key_entry.pack(side=tk.LEFT)
     app.key_entry.insert(0, str(settings.get("key", "")))
     app.key_entry.bind("<KeyRelease>", lambda _e: app._refresh_target_summary(), add="+")
+
+    # Click spread (#120): land each click up to N px from the target.
+    ttk.Label(settings_frame, text="Spread:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
+    spread_frame = ttk.Frame(settings_frame)
+    spread_frame.grid(row=4, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    ttk.Label(spread_frame, text="\u00b1").pack(side=tk.LEFT)
+    app.spread_entry = ttk.Entry(spread_frame, width=6)
+    app.spread_entry.pack(side=tk.LEFT)
+    app.spread_entry.insert(0, str(settings.get("click_spread", "0")))
+    ttk.Label(
+        spread_frame,
+        text="px around the target (0 = the exact point)",
+        style=MUTED,
+    ).pack(side=tk.LEFT, padx=(3, 0))
     app._apply_action_state()

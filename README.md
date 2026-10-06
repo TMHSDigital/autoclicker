@@ -169,6 +169,8 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 
 </div>
 
+**Spread** (Click Settings) does for position what variation does for time: each click lands at a random spot up to that many pixels from the target, for a more natural pattern or to avoid wearing one spot. It applies to fixed points, sequence steps and image targets (staying on the image), not to the cursor or key presses, and clicks never leave the screen. 0, the default, clicks the exact point.
+
 ## Sequences
 
 Choose **Sequence** under Target to click several points in order, for example *claim, close, next*.
@@ -203,6 +205,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--at X,Y`, `--cursor`, `--sequence`, `--image` | Target: a point, wherever the cursor is, the saved sequence, or wherever the captured image appears (the saved capture, or the one in `--profile`) |
 | `--profile NAME` | Load a saved profile first (other flags apply on top) |
 | `--interval 100ms` / `2s`, `--variation MS` | Timing |
+| `--spread PX` | Land each click up to PX pixels from the target (0 to 50) |
 | `--button left\|right\|middle`, `--double`, `--single` | What to click |
 | `--hold MS`, `--key KEY` | Hold the button, or press a key, instead of clicking |
 | `--burst N:MS`, `--clicks N`, `--minutes N`, `--repeat N` | Bursts, limits and sequence rounds |
@@ -295,6 +298,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `interval` | `1000` | Wait between bursts, in `interval_unit` |
 | `interval_unit` | `"ms"` | `"ms"` or `"seconds"` |
 | `variation` | `0` | ± random milliseconds added to each interval |
+| `click_spread` | `0` | Each click lands up to this many pixels from the target, 0 to 50; `0` = exact point |
 | `mouse_button` | `"left"` | `"left"`, `"right"` or `"middle"` |
 | `click_type` | `"single"` | `"single"` or `"double"`, for any button. A double click counts as one click toward limits and two presses toward the runaway guard |
 | `action` | `"click"` | `"click"`; `"hold"` presses the button for `hold_ms`, then releases it (always released when a run stops); `"key"` presses `key` in whatever window has focus. Sequences always click |
@@ -316,7 +320,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `last_update_check` | `0` | When the last successful update check ran (Unix time) |
 | `first_run_hint_dismissed` | `false` | Set when you press **Got it** on the first-launch hint that lists the ways to stop a run |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
-| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
+| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, `click_spread`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
 **Network:** the app makes no network requests unless you allow the update check (a checkbox in the first-launch hint, off unless you tick it, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
