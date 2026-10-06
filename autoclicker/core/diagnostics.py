@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import __version__
-from .app_data import app_data_dir
+from .app_data import app_data_dir, portable_data_dir
 from .screen import ScreenBounds, monitor_rects
 
 LOG_TAIL_LINES = 50
@@ -105,6 +105,8 @@ def build_report(
     """The full diagnostics text."""
     folder = data_dir or app_data_dir()
     run_method = "exe" if getattr(sys, "frozen", False) else "source"
+    if portable_data_dir() is not None:
+        run_method += ", portable"
     screens = monitors() or []
     lines = [
         "### Windows Autoclicker diagnostics",

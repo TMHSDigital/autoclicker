@@ -77,6 +77,12 @@ class TestReport(unittest.TestCase):
         self.assertIn("%USERPROFILE%", text)
         self.assertNotIn("900", text)
 
+    def test_portable_mode_is_named(self):
+        """#122"""
+        with patch("autoclicker.core.diagnostics.portable_data_dir", return_value=self.folder):
+            self.assertIn("portable)", self.report().splitlines()[1])
+        self.assertNotIn("portable", self.report().splitlines()[1])
+
     def test_missing_logs(self):
         self.assertIn("(not found)", self.report())
 

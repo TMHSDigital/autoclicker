@@ -161,7 +161,7 @@ class TestLegacyLocation(unittest.TestCase):
         )
         real = settings_paths.legacy_app_dir
         with (
-            patch.object(settings_paths.sys, "frozen", True, create=True),
-            patch.object(settings_paths.sys, "executable", r"C:\Tools\Autoclicker\app.exe"),
+            patch("autoclicker.core.app_data.sys.frozen", True, create=True),
+            patch("autoclicker.core.app_data.sys.executable", r"C:\Tools\Autoclicker\app.exe"),
         ):
             self.assertEqual(real(), Path(r"C:\Tools\Autoclicker").resolve())

@@ -7,7 +7,7 @@ Before tagging, the `chore(release): X.Y.Z` commit sets the version in `pyprojec
 Pushing a `vX.Y.Z` tag runs the CI workflow on GitHub Actions:
 
 1. Lint, type check, dependency audit and tests on Python 3.10 to 3.14.
-2. PyInstaller builds `WindowsAutoclicker.exe` from `WindowsAutoclicker.spec` (no UPX, with a Windows version resource), launches it once as a smoke test, and writes `WindowsAutoclicker.exe.sha256`.
+2. PyInstaller builds `WindowsAutoclicker.exe` from `WindowsAutoclicker.spec` (no UPX, with a Windows version resource), launches it once as a smoke test, and writes `WindowsAutoclicker.exe.sha256`. It then launches the exe once more from a folder with `portable.txt`, checks that it wrote its log to `data\` and nothing to `%APPDATA%`, and packs `WindowsAutoclicker-portable.zip` (exe plus marker) with its own checksum.
 3. The release job checks that the tag matches `autoclicker/__init__.py`, takes the release notes from that version's section of `CHANGELOG.md` (`scripts/release_notes.py`), records a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for the exe, and publishes the exe and its checksum.
 
 Maintainer steps are in [CONTRIBUTING.md](../CONTRIBUTING.md#releases).

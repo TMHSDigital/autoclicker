@@ -6,11 +6,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
-from .app_data import app_data_dir
+from .app_data import app_data_dir, app_dir
 from .session_log import append_session_event
 
 LEGACY_FILENAME = "autoclicker_settings.json"
@@ -29,9 +28,7 @@ def legacy_app_dir() -> Path:
     The exe's folder, or the source checkout when run with Python. Never the
     working directory, which may be any folder the app was started from (#105).
     """
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parents[2]
+    return app_dir()
 
 
 def legacy_settings_path() -> Path:

@@ -49,3 +49,39 @@ class TestSessionLogRotation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPortableMode(unittest.TestCase):
+    """#122: portable.txt next to the exe keeps everything in a data folder beside it."""
+
+    def _frozen(self, exe_dir):
+        from contextlib import ExitStack
+
+        stack = ExitStack()
+        stack.enter_context(patch("autoclicker.core.app_data.sys.frozen", True, create=True))
+        stack.enter_context(
+            patch("autoclicker.core.app_data.sys.executable", str(Path(exe_dir, "app.exe")))
+        )
+        return stack
+
+    def test_marker_next_to_the_exe(self):
+        with tempfile.TemporaryDirectory() as exe_dir:
+            Path(exe_dir, "portable.txt").write_text("", encoding="utf-8")
+            with self._frozen(exe_dir), patch.dict(os.environ, {"APPDATA": r"C:\elsewhere"}):
+                self.assertEqual(app_data_dir(), Path(exe_dir).resolve() / "data")
+
+    def test_without_marker_uses_appdata(self):
+        with (
+            tempfile.TemporaryDirectory() as exe_dir,
+            self._frozen(exe_dir),
+            patch.dict(os.environ, {"APPDATA": r"C:\Roaming"}),
+        ):
+            self.assertEqual(app_data_dir(), Path(r"C:\Roaming") / "WindowsAutoclicker")
+
+    def test_source_runs_are_never_portable(self):
+        from autoclicker.core import app_data
+
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "portable.txt").write_text("", encoding="utf-8")
+            with patch.object(app_data, "app_dir", return_value=Path(folder)):
+                self.assertIsNone(app_data.portable_data_dir())

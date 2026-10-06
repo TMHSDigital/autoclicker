@@ -171,6 +171,25 @@ jobs:
           "$hash  WindowsAutoclicker.exe" | Out-File -Encoding ascii dist\WindowsAutoclicker.exe.sha256
           Get-Content dist\WindowsAutoclicker.exe.sha256
 
+      - name: Portable zip, smoke-tested in portable mode (#122)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "portable"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item dist\WindowsAutoclicker.exe $dir
+          "Settings, logs and captured images are kept in the data folder next to WindowsAutoclicker.exe. Delete this file to keep them in %APPDATA% instead." | Out-File -Encoding utf8 (Join-Path $dir "portable.txt")
+          $env:APPDATA = Join-Path $env:RUNNER_TEMP "portable-appdata"
+          $p = Start-Process -FilePath (Join-Path $dir "WindowsAutoclicker.exe") -WorkingDirectory $env:RUNNER_TEMP -PassThru
+          Start-Sleep -Seconds 10
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not (Test-Path (Join-Path $dir "data\autoclicker.log"))) { Write-Error "portable mode did not write data\autoclicker.log"; exit 1 }
+          if (Test-Path (Join-Path $env:APPDATA "WindowsAutoclicker")) { Write-Error "portable mode wrote to APPDATA"; exit 1 }
+          Remove-Item -Recurse -Force (Join-Path $dir "data")
+          Compress-Archive -Path (Join-Path $dir "*") -DestinationPath dist\WindowsAutoclicker-portable.zip
+          $hash = (Get-FileHash dist\WindowsAutoclicker-portable.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  WindowsAutoclicker-portable.zip" | Out-File -Encoding ascii dist\WindowsAutoclicker-portable.zip.sha256
+          Get-Content dist\WindowsAutoclicker-portable.zip.sha256
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -223,6 +242,8 @@ jobs:
           files: |
             dist/WindowsAutoclicker.exe
             dist/WindowsAutoclicker.exe.sha256
+            dist/WindowsAutoclicker-portable.zip
+            dist/WindowsAutoclicker-portable.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
