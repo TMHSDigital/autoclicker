@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "windows-autoclicker"
 version = "1.6.0"
-description = "Windows autoclicker with coordinate targeting, burst mode, and safety controls"
+description = "Free Windows auto clicker: record click routines, click wherever an image appears, sequences, hold and key actions, safety stops on by default"
 readme = "README.md"
 license = "CC-BY-NC-4.0"
 license-files = ["LICENSE"]
@@ -13,8 +13,8 @@ authors = [
     {name = "TM Hospitality Strategies", email = "info@tmhsdigital.com"}
 ]
 keywords = [
-    "autoclicker", "automation", "windows", "gui", "python",
-    "productivity", "mouse", "clicking", "safety"
+    "autoclicker", "auto clicker", "auto-clicker", "mouse clicker", "click recorder",
+    "macro", "image matching", "automation", "windows", "productivity", "accessibility"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -28,7 +28,6 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Utilities",
     "Topic :: Desktop Environment",
-    "Topic :: System :: Monitoring",
     "Natural Language :: English"
 ]
 requires-python = ">=3.10"
@@ -56,10 +55,12 @@ build = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/TMHSDigital/autoclicker"
-"Repository" = "https://github.com/TMHSDigital/autoclicker"
-"Bug Reports" = "https://github.com/TMHSDigital/autoclicker/issues"
+"Homepage" = "https://tmhsdigital.github.io/autoclicker/"
 "Source" = "https://github.com/TMHSDigital/autoclicker"
+"Documentation" = "https://github.com/TMHSDigital/autoclicker#readme"
+"Changelog" = "https://github.com/TMHSDigital/autoclicker/blob/main/CHANGELOG.md"
+"Bug Reports" = "https://github.com/TMHSDigital/autoclicker/issues"
+"Funding" = "https://github.com/sponsors/TMHSDigital"
 
 [project.scripts]
 autoclicker = "autoclicker.main:main"
