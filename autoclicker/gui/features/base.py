@@ -104,6 +104,9 @@ class AppBase:
     _release_url: str | None = None
     # Active while recording a sequence (#86); the hook exists only then.
     _recorder: ClickRecorder | None = None
+    first_run_hint: ttk.Frame
+    first_run_hint_var: tk.StringVar
+    hint_updates_var: tk.BooleanVar
     # Controls disabled while a run or countdown uses the settings (#102).
     _locked_widgets: tuple[Any, ...] = ()
     # True while the Hotkeys dialog is open; global keys are released then (#93).

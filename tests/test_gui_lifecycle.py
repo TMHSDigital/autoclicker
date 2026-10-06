@@ -180,6 +180,33 @@ class TestBuild(GuiHarness):
         self.assertEqual(app.x_entry.cget("state"), "normal")
 
 
+class TestFirstRunHint(GuiHarness):
+    """#124: a one-time hint names the ways out of a run, with the user's keys."""
+
+    def test_shown_with_current_keys_until_dismissed(self):
+        app = self.app
+        text = app.first_run_hint_var.get()
+        for part in ("F7 stops clicking", "Esc is the emergency stop", "screen corner"):
+            self.assertIn(part, text)
+        self.assertFalse(app.settings.get("first_run_hint_dismissed"))
+        self.hotkeys.bindings = {**DEFAULT_HOTKEYS, "stop": "F9"}
+        app._refresh_hotkey_labels()
+        self.assertIn("F9 stops clicking", app.first_run_hint_var.get())
+        app.failsafe_var.set(False)
+        app._sync_safety_from_ui()
+        self.assertNotIn("corner", app.first_run_hint_var.get())
+        app.first_run_hint.grid_remove.reset_mock()  # ttk.Frame is one shared mock here
+        app.dismiss_first_run_hint()
+        app.first_run_hint.grid_remove.assert_called_once()
+        self.assertTrue(app.settings.get("first_run_hint_dismissed"))
+
+    def test_no_stop_keys(self):
+        app = self.app
+        self.hotkeys.bindings = {"start": "F6", "stop": "", "emergency": "", "toggle": ""}
+        app.failsafe_var.set(False)
+        self.assertIn("Stop button", app._first_run_hint_text())
+
+
 class TestRunLifecycle(GuiHarness):
     def test_max_clicks_run_reports_completion_once(self):
         app = self.app

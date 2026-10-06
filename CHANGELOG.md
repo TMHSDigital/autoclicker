@@ -17,6 +17,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Changed
 
+- First launch shows a short hint with the ways to stop a run, using your own keys (stop key, emergency key, and the screen corners if the failsafe is on) until you press **Got it**. The update-check question moved into that hint as an unticked checkbox instead of a separate dialog (#124).
 - The settings are locked while a countdown or run is in progress, since changes would not reach the running clicks; section headers still open. Action choices a target mode can't run are greyed out (Hold and Key in Sequence, Key in Image), switching to such a mode falls back to Click, and X/Y are off when Key is chosen. The status bar's target line follows what you type in X, Y and Key (#102).
 
 ### Fixed

@@ -226,6 +226,7 @@ class SettingsManager:
         # None until the user has been asked once; then True or False.
         "check_for_updates": None,
         "last_update_check": 0,
+        "first_run_hint_dismissed": False,
         "hotkeys": {"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""},
         "presets": {},
     }

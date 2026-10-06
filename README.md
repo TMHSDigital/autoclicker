@@ -310,12 +310,13 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `max_cps_ceiling` | `50` | Runaway guard (Safety, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
 | `theme` | `"light"` | `"light"` or `"dark"` |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
-| `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (App) |
-| `last_update_check` | `0` | When the last update check ran (Unix time) |
+| `check_for_updates` | `null` | Chosen with the checkbox in the first-launch hint (off unless ticked); `true` checks GitHub for a newer release at most once a day (App) |
+| `last_update_check` | `0` | When the last successful update check ran (Unix time) |
+| `first_run_hint_dismissed` | `false` | Set when you press **Got it** on the first-launch hint that lists the ways to stop a run |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
-**Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
+**Network:** the app makes no network requests unless you allow the update check (a checkbox in the first-launch hint, off unless you tick it, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 

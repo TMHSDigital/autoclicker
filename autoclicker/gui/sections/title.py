@@ -49,6 +49,34 @@ def build_title_section(app, parent: ttk.Frame) -> None:
     app.update_button.grid(row=0, column=2, sticky=tk.E, padx=(0, 6))
     app.update_button.grid_remove()
 
+    # One-time hint with the ways out of a run (#124); "Got it" hides it for good.
+    app.first_run_hint_var = tk.StringVar(value=app._first_run_hint_text())
+    app.first_run_hint = ttk.Frame(header)
+    app.first_run_hint.grid(row=1, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=(10, 0))
+    app.first_run_hint.grid_columnconfigure(0, weight=1)
+    ttk.Label(
+        app.first_run_hint,
+        textvariable=app.first_run_hint_var,
+        wraplength=420,
+        justify=tk.LEFT,
+    ).grid(row=0, column=0, sticky=tk.W)
+    ttk.Button(
+        app.first_run_hint,
+        text="Got it",
+        style="Toolbutton",
+        command=app.dismiss_first_run_hint,
+    ).grid(row=0, column=1, sticky=tk.NE, padx=(8, 0))
+    # The update opt-in rides along on first run instead of a second, modal prompt.
+    app.hint_updates_var = tk.BooleanVar(value=False)
+    if app.settings.get("check_for_updates") is None:
+        ttk.Checkbutton(
+            app.first_run_hint,
+            text="Also check GitHub once a day for new versions (nothing is sent or downloaded)",
+            variable=app.hint_updates_var,
+        ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(4, 0))
+    if app.settings.get("first_run_hint_dismissed", False):
+        app.first_run_hint.grid_remove()
+
 
 def _theme_label(app) -> str:
     return "\u2600 Light" if app.theme_var.get() == "dark" else "\u263d Dark"

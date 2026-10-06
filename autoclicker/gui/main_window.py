@@ -308,7 +308,40 @@ class AutoclickerApp(
         )
         return f" ({key})" if key else ""
 
+    def _first_run_hint_text(self) -> str:
+        """The ways to stop a run, with the user's own keys (#124)."""
+        hotkeys = getattr(self, "_hotkeys", None)  # built after the window
+        bindings = hotkeys.bindings if hotkeys is not None else self._saved_hotkeys()
+        stop = bindings.get("stop") or bindings.get("toggle")
+        ways = []
+        if stop:
+            ways.append(f"{stop} stops clicking")
+        if bindings.get("emergency"):
+            ways.append(f"{bindings['emergency']} is the emergency stop")
+        failsafe = getattr(self, "failsafe_var", None)
+        if failsafe.get() if failsafe is not None else self.settings.get("enable_failsafe", True):
+            ways.append("pushing the mouse into any screen corner stops it too")
+        if not ways:
+            ways.append("use the Stop button (no stop keys are set)")
+        return "Before you start: " + ", ".join(ways) + "."
+
+    def dismiss_first_run_hint(self) -> None:
+        """Got it: hide the hint for good, and record the update choice made there."""
+        self.settings.set("first_run_hint_dismissed", True)
+        hint = getattr(self, "first_run_hint", None)
+        if hint is not None:
+            hint.grid_remove()
+        if self.settings.get("check_for_updates") is None:
+            choice = bool(self.hint_updates_var.get())
+            self.settings.set("check_for_updates", choice)
+            if hasattr(self, "check_updates_var"):
+                self.check_updates_var.set(choice)
+            if choice:
+                self._maybe_check_for_updates()
+
     def _refresh_hotkey_labels(self) -> None:
+        if hasattr(self, "first_run_hint_var"):
+            self.first_run_hint_var.set(self._first_run_hint_text())
         if hasattr(self, "start_btn"):
             self.start_btn.config(text="Start" + self._hotkey_suffix("start"))
             self.stop_btn.config(text="Stop" + self._hotkey_suffix("stop"))
@@ -428,6 +461,8 @@ class AutoclickerApp(
             failsafe=self.failsafe_var.get(),
             pause_when_unfocused=self.pause_unfocused_var.get(),
         )
+        if hasattr(self, "first_run_hint_var"):
+            self.first_run_hint_var.set(self._first_run_hint_text())  # corner on or off
 
     def _apply_target_mode_state(self) -> None:
         """Enable only what the target mode and action use (#102).

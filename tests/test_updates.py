@@ -76,7 +76,12 @@ def _app(choice, last_check=0):
     app.check_updates_var = MagicMock()
     app.update_button = MagicMock()
     app.tray_icon = None
-    stored = {"check_for_updates": choice, "last_update_check": last_check}
+    # The fallback dialog only asks once the first-run hint is gone (#124).
+    stored = {
+        "check_for_updates": choice,
+        "last_update_check": last_check,
+        "first_run_hint_dismissed": True,
+    }
     app.settings = MagicMock()
     app.settings.get.side_effect = lambda key, default=None: stored.get(key, default)
     app.settings.set.side_effect = stored.__setitem__
@@ -120,6 +125,35 @@ class TestGuiUpdateCheck(unittest.TestCase):
         self._finish_check(app, Release("1.0.0", RELEASES_PAGE))
         app._maybe_check_for_updates()  # just checked
         thread.assert_called_once()
+
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    @patch("autoclicker.gui.dialogs.messagebox")
+    def test_first_run_asks_in_the_hint_not_a_dialog(self, messagebox, thread):
+        """#124: no modal on first launch; Got it records the hint's checkbox."""
+        app = _app(None)
+        app.stored["first_run_hint_dismissed"] = False
+        app._maybe_check_for_updates()
+        messagebox.askyesno.assert_not_called()
+        thread.assert_not_called()
+        app.first_run_hint = MagicMock()
+        app.hint_updates_var = MagicMock()
+        app.hint_updates_var.get.return_value = True
+        app.dismiss_first_run_hint()
+        self.assertIs(app.stored["check_for_updates"], True)
+        app.check_updates_var.set.assert_called_with(True)
+        thread.assert_called_once()  # checked right away
+        messagebox.askyesno.assert_not_called()
+
+    @patch("autoclicker.gui.features.updates.threading.Thread")
+    def test_hint_left_unchecked_means_no(self, thread):
+        app = _app(None)
+        app.stored["first_run_hint_dismissed"] = False
+        app.first_run_hint = MagicMock()
+        app.hint_updates_var = MagicMock()
+        app.hint_updates_var.get.return_value = False
+        app.dismiss_first_run_hint()
+        self.assertIs(app.stored["check_for_updates"], False)
+        thread.assert_not_called()
 
     @patch("autoclicker.gui.features.updates.threading.Thread")
     def test_failed_check_is_retried_next_launch(self, thread):

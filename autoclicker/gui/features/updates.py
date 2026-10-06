@@ -24,6 +24,8 @@ class UpdatesMixin(AppBase):
             self.root.after(_RETRY_MS, self._maybe_check_for_updates)
             return
         choice = self.settings.get("check_for_updates")
+        if choice is None and not self.settings.get("first_run_hint_dismissed", False):
+            return  # the first-run hint asks; Got it records the answer (#124)
         if choice is None:
             choice = bool(
                 dialogs.messagebox.askyesno(
