@@ -186,7 +186,7 @@ Choose **Image** under Target to click a button wherever it shows up, even after
 1. Press **Capture...** and drag a rectangle around the button. The app saves that image and searches for it within **Search** px around the spot (150 by default).
 2. Start as usual. Each click goes to the center of the image where it was last found; while it isn't on screen the run waits and the status bar says so.
 
-Matching is exact, so recapture if the button changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Each click waits for a fresh search that started after the previous click, so a click that closes the image is never repeated on whatever is underneath; image mode therefore clicks at most about 10 times a second. Every stop path, limit and the runaway guard work as usual.
+A small preview of the captured image sits next to **Capture...**, and **Clear** forgets it. Matching is exact by default. If the button's colors shift a little (HDR, Night light, a translucent theme), raise **Tolerance**: each color channel of each pixel may then differ by that much, 0 to 64. Keep it as low as works, since a high tolerance can match something else of the same shape. Recapture if the button really changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Each click waits for a fresh search that started after the previous click, so a click that closes the image is never repeated on whatever is underneath; image mode therefore clicks at most about 10 times a second. Every stop path, limit and the runaway guard work as usual.
 
 ## Command line
 
@@ -286,6 +286,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `target_mode` | `"fixed"` | `"fixed"` clicks at X/Y; `"cursor"` clicks wherever the cursor is; `"sequence"` clicks the steps in `sequence`; `"image"` clicks wherever the captured image appears |
 | `image_path`, `image_region` | `""`, `[]` | Image mode: the captured PNG (saved under `%APPDATA%\WindowsAutoclicker\images\`) and the `[left, top, width, height]` rectangle where it was captured. Replacing a capture deletes the old file unless a profile uses it |
 | `image_margin` | `150` | Pixels around the capture to search, 0 to 2 000; applied when a run starts, so changing it needs no recapture |
+| `image_tolerance` | `0` | How far each color channel may differ when matching the image, 0 to 64; `0` = exact |
 | `sequence` | `[]` | Steps for sequence mode: `[{"x": 800, "y": 600, "button": "left", "click_type": "single", "delay_ms": 500}, ...]`; `delay_ms` is the wait before the next step |
 | `sequence_repeat` | `0` | Rounds to run in sequence mode; `0` = until stopped |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |
@@ -312,7 +313,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `check_for_updates` | `null` | Asked once on first launch; `true` checks GitHub for a newer release at most once a day (App) |
 | `last_update_check` | `0` | When the last update check ran (Unix time) |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
-| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, the `condition_*` settings and, for image profiles, `image_path`, `image_region` and `image_margin`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
+| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
 **Network:** the app makes no network requests unless you allow the update check (asked once on first launch, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
@@ -364,7 +365,7 @@ Matching is exact, pixel for pixel, so anything that changes how the button is d
 
 - **Display scaling or resolution changed**, or the window moved to a monitor with a different scale: capture again.
 - **Hover, focus or pressed states**: capture the button the way it looks when the cursor is *not* on it, and remember the cursor rests on it after a click.
-- **Animations, blinking cursors, HDR, Night light or color filters** change pixels from moment to moment: capture a still part of the button, such as its label.
+- **Animations, blinking cursors, HDR, Night light or color filters** change pixels: capture a still part of the button, such as its label, or raise **Tolerance** a little (try 8 to 16).
 - **The window moved** further than the search margin: raise **Search margin** (no recapture needed; it applies at the next Start), or move the window back.
 
 The status bar says *Paused: waiting for the captured image to appear* while it looks. A run whose screen grabs keep failing stops with an error instead of waiting forever.

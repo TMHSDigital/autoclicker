@@ -6,9 +6,14 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from PIL import Image
+
 from ...core.image_match import grab, images_dir
 from ...core.screen import ScreenBounds
 from .base import AppBase
+
+# Largest thumbnail of the captured image shown in the Image panel.
+_PREVIEW_SIZE = (96, 40)
 
 
 class ImageMixin(AppBase):
@@ -82,9 +87,42 @@ class ImageMixin(AppBase):
         except OSError:
             pass
 
+    def clear_image(self) -> None:
+        """Clear button: forget the armed image (and delete it unless a profile uses it)."""
+        if self.click_engine.is_running or self._countdown_job is not None:
+            return
+        self._forget_image(self.image_path)
+        self.image_path, self.image_region = "", []
+        self.settings.update({"image_path": "", "image_region": []})
+        self._refresh_image_label()
+        self._refresh_target_summary()
+
     def _refresh_image_label(self) -> None:
+        self._show_image_preview()
         if not self.image_path or len(self.image_region) != 4:
             self.image_info_var.set("No image captured yet")
             return
         left, top, width, height = self.image_region
         self.image_info_var.set(f"Captured {width}x{height} px at ({left}, {top})")
+
+    def _show_image_preview(self) -> None:
+        """Small thumbnail of the armed image next to Capture (#123)."""
+        preview = getattr(self, "image_preview", None)
+        if preview is None:
+            return
+        photo = None
+        if self.image_path:
+            try:
+                from PIL import ImageTk
+
+                with Image.open(self.image_path) as image:
+                    thumb = image.convert("RGB")
+                thumb.thumbnail(_PREVIEW_SIZE)
+                photo = ImageTk.PhotoImage(thumb, master=self.root)
+            except Exception:  # missing file, no Tk (tests): just no thumbnail
+                photo = None
+        try:
+            preview.configure(image=photo if photo is not None else "")
+        except Exception:
+            return
+        self._image_photo = photo  # Tk only borrows the image; keep it alive

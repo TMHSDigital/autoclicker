@@ -51,7 +51,7 @@ a = Analysis(
         ("autoclicker/assets/autoclicker.ico", "autoclicker/assets"),
         ("autoclicker/assets/autoclicker.png", "autoclicker/assets"),
     ],
-    hiddenimports=["sv_ttk"],
+    hiddenimports=["sv_ttk", "PIL.ImageTk"],  # ImageTk: image thumbnail, imported lazily
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

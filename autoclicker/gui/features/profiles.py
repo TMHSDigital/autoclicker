@@ -139,6 +139,8 @@ class ProfilesMixin(AppBase):
             self._refresh_sequence_list()
         if "image_margin" in values:
             put(self.image_margin_entry, values["image_margin"])
+        if "image_tolerance" in values:
+            put(self.image_tolerance_entry, values["image_tolerance"])
         if values.get("target_mode") == "image" or "image_path" in values:
             # An image profile brings its own image; one without it must not
             # silently click the image captured last (#98).

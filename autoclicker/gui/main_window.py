@@ -567,6 +567,7 @@ class AutoclickerApp(
                 "image_path": self.image_path,
                 "image_region": list(self.image_region),
                 "image_margin": self.image_margin_entry.get(),
+                "image_tolerance": self.image_tolerance_entry.get(),
                 "action": self.action_var.get(),
                 "hold_ms": self.hold_entry.get(),
                 "key": self.key_entry.get(),

@@ -135,6 +135,11 @@ def _build_image_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
     row = ttk.Frame(app.image_frame)
     row.pack(fill=tk.X)
     ttk.Button(row, text="Capture\u2026", command=app.capture_image).pack(side=tk.LEFT)
+    app.image_clear_btn = ttk.Button(row, text="Clear", command=app.clear_image)
+    app.image_clear_btn.pack(side=tk.LEFT, padx=(5, 0))
+    # Thumbnail of the armed image (#123); empty until one is captured.
+    app.image_preview = ttk.Label(row)
+    app.image_preview.pack(side=tk.LEFT, padx=(10, 0))
     app.image_info_var = tk.StringVar(value="")
     ttk.Label(row, textvariable=app.image_info_var).pack(side=tk.LEFT, padx=(10, 0))
     margin_row = ttk.Frame(app.image_frame)
@@ -146,6 +151,17 @@ def _build_image_panel(app, coord_frame: ttk.LabelFrame, settings) -> None:
     ttk.Label(
         margin_row,
         text="px around where it was captured",
+    ).pack(side=tk.LEFT)
+    tolerance_row = ttk.Frame(app.image_frame)
+    tolerance_row.pack(fill=tk.X, pady=(6, 0))
+    ttk.Label(tolerance_row, text="Tolerance").pack(side=tk.LEFT)
+    app.image_tolerance_entry = ttk.Entry(tolerance_row, width=6)
+    app.image_tolerance_entry.pack(side=tk.LEFT, padx=(5, 5))
+    app.image_tolerance_entry.insert(0, str(settings.get("image_tolerance", "0")))
+    ttk.Label(
+        tolerance_row,
+        text="per color, 0 to 64 (0 = exact; raise it if the image is never found)",
+        style=MUTED,
     ).pack(side=tk.LEFT)
     app._refresh_image_label()
 

@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Any
 
-from PIL import Image, ImageGrab
+from PIL import Image, ImageChops, ImageGrab
 
 from .app_data import app_data_dir
 from .screen import ScreenBounds
@@ -29,6 +29,9 @@ DEFAULT_MARGIN = 150
 MAX_MARGIN = 2000
 # Largest template accepted from a file: an 8K screen. Bigger is not a capture.
 MAX_TEMPLATE_PIXELS = 7680 * 4320
+# Most candidate positions compared in full per tolerant search, so a template
+# whose probe colors are everywhere can't stall the watcher (#123).
+_MAX_TOLERANT_CHECKS = 2000
 # Largest base64 image accepted from an imported profile (characters).
 MAX_EMBEDDED_IMAGE_CHARS = 24 * 1024 * 1024
 
@@ -95,6 +98,10 @@ class PreparedTemplate:
     height: int
     rows: tuple[bytes, ...]
     anchor: int  # row with the most distinct colors
+    image: Any = field(repr=False, compare=False)  # the RGB template
+    # Up to four (x, y, rgb) pixels with rare colors, one per quadrant, used to
+    # find candidates quickly when matching with a tolerance (#123).
+    probes: tuple[tuple[int, int, tuple[int, int, int]], ...] = ()
 
     @classmethod
     def from_image(cls, needle: Image.Image) -> PreparedTemplate:
@@ -109,13 +116,81 @@ class PreparedTemplate:
             return len({rows[r][i : i + 3] for i in range(0, stride, 3)})
 
         anchor = max(range(height), key=distinct_colors) if height else 0
-        return cls(width, height, rows, anchor)
+        return cls(width, height, rows, anchor, pin, _probes(data, width, height))
+
+
+def _probes(
+    data: bytes, width: int, height: int
+) -> tuple[tuple[int, int, tuple[int, int, int]], ...]:
+    """The rarest-colored pixel of each quadrant: few places on screen share it."""
+    if width == 0 or height == 0:
+        return ()
+    pixels = [(data[i], data[i + 1], data[i + 2]) for i in range(0, width * height * 3, 3)]
+    counts: dict[tuple[int, int, int], int] = {}
+    for color in pixels:
+        counts[color] = counts.get(color, 0) + 1
+    half_w, half_h = max(1, (width + 1) // 2), max(1, (height + 1) // 2)
+    probes = []
+    for x0, y0 in ((0, 0), (half_w, 0), (0, half_h), (half_w, half_h)):
+        best = None
+        for y in range(y0, min(height, y0 + half_h)):
+            for x in range(x0, min(width, x0 + half_w)):
+                color = pixels[y * width + x]
+                if best is None or counts[color] < counts[best[2]]:
+                    best = (x, y, color)
+        if best is not None and best not in probes:
+            probes.append(best)
+    return tuple(probes)
+
+
+def _close_to(hay: Image.Image, color: tuple[int, int, int], tolerance: int) -> Image.Image:
+    """Mode "L" mask: 255 where every channel is within ``tolerance`` of ``color``."""
+    diff = ImageChops.difference(hay, Image.new("RGB", hay.size, color))
+    red, green, blue = diff.split()
+    worst = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    return worst.point([255 if v <= tolerance else 0 for v in range(256)])
+
+
+def _find_tolerant(
+    hay: Image.Image, needle: PreparedTemplate, tolerance: int
+) -> tuple[int, int] | None:
+    """Like the exact search, but every channel of every pixel may differ by ``tolerance``.
+
+    All the per-pixel work runs in Pillow's C code: each probe pixel gives a
+    mask of the places it could be, shifted to template top-left positions and
+    intersected, and only the surviving candidates are compared in full.
+    """
+    hw, hh = hay.size
+    cols, lines = hw - needle.width + 1, hh - needle.height + 1
+    candidates = None
+    for px, py, color in needle.probes:
+        mask = _close_to(hay, color, tolerance).crop((px, py, px + cols, py + lines))
+        candidates = mask if candidates is None else ImageChops.darker(candidates, mask)
+    if candidates is None:
+        return None
+    flags = candidates.tobytes()
+    index = flags.find(b"\xff")
+    for _ in range(_MAX_TOLERANT_CHECKS):
+        if index < 0:
+            break
+        x, y = index % cols, index // cols
+        window = hay.crop((x, y, x + needle.width, y + needle.height))
+        # One (low, high) pair per RGB band.
+        extrema: Any = ImageChops.difference(window, needle.image).getextrema()
+        if all(high <= tolerance for _low, high in extrema):
+            return x, y
+        index = flags.find(b"\xff", index + 1)
+    return None
 
 
 def find_template(
-    haystack: Image.Image, needle: Image.Image | PreparedTemplate
+    haystack: Image.Image, needle: Image.Image | PreparedTemplate, tolerance: int = 0
 ) -> tuple[int, int] | None:
-    """Top-left (x, y) of the first exact occurrence of ``needle`` in ``haystack``."""
+    """Top-left (x, y) of the first occurrence of ``needle`` in ``haystack``.
+
+    With ``tolerance`` 0 the match is exact; otherwise each color channel of
+    each pixel may differ by up to ``tolerance`` (like the pixel condition).
+    """
     if not isinstance(needle, PreparedTemplate):
         needle = PreparedTemplate.from_image(needle)
     hay = haystack if haystack.mode == "RGB" else haystack.convert("RGB")
@@ -123,6 +198,8 @@ def find_template(
     nw, nh = needle.width, needle.height
     if nw == 0 or nh == 0 or nw > hw or nh > hh:
         return None
+    if tolerance > 0:
+        return _find_tolerant(hay, needle, tolerance)
     hb = hay.tobytes()
     hrow, nrow = hw * 3, nw * 3
     rows, anchor = needle.rows, needle.anchor
@@ -253,6 +330,8 @@ class ImageTarget:
 
     template: Any  # PIL.Image.Image
     region: ScreenBounds
+    # Per-channel difference allowed for every pixel; 0 = exact match (#123).
+    tolerance: int = 0
     prepared: PreparedTemplate = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -260,7 +339,7 @@ class ImageTarget:
 
     def locate(self, grabber=grab) -> tuple[int, int] | None:
         """Screen coordinates of the template's center, or None if it isn't there."""
-        found = find_template(grabber(self.region), self.prepared)
+        found = find_template(grabber(self.region), self.prepared, self.tolerance)
         if found is None:
             return None
         width, height = self.prepared.width, self.prepared.height

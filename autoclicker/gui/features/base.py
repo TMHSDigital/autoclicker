@@ -86,6 +86,11 @@ class AppBase:
     image_frame: ttk.Frame
     image_info_var: tk.StringVar
     image_margin_entry: ttk.Entry
+    image_tolerance_entry: ttk.Entry
+    image_preview: ttk.Label
+    image_clear_btn: ttk.Button
+    # Keeps the thumbnail's PhotoImage alive while Tk shows it.
+    _image_photo: Any = None
     # Image target mode: the captured PNG and the area searched for it
     image_path: str
     image_region: list[int]

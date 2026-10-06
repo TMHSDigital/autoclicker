@@ -1003,6 +1003,31 @@ class TestImageUi(GuiHarness):
         self.assertTrue(second.is_file())
         self.assertTrue(third.is_file())
 
+    def test_clear_forgets_the_image(self):
+        """#123: Clear disarms the image and deletes an unused capture."""
+        app = self.app
+        path = self._capture("9")
+        app.target_mode_var.set("image")
+        app.clear_image()
+        self.assertEqual((app.image_path, app.image_region), ("", []))
+        self.assertEqual(app.image_info_var.get(), "No image captured yet")
+        self.assertFalse(path.exists())
+        self.assertEqual(app.settings.get("image_path"), "")
+        app.start_clicking()
+        self.assertFalse(app.click_engine.is_running)  # nothing to click
+
+    def test_tolerance_reaches_the_engine(self):
+        app = self.app
+        self._capture("8")
+        self.set_fields(image_tolerance="10", interval="0")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="1")
+        with patch("autoclicker.core.image_match.ImageTarget.locate", return_value=(5, 5)):
+            app.start_clicking()
+            self.assertEqual(app.click_engine._image.tolerance, 10)
+            _settle(app)
+        self.assertEqual(app.settings.get("image_tolerance"), 10)
+
     def test_capture_cancel_explains_the_minimum_size(self):
         app = self.app
         picker = self.picker_cls.return_value

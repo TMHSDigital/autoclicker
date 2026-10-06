@@ -40,6 +40,7 @@ _INT_FIELDS = frozenset(
         "condition_y",
         "condition_tolerance",
         "image_margin",
+        "image_tolerance",
     }
 )
 _FLOAT_FIELDS = frozenset({"interval", "burst_pause", "hold_ms"})
@@ -85,12 +86,15 @@ FIELD_LABELS: dict[str, str] = {
     "image_path": "Image",
     "image_region": "Image search area",
     "image_margin": "Search margin",
+    "image_tolerance": "Image tolerance",
 }
 
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 # Largest search margin around a captured image, in pixels (see core/image_match.py).
 MAX_IMAGE_MARGIN = 2000
+# Highest per-channel color difference allowed when matching an image.
+MAX_IMAGE_TOLERANCE = 64
 
 # Longest mouse-button hold, in milliseconds.
 MAX_HOLD_MS = 60_000
@@ -215,6 +219,7 @@ class SettingsManager:
         "image_path": "",
         "image_region": [],
         "image_margin": 150,
+        "image_tolerance": 0,
         "pause_when_unfocused": False,
         "theme": "light",
         "minimize_to_tray": True,
@@ -690,6 +695,9 @@ class SettingsManager:
         margin = parsed.get("image_margin")
         if margin is not None and not 0 <= margin <= MAX_IMAGE_MARGIN:
             errors["image_margin"] = f"Must be between 0 and {MAX_IMAGE_MARGIN:,} px"
+        image_tolerance = parsed.get("image_tolerance")
+        if image_tolerance is not None and not 0 <= image_tolerance <= MAX_IMAGE_TOLERANCE:
+            errors["image_tolerance"] = f"Must be between 0 and {MAX_IMAGE_TOLERANCE} (0 = exact)"
 
         if parsed.get("action", "click") not in allowed_actions(mode) and mode in _ACTION_ERRORS:
             errors["action"] = _ACTION_ERRORS[mode]

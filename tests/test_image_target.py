@@ -339,3 +339,58 @@ class TestRegionGrab(unittest.TestCase):
         if image is None:
             self.skipTest("no interactive desktop to copy from")
         self.assertEqual((image.mode, image.size), ("RGB", (8, 6)))
+
+
+class TestTolerance(unittest.TestCase):
+    """#123: optional per-channel tolerance for image matching."""
+
+    def setUp(self):
+        self.hay = Image.new("RGB", (200, 120), (240, 240, 240))
+        draw = ImageDraw.Draw(self.hay)
+        draw.rectangle((20, 20, 40, 30), fill=(200, 30, 30))
+        button = Image.new("RGB", (40, 20), (30, 110, 220))
+        ImageDraw.Draw(button).rectangle((5, 5, 15, 12), fill=(250, 250, 250))
+        ImageDraw.Draw(button).point((30, 8), fill=(10, 200, 40))
+        self.button = button
+        shifted = self.hay.copy()
+        shifted.paste(button.point(lambda v: max(0, v - 5)), (120, 70))
+        self.shifted = shifted
+
+    def test_exact_misses_a_slightly_different_image(self):
+        self.assertIsNone(find_template(self.shifted, self.button))
+
+    def test_tolerance_finds_it(self):
+        self.assertEqual(find_template(self.shifted, self.button, 5), (120, 70))
+        self.assertEqual(find_template(self.shifted, self.button, 20), (120, 70))
+        self.assertIsNone(find_template(self.shifted, self.button, 4))
+
+    def test_absent_and_too_big(self):
+        self.assertIsNone(find_template(self.hay, self.button, 10))
+        self.assertIsNone(find_template(self.button, self.hay, 10))
+
+    def test_target_uses_its_tolerance(self):
+        target = ImageTarget(self.button, ScreenBounds(1000, 500, 200, 120), tolerance=8)
+        self.assertEqual(target.locate(grabber=lambda _r: self.shifted), (1000 + 140, 500 + 80))
+        exact = ImageTarget(self.button, ScreenBounds(1000, 500, 200, 120))
+        self.assertIsNone(exact.locate(grabber=lambda _r: self.shifted))
+
+    def test_validation_and_loading(self):
+        settings = SettingsManager(os.path.join(tempfile.mkdtemp(), "s.json"))
+        for value, ok in (("0", True), ("64", True), ("65", False), ("-1", False), ("x", False)):
+            with self.subTest(value=value):
+                result = settings.validate_all_settings(
+                    {"target_mode": "cursor", "image_tolerance": value}, 1920, 1080
+                )
+                self.assertEqual("image_tolerance" not in result["errors"], ok)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "t.png")
+            self.button.save(path)
+            target, _error = _load_image_target(
+                {"image_path": path, "image_region": [0, 0, 50, 50], "image_tolerance": 12}
+            )
+        self.assertEqual(target.tolerance, 12)
+
+    def test_profiles_keep_it(self):
+        from autoclicker.utils.profiles import PROFILE_KEYS
+
+        self.assertIn("image_tolerance", PROFILE_KEYS)

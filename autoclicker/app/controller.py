@@ -67,7 +67,8 @@ def _load_image_target(
     if desktop is not None:
         margin = int(sanitized.get("image_margin", DEFAULT_MARGIN))
         region = search_region(region, margin, desktop)
-    return ImageTarget(template=template, region=region), None
+    tolerance = int(sanitized.get("image_tolerance", 0))
+    return ImageTarget(template=template, region=region, tolerance=tolerance), None
 
 
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
@@ -162,6 +163,7 @@ class AutoclickerController:
             "image_path": ui_fields.get("image_path", ""),
             "image_region": ui_fields.get("image_region", []),
             "image_margin": ui_fields.get("image_margin", 150),
+            "image_tolerance": ui_fields.get("image_tolerance", 0),
         }
 
     def validate(
