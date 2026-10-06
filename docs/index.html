@@ -231,6 +231,10 @@ WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code>
           <p>The executable isn't code-signed yet, and SmartScreen warns about unsigned programs it hasn't seen often. Choose More info, then Run anyway, or verify the checksum first.</p>
         </details>
         <details>
+          <summary>My antivirus flags it. Is something wrong?</summary>
+          <p>Probably not. Unsigned single-file Python apps, especially ones that move the mouse, are a common false positive. Check that the file's SHA-256 matches the release's <code>.sha256</code> file (PowerShell: <code>Get-FileHash</code>) and, if you like, look the hash up on VirusTotal. If it matches, restore it, and please report the false positive to your antivirus vendor. <a href="https://github.com/TMHSDigital/autoclicker#troubleshooting">Step by step</a>.</p>
+        </details>
+        <details>
           <summary>Does it send any data?</summary>
           <p>No. It makes no network requests unless you turn on the daily update check, which only reads the public latest-release page on GitHub.</p>
         </details>

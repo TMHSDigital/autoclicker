@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image mode grabs only the searched area of the screen instead of the whole desktop and prepares the captured image once per run, cutting each search from about 50 ms to about 17 ms on a two-monitor desktop and keeping the click thread's timing steady (#97).
 - Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
 
+### Documentation
+
+- Troubleshooting covers antivirus false positives (how to verify the download and report it) and an image that is never found; the website FAQ answers the antivirus question too (#114).
+
 ## [1.6.0] - 2026-10-05
 
 ### Added

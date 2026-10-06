@@ -334,6 +334,37 @@ Check the status bar and `sessions.log` for the reason: a click or time limit in
 </details>
 
 <details>
+<summary><b>My antivirus flags or deletes the download</b></summary>
+
+<br />
+
+Some antivirus engines flag programs like this one even when they are clean. Two things trigger it: the exe is a PyInstaller bundle (a Python app packed into one file), and it isn't code-signed yet. Tools that move the mouse also look suspicious to heuristics. To check your copy before you allow it:
+
+1. Compare its SHA-256 with the `.sha256` file on the [release page](https://github.com/TMHSDigital/autoclicker/releases/latest): in PowerShell, `Get-FileHash .\WindowsAutoclicker.exe`.
+2. Check the build provenance with `gh attestation verify .\WindowsAutoclicker.exe --repo TMHSDigital/autoclicker`, which proves it was built by this repository's CI from a specific commit ([details](docs/RELEASING.md#verifying-a-download)).
+3. Optionally look the hash up on [VirusTotal](https://www.virustotal.com/) to see what other engines say.
+
+If it matches, restore it from quarantine and add an exclusion, and please report the false positive to your vendor (for Microsoft Defender: [submit a file](https://www.microsoft.com/en-us/wdsi/filesubmission) as "incorrectly detected"). Each report helps the next person. You can also [run from source](#run-from-source) instead.
+
+</details>
+
+<details>
+<summary><b>Image mode never finds the image</b></summary>
+
+<br />
+
+Matching is exact, pixel for pixel, so anything that changes how the button is drawn stops it matching:
+
+- **Display scaling or resolution changed**, or the window moved to a monitor with a different scale: capture again.
+- **Hover, focus or pressed states**: capture the button the way it looks when the cursor is *not* on it, and remember the cursor rests on it after a click.
+- **Animations, blinking cursors, HDR, Night light or color filters** change pixels from moment to moment: capture a still part of the button, such as its label.
+- **The window moved** further than the search margin: raise **Search margin** (no recapture needed; it applies at the next Start), or move the window back.
+
+The status bar says *Paused: waiting for the captured image to appear* while it looks. A run whose screen grabs keep failing stops with an error instead of waiting forever.
+
+</details>
+
+<details>
 <summary><b>Clicks don't register in one particular app</b></summary>
 
 <br />
