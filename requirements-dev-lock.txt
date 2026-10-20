@@ -120,7 +120,7 @@ requests==2.34.2
     #   pip-audit
 rich==15.0.0
     # via pip-audit
-ruff==0.16.10
+ruff==0.17.0
     # via -r requirements-dev.in
 setuptools==84.0.0
     # via
