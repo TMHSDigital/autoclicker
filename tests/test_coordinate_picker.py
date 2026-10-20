@@ -45,7 +45,7 @@ class TestOverlayPicker(unittest.TestCase):
         overlay.overrideredirect.assert_called_once_with(True)
         overlay.attributes.assert_any_call("-topmost", True)
         bound = {c.args[0] for c in overlay.bind.call_args_list}
-        self.assertTrue({"<Button-1>", "<Button-3>", "<Escape>", "<Motion>"} <= bound)
+        self.assertLessEqual({"<Button-1>", "<Button-3>", "<Escape>", "<Motion>"}, bound)
         self.assertTrue(self.picker.is_picking())
 
     def test_click_selects_and_closes(self):

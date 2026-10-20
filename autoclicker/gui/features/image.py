@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 from pathlib import Path
 
@@ -82,10 +83,8 @@ class ImageMixin(AppBase):
             profile = self.preset_manager.load_profile(name) or {}
             if profile.get("image_path") == path:
                 return
-        try:
+        with contextlib.suppress(OSError):
             old.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     def clear_image(self) -> None:
         """Clear button: forget the armed image (and delete it unless a profile uses it)."""

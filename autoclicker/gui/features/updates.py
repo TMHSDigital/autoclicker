@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 import webbrowser
@@ -61,12 +62,10 @@ class UpdatesMixin(AppBase):
         self.update_button.configure(text=f"Update to {release.version}")
         self.update_button.grid()
         if self.tray_icon is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self.tray_icon.notify(
                     f"Version {release.version} is available.", "Windows Autoclicker"
                 )
-            except Exception:
-                pass
 
     def open_release_page(self) -> None:
         webbrowser.open(self._release_url or RELEASES_PAGE)

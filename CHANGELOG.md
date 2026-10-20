@@ -20,6 +20,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Changed
 
+- Running from source needs Python 3.11 or newer. Python 3.10 reached end of life in October 2026 and Pillow 13 no longer supports it; the release exe already ships with 3.11 and is unaffected.
 - First launch shows a short hint with the ways to stop a run, using your own keys (stop key, emergency key, and the screen corners if the failsafe is on) until you press **Got it**. The update-check question moved into that hint as an unticked checkbox instead of a separate dialog (#124).
 - The settings are locked while a countdown or run is in progress, since changes would not reach the running clicks; section headers still open. Action choices a target mode can't run are greyed out (Hold and Key in Sequence, Key in Image), switching to such a mode falls back to Click, and X/Y are off when Key is chosen. The status bar's target line follows what you type in X, Y and Key (#102).
 
@@ -38,6 +39,10 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 - Image mode grabs only the searched area of the screen instead of the whole desktop and prepares the captured image once per run, cutting each search from about 50 ms to about 17 ms on a two-monitor desktop and keeping the click thread's timing steady (#97).
 - Building the Python package from a source checkout no longer sweeps a local `autoclicker_env` virtualenv into the wheel and sdist (the package pattern `autoclicker*` matched it); CI now builds and checks the package on every run, ready for PyPI (#118).
 - Real-input integration tests no longer fail intermittently on the CI runner while starting Tk.
+
+### Security
+
+- Pillow 13.0.0 closes nine advisories in its image decoders (GHSA-8g5g-8vmr-9782, GHSA-pchr-8j38-3x4p, GHSA-c6hw-5grf-ff96, GHSA-58r4-6rv3-gfh8, GHSA-65qm-jvmh-6pqg, GHSA-q45j-58j2-45rg, GHSA-p4wg-p73j-c528, GHSA-462x-pgg6-55fp and GHSA-vx6w-vv9f-6gvg). certifi 2026.10.19 drops the emSign root CAs (GHSA-6q48-6c7w-9gw2) used by the dev tools.
 
 ### Documentation
 

@@ -14,7 +14,7 @@ The license was reviewed in October 2026 (#71) against PolyForm Noncommercial, M
 
 ## Development setup
 
-Requirements: Windows and Python 3.10 to 3.14 (3.11 recommended; see `.python-version`).
+Requirements: Windows and Python 3.11 to 3.14 (3.11 recommended; see `.python-version`).
 
 ```bash
 # Git Bash
@@ -55,7 +55,7 @@ Tests never start a real Tk window: GUI tests build the app with `AutoclickerApp
 | File | Contents | Regenerate |
 | :-- | :-- | :-- |
 | `requirements-lock.txt` | Runtime dependencies from `requirements.txt`, compiled with [uv](https://docs.astral.sh/uv/) for Windows and Python 3.11 (works from any venv or Python) | `make lock` (keeps pins), `python tools/refresh_lock.py --upgrade` (newest allowed) |
-| `requirements-dev-lock.txt` | Dev and build tools from `requirements-dev.in`, one lock for Python 3.10+ (needs [uv](https://docs.astral.sh/uv/)) | `make lock`, or `python tools/refresh_lock.py --dev` |
+| `requirements-dev-lock.txt` | Dev and build tools from `requirements-dev.in`, one lock for Python 3.11+ (needs [uv](https://docs.astral.sh/uv/)) | `make lock`, or `python tools/refresh_lock.py --dev` |
 
 Commit the updated lock files. When the ruff or mypy version in the dev lock changes, update the matching `rev` in `.pre-commit-config.yaml` so pre-commit and CI run the same versions.
 

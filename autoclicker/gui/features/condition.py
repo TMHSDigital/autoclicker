@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from .base import AppBase
 
 
@@ -17,10 +19,8 @@ class ConditionMixin(AppBase):
         x, y, color = self.condition_point
         template = self._CONDITION_TEXT.get(self.condition_var.get(), "off")
         self.condition_label_var.set(template.format(x=x, y=y))
-        try:
+        with contextlib.suppress(Exception):
             self.condition_swatch.configure(background=color)
-        except Exception:
-            pass
 
     def sample_condition_pixel(self) -> None:
         """Pick a point, then read its color once the overlay is gone."""

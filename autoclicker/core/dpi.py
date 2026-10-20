@@ -40,7 +40,7 @@ def enable_per_monitor_dpi_awareness(windll: Any = None) -> str:
             lambda: windll.user32.SetProcessDpiAwarenessContext(
                 ctypes.c_void_p(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
             ),
-            lambda result: bool(result),
+            bool,
         ),
         (
             "per-monitor",
@@ -50,7 +50,7 @@ def enable_per_monitor_dpi_awareness(windll: Any = None) -> str:
         (
             "system",
             lambda: windll.user32.SetProcessDPIAware(),
-            lambda result: bool(result),
+            bool,
         ),
     )
     for mode, call, succeeded in attempts:

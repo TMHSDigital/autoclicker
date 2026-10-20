@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import tkinter as tk
 import webbrowser
 from collections.abc import Callable
@@ -25,12 +26,10 @@ ABOUT_TEXT = (
 
 
 def _use_app_icon(window: Any) -> None:
-    try:
+    with contextlib.suppress(Exception):
         icon = resource_path("autoclicker.ico")
         if icon.is_file():
             window.iconbitmap(str(icon))
-    except Exception:
-        pass
 
 
 class InfoDialog:

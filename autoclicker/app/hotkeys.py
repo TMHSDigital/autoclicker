@@ -13,10 +13,10 @@ both on the same thread); other threads talk to it by posting messages.
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes as wintypes
 import logging
 import threading
 from collections.abc import Callable, Iterable
-from ctypes import wintypes
 from typing import Any
 
 _log = logging.getLogger(__name__)

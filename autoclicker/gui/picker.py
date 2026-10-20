@@ -8,6 +8,7 @@ never reaches the application underneath. All of this runs on the Tk thread.
 
 from __future__ import annotations
 
+import contextlib
 import tkinter as tk
 from collections.abc import Callable
 from typing import Any
@@ -206,10 +207,8 @@ class CoordinatePicker:
     def _destroy(self) -> None:
         for window in (self._readout, self._overlay):
             if window is not None:
-                try:
+                with contextlib.suppress(Exception):
                     window.destroy()
-                except Exception:
-                    pass
         self._overlay = None
         self._readout = None
         self._readout_label = None

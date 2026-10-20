@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from ... import __version__
 from ...core.diagnostics import build_report
 from ..info_dialog import InfoDialog
@@ -25,8 +27,6 @@ class InfoMixin(AppBase):
     def _settings_for_diagnostics(self) -> dict:
         """Saved settings plus the form's current (possibly unsaved) values."""
         values = dict(self.settings.get_all())
-        try:
+        with contextlib.suppress(Exception):
             values.update(self._collect_ui_settings())
-        except Exception:
-            pass
         return values

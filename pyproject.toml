@@ -21,7 +21,6 @@ classifiers = [
     "Intended Audience :: End Users/Desktop",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -30,7 +29,7 @@ classifiers = [
     "Topic :: Desktop Environment",
     "Natural Language :: English"
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "pyautogui>=0.9.53",
     "pywin32>=227",
@@ -113,7 +112,7 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 src = ["."]
 
@@ -127,7 +126,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
 "tools/create_icon.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

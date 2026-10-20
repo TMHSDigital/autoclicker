@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import math
 import tkinter as tk
 from datetime import datetime
@@ -81,10 +82,8 @@ class CountdownMixin(AppBase):
             return False
         self._countdown_job = None
         self._countdown_until = None
-        try:
+        with contextlib.suppress(Exception):
             self.root.after_cancel(job)
-        except Exception:
-            pass
         if message is not None:
             self._paint_stopped(message, "alert")
         return True

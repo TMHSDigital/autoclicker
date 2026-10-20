@@ -31,13 +31,11 @@ from .gui.main_window import AutoclickerApp  # noqa: E402
 
 
 def _show_dialog(title: str, text: str, *, error: bool) -> None:
-    try:
+    with contextlib.suppress(Exception):
         root = tk.Tk()
         root.withdraw()
         (messagebox.showerror if error else messagebox.showinfo)(title, text)
         root.destroy()
-    except Exception:
-        pass
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

@@ -7,7 +7,7 @@ Regenerate the lock files.
   from requirements.txt alone, never frozen from the dev venv, so dev tools and
   the editable install can't leak in (#108).
 - requirements-dev-lock.txt: dev and build tooling from requirements-dev.in,
-  compiled with uv as one lock valid for every supported Python (3.10+), so
+  compiled with uv as one lock valid for every supported Python (3.11+), so
   CI and pre-commit always run the same tool versions.
 
 Existing pins are kept unless the inputs need a change; pass --upgrade to move
@@ -32,7 +32,7 @@ REQUIREMENTS = ROOT / "requirements.txt"
 LOCK_FILE = ROOT / "requirements-lock.txt"
 DEV_REQUIREMENTS = ROOT / "requirements-dev.in"
 DEV_LOCK_FILE = ROOT / "requirements-dev-lock.txt"
-MIN_PYTHON = "3.10"
+MIN_PYTHON = "3.11"
 # The exe and CI run the runtime dependencies on Windows with this Python.
 RUNTIME_PYTHON = "3.11"
 

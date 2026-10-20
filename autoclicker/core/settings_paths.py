@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -40,14 +41,12 @@ def legacy_migrated_marker_path() -> Path:
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
-    try:
+    with contextlib.suppress(OSError, json.JSONDecodeError):
         if path.is_file():
             with path.open(encoding="utf-8") as fh:
                 data = json.load(fh)
             if isinstance(data, dict):
                 return data
-    except (OSError, json.JSONDecodeError):
-        pass
     return None
 
 
@@ -62,10 +61,8 @@ def atomic_write_json(path: Path, data: Any) -> None:
             os.fsync(fh.fileno())
         os.replace(tmp, path)
     except Exception:
-        try:
+        with contextlib.suppress(OSError):
             tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
         raise
 
 
@@ -104,11 +101,9 @@ def resolve_settings_file(explicit: str | None = None) -> str:
             _log.warning("Could not migrate %s: %s", legacy, e)
             return str(primary)  # never save to the legacy file (#105)
         append_session_event("settings_migrated", from_path=str(legacy), to_path=str(primary))
-        try:
+        with contextlib.suppress(OSError):
             # Only a hint for anyone looking in the old folder: once the AppData
             # file exists, migration never runs again anyway.
             marker.write_text("migrated\n", encoding="utf-8")
-        except OSError:
-            pass
 
     return str(primary)

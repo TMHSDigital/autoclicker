@@ -10,11 +10,11 @@ keystrokes, nothing leaves the machine.
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes as wintypes
 import logging
 import threading
 import time
 from collections.abc import Callable
-from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any
 

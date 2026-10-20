@@ -20,7 +20,7 @@ built around safety stops that are on by default.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/TMHSDigital/autoclicker/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/TMHSDigital/autoclicker/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/TMHSDigital/autoclicker?style=flat-square&color=0078D4)](https://github.com/TMHSDigital/autoclicker/releases)
-[![Python](https://img.shields.io/badge/python-3.10--3.14-3776AB?style=flat-square&logo=python&logoColor=white)](#run-from-source)
+[![Python](https://img.shields.io/badge/python-3.11--3.14-3776AB?style=flat-square&logo=python&logoColor=white)](#run-from-source)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?style=flat-square)](#quick-start)
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey?style=flat-square)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%99%A5-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/TMHSDigital)
@@ -122,7 +122,7 @@ scoop install tmhs/windows-autoclicker
 ```
 
 <details>
-<summary><b id="run-from-source">Run from source</b> (Python 3.10 to 3.14)</summary>
+<summary><b id="run-from-source">Run from source</b> (Python 3.11 to 3.14)</summary>
 
 <br />
 
@@ -435,7 +435,7 @@ tasks.bat check     # ruff, mypy and pytest             (make check)
   </tr>
 </table>
 
-Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.10 to 3.14, builds the executable and publishes it. See the [changelog](CHANGELOG.md).
+Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.11 to 3.14, builds the executable and publishes it. See the [changelog](CHANGELOG.md).
 
 <br />
 

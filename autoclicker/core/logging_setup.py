@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -25,7 +26,7 @@ def configure_logging() -> None:
     logger.addHandler(stream)
 
     log_dir = app_data_dir()
-    try:
+    with contextlib.suppress(OSError):
         log_dir.mkdir(parents=True, exist_ok=True)
         file_handler = RotatingFileHandler(
             log_dir / "autoclicker.log",
@@ -35,5 +36,3 @@ def configure_logging() -> None:
         )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-    except OSError:
-        pass

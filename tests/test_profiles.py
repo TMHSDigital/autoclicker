@@ -162,7 +162,8 @@ class TestImageProfiles(ProfileTestCase):
         self.manager.save_profile("Ok button", self.profile)
         out = self.path("export.json")
         self.manager.export_profiles(out)
-        exported = json.loads(open(out, encoding="utf-8").read())["profiles"]["Ok button"]
+        with open(out, encoding="utf-8") as fh:
+            exported = json.load(fh)["profiles"]["Ok button"]
         self.assertNotIn("image_path", exported)
         self.assertIn("image_png", exported)
 

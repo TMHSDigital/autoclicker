@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -50,7 +50,7 @@ def append_session_event(event: str, **fields: Any) -> None:
     """Append one tab-separated log line; never raises to callers."""
     try:
         path = session_log_path()
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        ts = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         extras = " ".join(f"{k}={_escape_field(fields[k])}" for k in sorted(fields))
         line = f"{ts}\tevent={event}"
         if extras:

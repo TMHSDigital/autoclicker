@@ -4,6 +4,7 @@ Main GUI window for the autoclicker application.
 Handles user interface and event coordination.
 """
 
+import contextlib
 import threading
 import tkinter as tk
 from collections.abc import Callable
@@ -94,13 +95,11 @@ def _lock_widget(widget) -> bool:
 
 
 def _unlock_widget(widget) -> None:
-    try:
+    with contextlib.suppress(AttributeError, TypeError, tk.TclError):
         if hasattr(widget, "instate"):
             widget.state(["!disabled"])
         else:
             widget.configure(state=tk.NORMAL)
-    except (AttributeError, TypeError, tk.TclError):
-        pass
 
 
 class AutoclickerApp(
@@ -165,12 +164,10 @@ class AutoclickerApp(
         self.root.resizable(True, True)
         self.root.minsize(460, 480)
 
-        try:
+        with contextlib.suppress(Exception):
             icon = resource_path("autoclicker.ico")
             if icon.is_file():
                 self.root.iconbitmap(str(icon))
-        except Exception:
-            pass
 
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
@@ -348,10 +345,8 @@ class AutoclickerApp(
             self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
         tray = getattr(self, "tray_icon", None)
         if tray is not None:
-            try:
+            with contextlib.suppress(Exception):
                 tray.update_menu()
-            except Exception:
-                pass
 
     def open_hotkeys_dialog(self) -> None:
         """Rebind hotkeys; global keys are released while the dialog is open."""
@@ -770,10 +765,8 @@ class AutoclickerApp(
         tray = getattr(self, "tray_icon", None)
         if tray is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             tray.title = f"Windows Autoclicker: {text}"[:127]  # Win32 tooltip limit
-        except Exception:
-            pass
 
     def _on_unmap(self, event) -> None:
         """Minimizing hides the window to the tray when that option is on."""
@@ -784,13 +777,11 @@ class AutoclickerApp(
         self.root.withdraw()
         if not self._tray_hint_shown:
             self._tray_hint_shown = True
-            try:
+            with contextlib.suppress(Exception):
                 self.tray_icon.notify(
                     "Still running in the tray. Double-click the icon to restore it.",
                     "Windows Autoclicker",
                 )
-            except Exception:
-                pass
 
     def _on_minimize_to_tray_toggle(self) -> None:
         self.settings.set("minimize_to_tray", bool(self.minimize_to_tray_var.get()))
