@@ -341,11 +341,6 @@ class TestOtherActions(GuiHarness):
         app.delete_preset()
         self.assertEqual(app.preset_manager.get_preset_names(), [])
 
-    def test_theme_toggle_persists(self):
-        app = self.app
-        app.toggle_theme()
-        self.assertEqual(app.settings.get("theme"), "dark")
-
     def test_hotkeys_dialog_save(self):
         app = self.app
         with patch("autoclicker.gui.main_window.HotkeysDialog") as dialog:

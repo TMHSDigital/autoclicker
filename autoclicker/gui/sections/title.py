@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Title row with app icon and theme toggle."""
+"""Title row with app icon, update button and first-run hint."""
 
 import contextlib
 import tkinter as tk
@@ -29,15 +29,6 @@ def build_title_section(app, parent: ttk.Frame) -> None:
         font=("Segoe UI", 16, "bold"),
     ).grid(row=0, column=1, sticky=tk.W)
 
-    app.theme_button = ttk.Button(
-        header,
-        text=_theme_label(app),
-        style="Toolbutton",
-        width=10,
-        command=app.toggle_theme,
-    )
-    app.theme_button.grid(row=0, column=3, sticky=tk.E)
-
     # Shown only when the opt-in update check finds a newer release.
     app.update_button = ttk.Button(
         header,
@@ -45,13 +36,13 @@ def build_title_section(app, parent: ttk.Frame) -> None:
         style="Toolbutton",
         command=app.open_release_page,
     )
-    app.update_button.grid(row=0, column=2, sticky=tk.E, padx=(0, 6))
+    app.update_button.grid(row=0, column=2, sticky=tk.E)
     app.update_button.grid_remove()
 
     # One-time hint with the ways out of a run (#124); "Got it" hides it for good.
     app.first_run_hint_var = tk.StringVar(value=app._first_run_hint_text())
     app.first_run_hint = ttk.Frame(header)
-    app.first_run_hint.grid(row=1, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=(10, 0))
+    app.first_run_hint.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
     app.first_run_hint.grid_columnconfigure(0, weight=1)
     ttk.Label(
         app.first_run_hint,
@@ -75,7 +66,3 @@ def build_title_section(app, parent: ttk.Frame) -> None:
         ).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(4, 0))
     if app.settings.get("first_run_hint_dismissed", False):
         app.first_run_hint.grid_remove()
-
-
-def _theme_label(app) -> str:
-    return "\u2600 Light" if app.theme_var.get() == "dark" else "\u263d Dark"

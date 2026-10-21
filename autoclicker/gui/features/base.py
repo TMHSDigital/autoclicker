@@ -83,7 +83,6 @@ class AppBase:
     click_count_var: tk.StringVar
     runtime_var: tk.StringVar
     performance_var: tk.StringVar
-    theme_button: ttk.Button
     bottom_frame: ttk.Frame
     sequence_frame: ttk.Frame
     image_frame: ttk.Frame

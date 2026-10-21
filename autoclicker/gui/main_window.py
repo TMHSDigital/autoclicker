@@ -10,8 +10,6 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
 
-import sv_ttk
-
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import (
     DEFAULT_HOTKEYS,
@@ -54,7 +52,7 @@ from .sections import (
     build_title_section,
 )
 from .sections.status import STATUS_COLORS
-from .styles import apply_text_styles
+from .theme import FONT, apply_theme
 
 # Status-dot state for each way a run can end; anything else is "stopped".
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
@@ -81,7 +79,7 @@ def _lock_widget(widget) -> bool:
         if widget.winfo_class() not in _LOCKABLE:
             return False
         if hasattr(widget, "instate"):  # ttk
-            # Section headers and the small Import/Export/theme buttons stay usable.
+            # Section headers and the small Import/Export buttons stay usable.
             if str(widget.cget("style")) == "Toolbutton" or widget.instate(["disabled"]):
                 return False
             widget.state(["disabled"])
@@ -174,22 +172,8 @@ class AutoclickerApp(
 
         self.center_window()
 
-        theme = "dark" if str(self.settings.get("theme", "light")) == "dark" else "light"
-        self.theme_var = tk.StringVar(value=theme)
-        sv_ttk.set_theme(theme)
-        apply_text_styles(theme, self.root)
-        self.root.option_add("*Font", ("Segoe UI", 10))
-
-    def toggle_theme(self) -> None:
-        """Switch between light and dark themes and persist the choice."""
-        new_theme = "dark" if self.theme_var.get() == "light" else "light"
-        self.theme_var.set(new_theme)
-        sv_ttk.set_theme(new_theme)
-        apply_text_styles(new_theme, self.root)
-        self.settings.set("theme", new_theme)
-        if hasattr(self, "theme_button"):
-            label = "\u2600 Light" if new_theme == "dark" else "\u263d Dark"
-            self.theme_button.configure(text=label)
+        apply_theme(self.root)
+        self.root.option_add("*Font", FONT)
 
     def _fit_to_content(self) -> None:
         """Size the window to its content (sections collapsed) so nothing starts cut off.

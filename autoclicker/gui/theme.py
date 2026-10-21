@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Docs Blue: the app's light and dark palettes, shared with the website.
+"""The app's single dark palette, fonts and ttk styles.
 
-Colors come from docs/site.css so the app and the site read as one product.
-ttk widgets get them through ttk.Style; the custom-drawn widgets register a
-listener and redraw themselves when the theme changes.
+Colors come from the dark palette of docs/site.css so the app and the site read
+as one product. ttk widgets get them through ttk.Style; custom-drawn widgets
+read PALETTE directly and may register a listener for re-application.
 """
 
 from __future__ import annotations
@@ -15,81 +15,72 @@ from typing import Any
 
 import sv_ttk
 
-from .styles import ERROR, MUTED
+from .styles import (
+    BG_FRAME,
+    BG_LABEL,
+    BG_MUTED,
+    DANGER,
+    ERROR,
+    MUTED,
+    PANEL,
+    PANEL_HEADER,
+    PANEL_HEADING,
+    SEGMENT,
+    STAT,
+    STAT_CAPTION,
+)
 
 _log = logging.getLogger(__name__)
 
-PALETTES: dict[str, dict[str, str]] = {
-    "light": {
-        "bg": "#f6f8fb",
-        "surface": "#ffffff",
-        "text": "#1b2330",
-        "muted": "#5b6676",
-        "line": "#e1e6ee",
-        "accent": "#0067d6",
-        "accent_strong": "#0050a8",
-        "accent_soft": "#e6f0fc",
-        "accent_line": "#c4dbf7",
-        "hero_a": "#1a73e0",
-        "hero_b": "#0058c9",
-        "on_accent": "#ffffff",
-        "track": "#e1e6ee",
-        "segment": "#e9edf3",
-        "error": "#cf222e",
-        "success": "#1a7f37",
-        "warning": "#9a6700",
-        "idle": "#8b949e",
-        "shadow": "#d5dbe4",
-    },
-    "dark": {
-        "bg": "#0f141b",
-        "surface": "#171e27",
-        "text": "#e6ebf2",
-        "muted": "#9aa6b6",
-        "line": "#26303c",
-        "accent": "#4aa3ff",
-        "accent_strong": "#7bbcff",
-        "accent_soft": "#152a42",
-        "accent_line": "#24507f",
-        "hero_a": "#5aaeff",
-        "hero_b": "#2f88ea",
-        "on_accent": "#08111c",
-        "track": "#26303c",
-        "segment": "#1d2530",
-        "error": "#ff7b72",
-        "success": "#3fb950",
-        "warning": "#d29922",
-        "idle": "#6e7681",
-        "shadow": "#0a0d12",
-    },
+PALETTE: dict[str, str] = {
+    "bg": "#0f141b",
+    "surface": "#171e27",
+    "text": "#e6ebf2",
+    "muted": "#9aa6b6",
+    "line": "#26303c",
+    "accent": "#4aa3ff",
+    "accent_strong": "#7bbcff",
+    "accent_soft": "#152a42",
+    "accent_line": "#24507f",
+    "on_accent": "#08111c",
+    "track": "#26303c",
+    "segment": "#1d2530",
+    "error": "#ff7b72",
+    "success": "#3fb950",
+    "warning": "#d29922",
+    "idle": "#6e7681",
+    "shadow": "#0a0d12",
+}
+
+# Status-dot colors by state (see AutoclickerApp._set_status_message).
+STATUS_COLORS: dict[str, str] = {
+    "running": PALETTE["success"],
+    "stopped": PALETTE["idle"],
+    "alert": PALETTE["warning"],
+    "error": PALETTE["error"],
 }
 
 FONT = ("Segoe UI", 10)
 FONT_SMALL = ("Segoe UI", 9)
 FONT_BOLD = ("Segoe UI Semibold", 10)
 FONT_LABEL = ("Segoe UI Semibold", 8)
-FONT_TITLE = ("Segoe UI Semibold", 11)
-FONT_SENTENCE = ("Segoe UI", 15)
-FONT_PILL = ("Segoe UI Semibold", 14)
-FONT_BUTTON = ("Segoe UI Semibold", 12)
-FONT_COUNT = ("Segoe UI Semibold", 24)
+FONT_TITLE = ("Segoe UI Semibold", 12)
+FONT_STAT = ("Consolas", 22)
+FONT_STAT_CAPTION = ("Segoe UI Semibold", 8)
+FONT_RUN = ("Segoe UI Semibold", 15)
+FONT_RUN_CAPTION = ("Segoe UI", 9)
 
 _listeners: list[Callable[[dict[str, str]], None]] = []
-_current: dict[str, str] = PALETTES["light"]
-
-
-def palette(mode: str) -> dict[str, str]:
-    """The palette for ``mode`` ("light" or "dark"); anything else is light."""
-    return PALETTES.get(mode, PALETTES["light"])
+_current: dict[str, str] = PALETTE
 
 
 def current() -> dict[str, str]:
-    """The palette applied last."""
+    """The palette applied last (always PALETTE; kept for custom widgets)."""
     return _current
 
 
 def register(listener: Callable[[dict[str, str]], None]) -> None:
-    """Call ``listener(palette)`` after every theme change."""
+    """Call ``listener(palette)`` after every apply_theme."""
     _listeners.append(listener)
 
 
@@ -98,14 +89,14 @@ def unregister(listener: Callable[[dict[str, str]], None]) -> None:
         _listeners.remove(listener)
 
 
-def apply_theme(root: Any, mode: str, *, style: Any = None) -> dict[str, str]:
-    """Switch sv_ttk and our ttk styles to ``mode``, then tell the custom widgets."""
+def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
+    """Put sv_ttk in dark mode, configure our styles, then tell the custom widgets."""
     global _current
-    colors = palette(mode)
+    colors = PALETTE
     _current = colors
     try:
-        sv_ttk.set_theme("dark" if colors is PALETTES["dark"] else "light")
-    except Exception:  # cosmetic; never block startup or a theme switch
+        sv_ttk.set_theme("dark")
+    except Exception:  # cosmetic; never block startup
         _log.debug("Could not set the sv_ttk theme", exc_info=True)
     try:
         style = style if style is not None else ttk.Style(root)
@@ -121,15 +112,42 @@ def apply_theme(root: Any, mode: str, *, style: Any = None) -> dict[str, str]:
     return colors
 
 
+def set_dimmed(dimmed: bool, *, style: Any = None) -> None:
+    """Fade the panel text while the settings are locked during a run."""
+    c = PALETTE
+    text = c["muted"] if dimmed else c["text"]
+    heading = c["idle"] if dimmed else c["muted"]
+    try:
+        style = style if style is not None else ttk.Style()
+        for name in ("TLabel", "TCheckbutton", "TRadiobutton"):
+            style.configure(name, foreground=text)
+        style.configure(PANEL_HEADING, foreground=heading)
+    except Exception:
+        _log.debug("Could not dim the panels", exc_info=True)
+
+
 def _configure_styles(style: Any, c: dict[str, str]) -> None:
-    style.configure(MUTED, foreground=c["muted"])
-    style.configure(ERROR, foreground=c["error"])
-    for name in ("TFrame", "TLabelframe", "Card.TFrame"):
-        style.configure(name, background=c["bg"])
+    surface, bg = c["surface"], c["bg"]
+    # Panels are the majority of widgets, so the base styles sit on `surface`
+    # and the section builders need no style names at all.
+    for name in ("TFrame", "TLabelframe", PANEL):
+        style.configure(name, background=surface)
     for name in ("TLabel", "TCheckbutton", "TRadiobutton", "TLabelframe.Label"):
-        style.configure(name, background=c["bg"], foreground=c["text"])
-    style.configure(MUTED, background=c["bg"])
-    style.configure(ERROR, background=c["bg"])
-    style.configure("Heading.TLabel", background=c["bg"], foreground=c["muted"], font=FONT_LABEL)
-    style.configure("Link.TButton", foreground=c["accent"])
-    style.configure("Danger.TButton", foreground=c["error"])
+        style.configure(name, background=surface, foreground=c["text"])
+    style.configure(MUTED, background=surface, foreground=c["muted"])
+    style.configure(ERROR, background=surface, foreground=c["error"])
+    # Window chrome on the darker page background.
+    style.configure(BG_FRAME, background=bg)
+    style.configure(BG_LABEL, background=bg, foreground=c["text"])
+    style.configure(BG_MUTED, background=bg, foreground=c["muted"])
+    style.configure(PANEL_HEADING, background=surface, foreground=c["muted"], font=FONT_LABEL)
+    style.configure(PANEL_HEADER, font=FONT_BOLD, foreground=c["text"], anchor="w")
+    style.configure(SEGMENT, font=FONT, padding=(10, 4))
+    style.map(
+        SEGMENT,
+        background=[("selected", c["accent_soft"])],
+        foreground=[("selected", c["accent_strong"])],
+    )
+    style.configure(STAT, background=bg, foreground=c["text"], font=FONT_STAT)
+    style.configure(STAT_CAPTION, background=bg, foreground=c["muted"], font=FONT_STAT_CAPTION)
+    style.configure(DANGER, foreground=c["error"])

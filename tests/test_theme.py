@@ -1,10 +1,10 @@
-"""Docs Blue theme tokens: contrast and application."""
+"""Dark control-panel theme tokens: contrast and application."""
 
 import unittest
 from unittest.mock import MagicMock, patch
 
 from autoclicker.gui import theme
-from autoclicker.gui.styles import ERROR, MUTED
+from autoclicker.gui.styles import ERROR, MUTED, PANEL, SEGMENT
 
 
 def _luminance(color: str) -> float:
@@ -18,25 +18,27 @@ def contrast(a: str, b: str) -> float:
     return (high + 0.05) / (low + 0.05)
 
 
-class TestPalettes(unittest.TestCase):
-    def test_both_modes_have_every_token(self):
-        self.assertEqual(set(theme.PALETTES["light"]), set(theme.PALETTES["dark"]))
-
+class TestPalette(unittest.TestCase):
     def test_text_tokens_meet_aa_on_both_backgrounds(self):
-        for mode, p in theme.PALETTES.items():
-            for token in ("text", "muted", "error", "accent_strong"):
-                for bg in ("bg", "surface"):
-                    with self.subTest(mode=mode, token=token, bg=bg):
-                        self.assertGreaterEqual(contrast(p[token], p[bg]), 4.5)
+        p = theme.PALETTE
+        for token in ("text", "muted", "error", "accent_strong"):
+            for bg in ("bg", "surface"):
+                with self.subTest(token=token, bg=bg):
+                    self.assertGreaterEqual(contrast(p[token], p[bg]), 4.5)
 
-    def test_pill_and_button_text_meet_aa(self):
-        for mode, p in theme.PALETTES.items():
-            with self.subTest(mode=mode):
-                self.assertGreaterEqual(contrast(p["accent_strong"], p["accent_soft"]), 4.5)
-                self.assertGreaterEqual(contrast(p["on_accent"], p["accent"]), 4.5)
+    def test_run_button_text_meets_aa_on_every_fill(self):
+        p = theme.PALETTE
+        for fill in ("accent", "warning", "error"):
+            with self.subTest(fill=fill):
+                self.assertGreaterEqual(contrast(p["on_accent"], p[fill]), 4.5)
 
-    def test_unknown_mode_is_light(self):
-        self.assertIs(theme.palette("sepia"), theme.PALETTES["light"])
+    def test_segment_text_meets_aa_on_segment_fill(self):
+        p = theme.PALETTE
+        self.assertGreaterEqual(contrast(p["accent_strong"], p["accent_soft"]), 4.5)
+
+    def test_status_colors_cover_every_state(self):
+        self.assertEqual(set(theme.STATUS_COLORS), {"running", "stopped", "alert", "error"})
+        self.assertEqual(theme.STATUS_COLORS["error"], theme.PALETTE["error"])
 
 
 class TestApply(unittest.TestCase):
@@ -44,24 +46,44 @@ class TestApply(unittest.TestCase):
         theme._listeners.clear()
         self.addCleanup(theme._listeners.clear)
 
-    def test_runs_sv_ttk_styles_and_listeners(self):
+    def test_applies_dark_sv_ttk_styles_and_listeners(self):
         style = MagicMock()
         seen = []
         theme.register(seen.append)
         with patch("autoclicker.gui.theme.sv_ttk") as sv:
-            theme.apply_theme(MagicMock(), "dark", style=style)
+            result = theme.apply_theme(MagicMock(), style=style)
         sv.set_theme.assert_called_once_with("dark")
-        style.configure.assert_any_call(MUTED, foreground=theme.PALETTES["dark"]["muted"])
-        style.configure.assert_any_call(ERROR, foreground=theme.PALETTES["dark"]["error"])
-        self.assertEqual(seen, [theme.PALETTES["dark"]])
-        self.assertIs(theme.current(), theme.PALETTES["dark"])
+        p = theme.PALETTE
+        style.configure.assert_any_call(MUTED, background=p["surface"], foreground=p["muted"])
+        style.configure.assert_any_call(ERROR, background=p["surface"], foreground=p["error"])
+        style.configure.assert_any_call(PANEL, background=p["surface"])
+        style.configure.assert_any_call("Bg.TFrame", background=p["bg"])
+        self.assertTrue(
+            any(c.args[0] == SEGMENT for c in style.map.call_args_list),
+            "segmented controls get a selected-state map",
+        )
+        self.assertEqual(seen, [p])
+        self.assertIs(result, p)
+        self.assertIs(theme.current(), p)
 
     def test_errors_are_swallowed(self):
         style = MagicMock()
         style.configure.side_effect = RuntimeError("no Tk")
         theme.register(MagicMock(side_effect=RuntimeError("dead widget")))
         with patch("autoclicker.gui.theme.sv_ttk"):
-            theme.apply_theme(MagicMock(), "light", style=style)  # does not raise
+            theme.apply_theme(MagicMock(), style=style)  # does not raise
+
+    def test_dimming_swaps_label_foregrounds(self):
+        style = MagicMock()
+        theme.set_dimmed(True, style=style)
+        style.configure.assert_any_call("TLabel", foreground=theme.PALETTE["muted"])
+        theme.set_dimmed(False, style=style)
+        style.configure.assert_any_call("TLabel", foreground=theme.PALETTE["text"])
+
+    def test_dimming_errors_are_swallowed(self):
+        style = MagicMock()
+        style.configure.side_effect = RuntimeError("no Tk")
+        theme.set_dimmed(True, style=style)  # does not raise
 
 
 if __name__ == "__main__":
