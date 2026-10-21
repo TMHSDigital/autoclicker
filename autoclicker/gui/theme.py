@@ -2,7 +2,8 @@
 """The app's single dark palette, fonts and ttk styles.
 
 Colors come from the dark palette of docs/site.css so the app and the site read
-as one product. ttk widgets get them through ttk.Style; custom-drawn widgets
+as one product; ``surface`` is sv_ttk's own window gray, which its card and input
+images are drawn for. ttk widgets get them through ttk.Style; custom-drawn widgets
 read PALETTE directly and may register a listener for re-application.
 """
 
@@ -16,6 +17,7 @@ from typing import Any
 import sv_ttk
 
 from .styles import (
+    BG_CHECK,
     BG_FRAME,
     BG_LABEL,
     BG_MUTED,
@@ -34,7 +36,7 @@ _log = logging.getLogger(__name__)
 
 PALETTE: dict[str, str] = {
     "bg": "#0f141b",
-    "surface": "#171e27",
+    "surface": "#1c1c1c",
     "text": "#e6ebf2",
     "muted": "#9aa6b6",
     "line": "#26303c",
@@ -102,6 +104,12 @@ def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
         style = style if style is not None else ttk.Style(root)
         _configure_styles(style, colors)
         root.configure(background=colors["bg"])
+        # sv_ttk's tk_setPalette writes *background and *foreground into the option
+        # database, and a ttk label's own option beats its style. Blank them for
+        # labels so Bg.*, Stat.* and the dimming styles show; classic widgets
+        # (Listbox, Menu) keep the dark palette.
+        for option in ("background", "foreground"):
+            root.option_add(f"*TLabel.{option}", "")
     except Exception:
         _log.debug("Could not apply ttk styles", exc_info=True)
     for listener in list(_listeners):
@@ -140,6 +148,7 @@ def _configure_styles(style: Any, c: dict[str, str]) -> None:
     style.configure(BG_FRAME, background=bg)
     style.configure(BG_LABEL, background=bg, foreground=c["text"])
     style.configure(BG_MUTED, background=bg, foreground=c["muted"])
+    style.configure(BG_CHECK, background=bg, foreground=c["text"])
     style.configure(PANEL_HEADING, background=surface, foreground=c["muted"], font=FONT_LABEL)
     style.configure(PANEL_HEADER, font=FONT_BOLD, foreground=c["text"], anchor="w")
     style.configure(SEGMENT, font=FONT, padding=(10, 4))
@@ -150,4 +159,4 @@ def _configure_styles(style: Any, c: dict[str, str]) -> None:
     )
     style.configure(STAT, background=bg, foreground=c["text"], font=FONT_STAT)
     style.configure(STAT_CAPTION, background=bg, foreground=c["muted"], font=FONT_STAT_CAPTION)
-    style.configure(DANGER, foreground=c["error"])
+    style.configure(DANGER, foreground=c["error"], background=bg)

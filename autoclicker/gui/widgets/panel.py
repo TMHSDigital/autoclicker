@@ -9,6 +9,16 @@ from typing import Any
 
 from ..styles import MUTED, PANEL, PANEL_HEADER, PANEL_HEADING
 
+
+def labeled_row(body: Any, row: int, label: str) -> Any:
+    """A form row: ``label`` in column 0, a frame for the controls in column 1."""
+    pady = (0, 0) if row == 0 else (8, 0)
+    ttk.Label(body, text=label).grid(row=row, column=0, sticky=tk.W, pady=pady)
+    frame = ttk.Frame(body)
+    frame.grid(row=row, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=pady)
+    return frame
+
+
 _CLOSED = "▸"  # small right-pointing triangle
 _OPEN = "▾"  # small down-pointing triangle
 

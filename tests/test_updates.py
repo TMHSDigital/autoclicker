@@ -181,3 +181,48 @@ class TestGuiUpdateCheck(unittest.TestCase):
         with patch("autoclicker.gui.features.updates.webbrowser.open") as open_:
             app.open_release_page()
         open_.assert_called_once_with("https://example.invalid/r")
+
+
+class TestCheckNow(unittest.TestCase):
+    """The menu's Check for updates now reports either way."""
+
+    def test_reports_up_to_date(self):
+        from autoclicker import __version__
+
+        app = _app(True)
+        app._ui = lambda fn, *args: fn(*args)
+        app._set_status_message = MagicMock()
+        app._countdown_job = None
+        release = Release(version=__version__, url="https://example.invalid")
+        with (
+            patch("autoclicker.gui.features.updates.fetch_latest_release", return_value=release),
+            patch("autoclicker.gui.features.updates.threading.Thread") as thread,
+        ):
+            app.check_for_updates_now()
+            thread.call_args.kwargs["target"]()
+        app._set_status_message.assert_called_with(f"{__version__} is the latest version")
+
+    def test_reports_unreachable(self):
+        app = _app(True)
+        app._ui = lambda fn, *args: fn(*args)
+        app._set_status_message = MagicMock()
+        app._countdown_job = None
+        with (
+            patch("autoclicker.gui.features.updates.fetch_latest_release", return_value=None),
+            patch("autoclicker.gui.features.updates.threading.Thread") as thread,
+        ):
+            app.check_for_updates_now()
+            thread.call_args.kwargs["target"]()
+        app._set_status_message.assert_called_with("Could not reach GitHub", "alert")
+
+    def test_refused_while_running(self):
+        app = _app(True)
+        app.click_engine.is_running = True
+        app._set_status_message = MagicMock()
+        app._countdown_job = None
+        with patch("autoclicker.gui.features.updates.threading.Thread") as thread:
+            app.check_for_updates_now()
+        thread.assert_not_called()
+        app._set_status_message.assert_called_with(
+            "Stop clicking before checking for updates", "alert"
+        )

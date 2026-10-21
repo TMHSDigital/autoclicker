@@ -33,7 +33,7 @@ class UpdatesMixin(AppBase):
                     "Check for updates",
                     "Check GitHub once a day for new versions of Windows Autoclicker?\n\n"
                     "Only the public release page is contacted, and nothing is downloaded. "
-                    "You can change this under App.",
+                    "You can change this with the update toggle at the bottom of the window.",
                 )
             )
             self.settings.set("check_for_updates", choice)
@@ -44,18 +44,35 @@ class UpdatesMixin(AppBase):
             return
         threading.Thread(target=self._check_for_updates, daemon=True, name="UpdateCheck").start()
 
-    def _check_for_updates(self) -> None:
+    def check_for_updates_now(self) -> None:
+        """Menu: check right away and say what was found, either way."""
+        if self.click_engine.is_running or self._countdown_job is not None:
+            self._set_status_message("Stop clicking before checking for updates", "alert")
+            return
+        self._set_status_message("Checking for updates...")
+        threading.Thread(
+            target=lambda: self._check_for_updates(report=True),
+            daemon=True,
+            name="UpdateCheck",
+        ).start()
+
+    def _check_for_updates(self, report: bool = False) -> None:
         """(Worker thread) look for a newer release and report it on the Tk thread.
 
         Only a successful check counts toward the daily limit, so starting
-        offline doesn't skip a day (#103).
+        offline doesn't skip a day (#103). ``report`` also tells the user when
+        there is nothing new or GitHub could not be reached.
         """
         release = fetch_latest_release()
         if release is None:
+            if report:
+                self._ui(self._set_status_message, "Could not reach GitHub", "alert")
             return
         self._ui(self.settings.set, "last_update_check", time.time())
         if is_newer(release.version, __version__):
             self._ui(self._show_update, release)
+        elif report:
+            self._ui(self._set_status_message, f"{__version__} is the latest version")
 
     def _show_update(self, release: Release) -> None:
         self._release_url = release.url

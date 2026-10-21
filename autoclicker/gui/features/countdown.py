@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import contextlib
 import math
-import tkinter as tk
 from datetime import datetime
 
 from ...core.schedule import describe_wait, next_start, parse_start_at
@@ -45,8 +44,7 @@ class CountdownMixin(AppBase):
             return
         if not self._confirm_guard_off():
             return
-        self.start_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
+        self._paint_run_mode("countdown")
         # Stop, Emergency and Toggle keys cancel it. A long scheduled wait claims
         # them only for its last minute, so Esc keeps working elsewhere meanwhile;
         # until then the Stop button, tray Stop or the toggle key cancel it.
@@ -63,9 +61,12 @@ class CountdownMixin(AppBase):
                 self._hotkeys.set_running(True)
             if until is not None and remaining > _CLAIM_STOP_KEYS_SECONDS:
                 message = f"Starting at {until:%H:%M} (in {describe_wait(remaining)})"
+                detail = f"at {until:%H:%M}"
             else:
                 message = f"Starting in {remaining}..."
+                detail = str(remaining)
             self._set_status_message(message, "alert")
+            self._paint_run_mode("countdown", detail)
             self._countdown_job = self.root.after(1000, self._countdown_tick, remaining - 1)
             return
         self._countdown_job = None

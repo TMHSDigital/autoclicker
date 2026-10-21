@@ -64,14 +64,6 @@ class FakeEntry:
     bind = pack
 
 
-class FakeCollapsible:
-    def __init__(self, *_args, **_kwargs):
-        self.body = MagicMock()
-
-    def grid(self, *_a, **_k):
-        pass
-
-
 _PENDING: list = []
 _PENDING_LOCK = threading.Lock()
 
@@ -129,6 +121,7 @@ class GuiHarness(unittest.TestCase):
         p(patch("tkinter.Canvas", MagicMock()))
         p(patch("tkinter.Listbox", MagicMock()))
         p(patch("tkinter.Label", MagicMock()))
+        p(patch("tkinter.Menu", MagicMock()))
         for name in (
             "Frame",
             "LabelFrame",
@@ -141,7 +134,7 @@ class GuiHarness(unittest.TestCase):
         ):
             p(patch(f"tkinter.ttk.{name}", MagicMock()))
         p(patch("tkinter.ttk.Entry", FakeEntry))
-        p(patch("autoclicker.gui.sections.advanced.CollapsibleFrame", FakeCollapsible))
+        p(patch("autoclicker.gui.sections.hero.RunButton", MagicMock()))
         self.messagebox = p(patch("autoclicker.gui.dialogs.messagebox"))
         self.simpledialog = p(patch("autoclicker.gui.dialogs.simpledialog"))
         hotkeys_cls = p(patch("autoclicker.gui.main_window.HotkeyManager"))
@@ -173,11 +166,46 @@ class TestBuild(GuiHarness):
     def test_build_wires_everything(self):
         app = self.app
         self.hotkeys.start.assert_called_once()
-        app.start_btn.config.assert_any_call(text="Start (F6)")
+        app.run_button.set_hotkey.assert_any_call("F6", "F7")
+        self.assertIn("3 s delay", app.timing_panel.summary_var.get())
+        self.assertTrue(app.safety_panel.summary_var.get().startswith("failsafe on"))
+        self.assertEqual(app.click_summary_var.get(), "Left click \u00b7 every 1000 ms")
         app.emergency_btn.config.assert_any_call(text="Emergency stop (Esc)")
         self.assertEqual(app.target_mode_var.get(), "fixed")
         self.assertEqual(app.x_entry.get(), "100")
         self.assertEqual(app.x_entry.cget("state"), "normal")
+
+
+class TestSummaries(GuiHarness):
+    """The hero line and the collapsed panels describe the form."""
+
+    def test_click_summary_follows_the_form(self):
+        app = self.app
+        app.button_var.set("right")
+        app.click_type_var.set("double")
+        self.set_fields(interval="250", variation="10")
+        app._refresh_click_summary()
+        self.assertEqual(
+            app.click_summary_var.get(), "Double right click \u00b7 every 250 ms \u00b1 10 ms"
+        )
+
+    def test_panel_summaries_follow_the_form(self):
+        app = self.app
+        self.set_fields(start_delay="0", burst_clicks="3", burst_pause="50")
+        app.limit_clicks_var.set(True)
+        self.set_fields(max_clicks="500")
+        app.failsafe_var.set(False)
+        app._sync_safety_from_ui()
+        self.assertEqual(app.timing_panel.summary_var.get(), "burst of 3, 50 ms apart")
+        self.assertEqual(
+            app.safety_panel.summary_var.get(), "failsafe off \u00b7 stop after 500 clicks"
+        )
+
+    def test_profile_load_refreshes_the_summaries(self):
+        app = self.app
+        app.apply_form_values({"start_delay_seconds": 0, "mouse_button": "middle"})
+        self.assertEqual(app.timing_panel.summary_var.get(), "no delay \u00b7 no burst")
+        self.assertTrue(app.click_summary_var.get().startswith("Middle click"))
 
 
 class TestFirstRunHint(GuiHarness):
@@ -216,7 +244,7 @@ class TestRunLifecycle(GuiHarness):
         app.start_clicking()
         _settle(app)
         self.assertEqual(app.status_var.get(), "Done: reached 4 clicks")
-        self.assertEqual(app.click_count_var.get(), "Clicks: 4")
+        self.assertEqual(app.click_count_var.get(), "4")
         self.hotkeys.set_running.assert_any_call(True)
         self.hotkeys.set_running.assert_called_with(False)
         log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log").read_text("utf-8")
@@ -482,6 +510,7 @@ class TestStartCountdown(GuiHarness):
     def test_counts_down_then_starts(self):
         app = self.begin("2")
         self.assertEqual(app.status_var.get(), "Starting in 2...")
+        app.run_button.set_mode.assert_called_with("countdown", detail="2")
         self.assertFalse(app.click_engine.is_running)
         self.hotkeys.set_running.assert_called_with(True)
         app._countdown_tick(1)
@@ -499,11 +528,11 @@ class TestStartCountdown(GuiHarness):
 
     def test_stop_cancels(self):
         app = self.begin()
-        seen = len(app.start_btn.config.call_args_list)
+        seen = len(app.run_button.set_mode.call_args_list)
         app.stop_clicking()
         self.assertIsNone(app._countdown_job)
         self.assertEqual(app.status_var.get(), "Start cancelled")
-        self.assertIn(call(state="normal"), app.start_btn.config.call_args_list[seen:])
+        self.assertIn(call("idle", detail=""), app.run_button.set_mode.call_args_list[seen:])
         self.hotkeys.set_running.assert_called_with(False)
         log = Path(self._tmp.name, "WindowsAutoclicker", "sessions.log")
         self.assertFalse(log.exists() and "event=start" in log.read_text("utf-8"))
@@ -610,11 +639,11 @@ class TestStartCountdown(GuiHarness):
     def test_input_broken_during_countdown_does_not_start(self):
         app = self.begin()
         self.set_fields(interval="abc")
-        seen = len(app.start_btn.config.call_args_list)
+        seen = len(app.run_button.set_mode.call_args_list)
         app._countdown_tick(0)
         self.assertFalse(app.click_engine.is_running)
         self.assertEqual(app.status_var.get(), "Not started")
-        self.assertIn(call(state="normal"), app.start_btn.config.call_args_list[seen:])
+        self.assertIn(call("idle", detail=""), app.run_button.set_mode.call_args_list[seen:])
 
 
 class TestProfilesUi(GuiHarness):

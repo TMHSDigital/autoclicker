@@ -1,116 +1,95 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Essential click settings section (mouse button, click type, interval)."""
+"""Click panel: button, click type, interval, action and spread."""
 
 import tkinter as tk
 from tkinter import ttk
 
-from ..styles import MUTED
+from ..styles import MUTED, SEGMENT
+from ..widgets.panel import Panel, labeled_row
 
 
-def build_click_settings_section(app, parent: ttk.Frame) -> None:
-    """Create the essential click settings section."""
-    settings_frame = ttk.LabelFrame(parent, text="Click Settings", padding="10")
-    settings_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
-    settings_frame.grid_columnconfigure(1, weight=1)
-
+def build_click_panel(app, parent) -> Panel:
+    """Create the Click panel; the caller grids it."""
+    panel = Panel(parent, "Click")
+    body = panel.body
     settings = app.controller.settings
 
-    ttk.Label(settings_frame, text="Mouse Button:").grid(row=0, column=0, sticky=tk.W)
+    def refresh(*_args) -> None:
+        app._refresh_click_summary()
+
     app.button_var = tk.StringVar(value=settings.get("mouse_button", "left"))
-    button_frame = ttk.Frame(settings_frame)
-    button_frame.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(10, 0))
+    buttons = labeled_row(body, 0, "Button")
+    for text, value in (("Left", "left"), ("Right", "right"), ("Middle", "middle")):
+        ttk.Radiobutton(
+            buttons, text=text, variable=app.button_var, value=value, style=SEGMENT
+        ).pack(side=tk.LEFT)
+    app.button_var.trace_add("write", refresh)
 
-    ttk.Radiobutton(button_frame, text="Left", variable=app.button_var, value="left").pack(
-        side=tk.LEFT, padx=(0, 10)
-    )
-    ttk.Radiobutton(button_frame, text="Right", variable=app.button_var, value="right").pack(
-        side=tk.LEFT, padx=(0, 10)
-    )
-    ttk.Radiobutton(button_frame, text="Middle", variable=app.button_var, value="middle").pack(
-        side=tk.LEFT
-    )
-
-    ttk.Label(settings_frame, text="Click Type:").grid(row=1, column=0, sticky=tk.W, pady=(10, 0))
     app.click_type_var = tk.StringVar(value=settings.get("click_type", "single"))
-    click_type_frame = ttk.Frame(settings_frame)
-    click_type_frame.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    types = labeled_row(body, 1, "Type")
+    for text, value in (("Single", "single"), ("Double", "double")):
+        ttk.Radiobutton(
+            types, text=text, variable=app.click_type_var, value=value, style=SEGMENT
+        ).pack(side=tk.LEFT)
+    app.click_type_var.trace_add("write", refresh)
 
-    ttk.Radiobutton(
-        click_type_frame, text="Single", variable=app.click_type_var, value="single"
-    ).pack(side=tk.LEFT, padx=(0, 10))
-    ttk.Radiobutton(
-        click_type_frame, text="Double", variable=app.click_type_var, value="double"
-    ).pack(side=tk.LEFT)
-
-    ttk.Label(settings_frame, text="Interval:").grid(row=2, column=0, sticky=tk.W, pady=(10, 0))
-    interval_frame = ttk.Frame(settings_frame)
-    interval_frame.grid(row=2, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-
-    app.interval_entry = ttk.Entry(interval_frame, width=8)
+    every = labeled_row(body, 2, "Every")
+    app.interval_entry = ttk.Entry(every, width=6)
     app.interval_entry.pack(side=tk.LEFT, padx=(0, 5))
     app.interval_entry.insert(0, str(settings.get("interval", "1000")))
-
     app.interval_unit_var = tk.StringVar(value=settings.get("interval_unit", "ms"))
     ttk.Combobox(
-        interval_frame,
+        every,
         textvariable=app.interval_unit_var,
         values=["ms", "seconds"],
-        width=8,
+        width=7,
         state="readonly",
-    ).pack(side=tk.LEFT, padx=(0, 10))
-
-    ttk.Label(interval_frame, text="\u00b1").pack(side=tk.LEFT)
-    app.variation_entry = ttk.Entry(interval_frame, width=6)
-    app.variation_entry.pack(side=tk.LEFT)
+    ).pack(side=tk.LEFT, padx=(0, 8))
+    app.interval_unit_var.trace_add("write", refresh)
+    ttk.Label(every, text="±").pack(side=tk.LEFT)
+    app.variation_entry = ttk.Entry(every, width=4)
+    app.variation_entry.pack(side=tk.LEFT, padx=(3, 3))
     app.variation_entry.insert(0, str(settings.get("variation", "0")))
-    ttk.Label(interval_frame, text="ms").pack(side=tk.LEFT)
+    ttk.Label(every, text="ms").pack(side=tk.LEFT)
 
     # What each click does: click, hold the button, or press a key.
-    ttk.Label(settings_frame, text="Action:").grid(row=3, column=0, sticky=tk.W, pady=(10, 0))
-    action_frame = ttk.Frame(settings_frame)
-    action_frame.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
+    actions = labeled_row(body, 3, "Action")
     saved_action = settings.get("action", "click")
     app.action_var = tk.StringVar(
         value=saved_action if saved_action in ("click", "hold", "key") else "click"
     )
     app.action_radios = {}
-    for text, value in (("Click", "click"), ("Hold", "hold")):
+    for text, value in (("Click", "click"), ("Hold", "hold"), ("Key", "key")):
         app.action_radios[value] = ttk.Radiobutton(
-            action_frame,
+            actions,
             text=text,
             variable=app.action_var,
             value=value,
+            style=SEGMENT,
             command=app._apply_action_state,
         )
-        app.action_radios[value].pack(side=tk.LEFT, padx=(0, 6))
-    app.hold_entry = ttk.Entry(action_frame, width=6)
+        app.action_radios[value].pack(side=tk.LEFT)
+
+    details = labeled_row(body, 4, "Hold")
+    app.hold_entry = ttk.Entry(details, width=5)
     app.hold_entry.pack(side=tk.LEFT)
     app.hold_entry.insert(0, str(settings.get("hold_ms", "500")))
-    ttk.Label(action_frame, text="ms").pack(side=tk.LEFT, padx=(3, 12))
-    app.action_radios["key"] = ttk.Radiobutton(
-        action_frame,
-        text="Key",
-        variable=app.action_var,
-        value="key",
-        command=app._apply_action_state,
-    )
-    app.action_radios["key"].pack(side=tk.LEFT, padx=(0, 6))
-    app.key_entry = ttk.Entry(action_frame, width=10)
+    ttk.Label(details, text="ms").pack(side=tk.LEFT, padx=(3, 10))
+    ttk.Label(details, text="Key").pack(side=tk.LEFT, padx=(0, 5))
+    app.key_entry = ttk.Entry(details, width=8)
     app.key_entry.pack(side=tk.LEFT)
     app.key_entry.insert(0, str(settings.get("key", "")))
     app.key_entry.bind("<KeyRelease>", lambda _e: app._refresh_target_summary(), add="+")
 
     # Click spread (#120): land each click up to N px from the target.
-    ttk.Label(settings_frame, text="Spread:").grid(row=4, column=0, sticky=tk.W, pady=(10, 0))
-    spread_frame = ttk.Frame(settings_frame)
-    spread_frame.grid(row=4, column=1, sticky=(tk.W, tk.E), padx=(10, 0), pady=(10, 0))
-    ttk.Label(spread_frame, text="\u00b1").pack(side=tk.LEFT)
-    app.spread_entry = ttk.Entry(spread_frame, width=6)
-    app.spread_entry.pack(side=tk.LEFT)
+    spread = labeled_row(body, 5, "Spread")
+    ttk.Label(spread, text="±").pack(side=tk.LEFT)
+    app.spread_entry = ttk.Entry(spread, width=4)
+    app.spread_entry.pack(side=tk.LEFT, padx=(3, 3))
     app.spread_entry.insert(0, str(settings.get("click_spread", "0")))
-    ttk.Label(
-        spread_frame,
-        text="px around the target (0 = the exact point)",
-        style=MUTED,
-    ).pack(side=tk.LEFT, padx=(3, 0))
+    ttk.Label(spread, text="px around the target (0 = exact)", style=MUTED).pack(side=tk.LEFT)
+
+    for entry in (app.interval_entry, app.variation_entry, app.hold_entry):
+        entry.bind("<KeyRelease>", lambda _e: app._refresh_click_summary(), add="+")
     app._apply_action_state()
+    return panel

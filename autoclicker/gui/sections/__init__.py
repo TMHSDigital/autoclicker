@@ -1,20 +1,19 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """GUI section builders for the main window."""
 
-from .advanced import build_advanced_section
-from .click_settings import build_click_settings_section
-from .control import build_control_section
-from .coordinates import build_coordinate_section
-from .disclaimer import build_disclaimer_section
-from .status import build_status_section
-from .title import build_title_section
+from .advanced import build_safety_panel, build_timing_panel
+from .click_settings import build_click_panel
+from .coordinates import build_target_panel
+from .footer import build_footer_section
+from .header import build_header_section
+from .hero import build_hero_section
 
 __all__ = [
-    "build_advanced_section",
-    "build_click_settings_section",
-    "build_control_section",
-    "build_coordinate_section",
-    "build_disclaimer_section",
-    "build_status_section",
-    "build_title_section",
+    "build_click_panel",
+    "build_footer_section",
+    "build_header_section",
+    "build_hero_section",
+    "build_safety_panel",
+    "build_target_panel",
+    "build_timing_panel",
 ]

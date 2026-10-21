@@ -29,7 +29,7 @@ from ..core.click_engine import (
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.resources import resource_path
 from ..core.settings_manager import allowed_actions, field_label, uses_point
-from . import dialogs
+from . import dialogs, theme
 from .features import (
     ConditionMixin,
     CountdownMixin,
@@ -43,16 +43,17 @@ from .features import (
 from .hotkeys_dialog import HotkeysDialog
 from .picker import CoordinatePicker
 from .sections import (
-    build_advanced_section,
-    build_click_settings_section,
-    build_control_section,
-    build_coordinate_section,
-    build_disclaimer_section,
-    build_status_section,
-    build_title_section,
+    build_click_panel,
+    build_footer_section,
+    build_header_section,
+    build_hero_section,
+    build_safety_panel,
+    build_target_panel,
+    build_timing_panel,
 )
-from .sections.status import STATUS_COLORS
-from .theme import FONT, apply_theme
+from .styles import BG_FRAME
+from .summaries import click_summary, format_stats, safety_summary, timing_summary
+from .theme import FONT, STATUS_COLORS, apply_theme
 
 # Status-dot state for each way a run can end; anything else is "stopped".
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
@@ -79,8 +80,13 @@ def _lock_widget(widget) -> bool:
         if widget.winfo_class() not in _LOCKABLE:
             return False
         if hasattr(widget, "instate"):  # ttk
-            # Section headers and the small Import/Export buttons stay usable.
-            if str(widget.cget("style")) == "Toolbutton" or widget.instate(["disabled"]):
+            # Panel headers and small Toolbutton actions (Save, Sample...) stay usable;
+            # Toolbutton-styled radios are segmented settings and lock like any other.
+            if widget.instate(["disabled"]):
+                return False
+            if widget.winfo_class() == "TButton" and str(widget.cget("style")).endswith(
+                "Toolbutton"
+            ):
                 return False
             widget.state(["disabled"])
             return True
@@ -158,16 +164,16 @@ class AutoclickerApp(
     def setup_window(self) -> None:
         """Configure main window properties."""
         self.root.title("Windows Autoclicker")
-        self.root.geometry("520x560")
+        self.root.geometry("640x640")
         self.root.resizable(True, True)
-        self.root.minsize(460, 480)
+        self.root.minsize(600, 520)
 
         with contextlib.suppress(Exception):
             icon = resource_path("autoclicker.ico")
             if icon.is_file():
                 self.root.iconbitmap(str(icon))
 
-        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_rowconfigure(2, weight=1)  # the panels take the spare height
         self.root.grid_columnconfigure(0, weight=1)
 
         self.center_window()
@@ -176,18 +182,18 @@ class AutoclickerApp(
         self.root.option_add("*Font", FONT)
 
     def _fit_to_content(self) -> None:
-        """Size the window to its content (sections collapsed) so nothing starts cut off.
+        """Size the window to its content (panels collapsed) so nothing starts cut off.
 
         Capped at 90% of the screen height; the scrollbar covers anything taller.
         """
         try:
             self.root.update_idletasks()
-            bottom = getattr(self, "bottom_frame", None)
-            width = max(520, int(self.main_frame.winfo_reqwidth()))
+            width = int(self.main_frame.winfo_reqwidth())
             height = int(self.main_frame.winfo_reqheight())
-            if bottom is not None:
-                width = max(width, int(bottom.winfo_reqwidth()))
-                height += int(bottom.winfo_reqheight())
+            for frame in getattr(self, "_pinned_frames", ()):
+                width = max(width, int(frame.winfo_reqwidth()))
+                height += int(frame.winfo_reqheight())
+            width = max(640, width)
             height = min(height, int(self.root.winfo_screenheight() * 0.9))
         except (TypeError, ValueError, AttributeError):
             return
@@ -204,41 +210,104 @@ class AutoclickerApp(
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def create_gui(self) -> None:
-        """Create the main GUI interface."""
-        self.canvas = tk.Canvas(self.root, highlightthickness=0, borderwidth=0)
-        self.canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        """Header and hero on top, the settings panels in the middle, footer below.
 
+        Only the panels scroll, and only when they overflow; the rest stays put.
+        """
+        build_header_section(self, self.root)
+
+        self.canvas = tk.Canvas(
+            self.root, highlightthickness=0, borderwidth=0, background=theme.PALETTE["bg"]
+        )
+        self.canvas.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.v_scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.canvas.yview)
-        self.v_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
-
+        self.v_scrollbar.grid(row=2, column=1, sticky=(tk.N, tk.S))
         self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
 
-        main_frame = ttk.Frame(self.canvas, padding=(20, 20, 20, 0))
+        main_frame = ttk.Frame(self.canvas, style=BG_FRAME, padding=(16, 4, 16, 8))
         self.main_frame = main_frame
         self.canvas_frame = self.canvas.create_window((0, 0), window=main_frame, anchor="nw")
-
-        main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_columnconfigure(1, weight=1)
-
+        for column in (0, 1):
+            main_frame.grid_columnconfigure(column, weight=1, uniform="panels")
         main_frame.bind("<Configure>", self.on_frame_configure)
         self.canvas.bind("<Configure>", self.on_canvas_configure)
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
 
-        build_title_section(self, main_frame)
-        build_coordinate_section(self, main_frame)
-        build_click_settings_section(self, main_frame)
-        build_advanced_section(self, main_frame)
+        fill = (tk.W, tk.E, tk.N, tk.S)
+        build_target_panel(self, main_frame).grid(row=0, column=0, sticky=fill, padx=(0, 6))
+        build_click_panel(self, main_frame).grid(row=0, column=1, sticky=fill, padx=(6, 0))
+        self.timing_panel = build_timing_panel(self, main_frame)
+        self.timing_panel.grid(
+            row=1, column=0, sticky=(tk.W, tk.E, tk.N), padx=(0, 6), pady=(12, 0)
+        )
+        self.safety_panel = build_safety_panel(self, main_frame)
+        self.safety_panel.grid(
+            row=1, column=1, sticky=(tk.W, tk.E, tk.N), padx=(6, 0), pady=(12, 0)
+        )
 
-        # Start/Stop, status and footer stay pinned below the scrolling settings,
-        # so they are always visible however many sections are open (#85).
-        bottom = ttk.Frame(self.root, padding=(20, 6, 20, 14))
-        bottom.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))
-        bottom.grid_columnconfigure(0, weight=1)
-        bottom.grid_columnconfigure(1, weight=1)
-        self.bottom_frame = bottom
-        build_control_section(self, bottom)
-        build_status_section(self, bottom)
-        build_disclaimer_section(self, bottom)
+        # The hero's status line reads the form, so it is built after the panels.
+        build_hero_section(self, self.root)
+        build_footer_section(self, self.root)
+        self._pinned_frames = (self.header_frame, self.hero_frame, self.footer_frame)
+        self._refresh_panel_summaries()
+
+    def toggle_from_button(self) -> None:
+        """The hero button: stop a run or countdown, otherwise start (with the countdown)."""
+        if self.click_engine.is_running or self._countdown_job is not None:
+            self.stop_clicking()
+        else:
+            self.start_from_button()
+
+    def _paint_run_mode(self, mode: str, detail: str = "") -> None:
+        """Show ``idle``, ``countdown`` or ``running`` on the hero button."""
+        button = getattr(self, "run_button", None)
+        if button is not None:
+            button.set_mode(mode, detail=detail)
+
+    def _refresh_click_summary(self) -> None:
+        """The hero's one-line description of the Click panel."""
+        var = getattr(self, "click_summary_var", None)
+        if var is None or getattr(self, "spread_entry", None) is None:
+            return  # the Click panel is not built yet
+        var.set(
+            click_summary(
+                mouse_button=self.button_var.get(),
+                click_type=self.click_type_var.get(),
+                action=self.action_var.get(),
+                interval=self.interval_entry.get(),
+                interval_unit=self.interval_unit_var.get(),
+                variation=self.variation_entry.get(),
+                hold_ms=self.hold_entry.get(),
+                key=self.key_entry.get(),
+            )
+        )
+
+    def _refresh_panel_summaries(self) -> None:
+        """What the collapsed Timing and Safety panels say, and the hero line."""
+        self._refresh_click_summary()
+        timing = getattr(self, "timing_panel", None)
+        if timing is not None and getattr(self, "start_at_entry", None) is not None:
+            timing.set_summary(
+                timing_summary(
+                    burst_clicks=self.burst_clicks_entry.get(),
+                    burst_pause=self.burst_pause_entry.get(),
+                    start_delay=self.start_delay_entry.get(),
+                    start_at=self.start_at_entry.get(),
+                )
+            )
+        safety = getattr(self, "safety_panel", None)
+        if safety is not None and getattr(self, "pause_unfocused_var", None) is not None:
+            safety.set_summary(
+                safety_summary(
+                    limit_clicks=bool(self.limit_clicks_var.get()),
+                    max_clicks=self.max_clicks_entry.get(),
+                    auto_stop_minutes=self.auto_stop_entry.get(),
+                    max_cps=self.max_cps_entry.get(),
+                    condition=self.condition_var.get(),
+                    failsafe=bool(self.failsafe_var.get()),
+                    pause_unfocused=bool(self.pause_unfocused_var.get()),
+                )
+            )
 
     def _on_mousewheel(self, event) -> None:
         """Scroll the canvas with the mouse wheel when content overflows.
@@ -323,9 +392,11 @@ class AutoclickerApp(
     def _refresh_hotkey_labels(self) -> None:
         if hasattr(self, "first_run_hint_var"):
             self.first_run_hint_var.set(self._first_run_hint_text())
-        if hasattr(self, "start_btn"):
-            self.start_btn.config(text="Start" + self._hotkey_suffix("start"))
-            self.stop_btn.config(text="Stop" + self._hotkey_suffix("stop"))
+        if hasattr(self, "run_button"):
+            self.run_button.set_hotkey(
+                self._hotkey_suffix("start").strip(" ()"), self._hotkey_suffix("stop").strip(" ()")
+            )
+        if hasattr(self, "emergency_btn"):
             self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
         tray = getattr(self, "tray_icon", None)
         if tray is not None:
@@ -392,20 +463,22 @@ class AutoclickerApp(
             widgets, self._locked_widgets = self._locked_widgets, ()
             for widget in widgets:
                 _unlock_widget(widget)
+            with contextlib.suppress(Exception):
+                theme.set_dimmed(False)
             return
         frame = getattr(self, "main_frame", None)
         if self._locked_widgets or frame is None:
             return
         self._locked_widgets = tuple(w for w in _descendants(frame) if _lock_widget(w))
+        with contextlib.suppress(Exception):
+            theme.set_dimmed(True)
 
     def _paint_stopped(self, message: str, state: str = "stopped") -> None:
         """Reset start/stop widgets after clicking ends."""
         self._set_settings_locked(False)
         if hasattr(self, "_hotkeys"):
             self._hotkeys.set_running(False)
-        if hasattr(self, "start_btn"):
-            self.start_btn.config(state=tk.NORMAL)
-            self.stop_btn.config(state=tk.DISABLED)
+        self._paint_run_mode("idle")
         self._set_status_message(message, state)
         self._stop_status_timer()
         # Final refresh so the counters show the exact totals, not the last 1 s tick
@@ -420,9 +493,10 @@ class AutoclickerApp(
         if hasattr(self, "status_var"):
             self.status_var.set(message)
         self._set_tray_title(message)
-        dot = getattr(self, "status_dot", None)
-        if dot is not None:
-            dot.configure(foreground=STATUS_COLORS.get(state, STATUS_COLORS["stopped"]))
+        color = STATUS_COLORS.get(state, STATUS_COLORS["stopped"])
+        for dot in (getattr(self, "status_dot", None), getattr(self, "brand_dot", None)):
+            if dot is not None:
+                dot.configure(foreground=color)
 
     def _on_failsafe_toggle(self) -> None:
         if not self.failsafe_var.get():
@@ -442,6 +516,7 @@ class AutoclickerApp(
         )
         if hasattr(self, "first_run_hint_var"):
             self.first_run_hint_var.set(self._first_run_hint_text())  # corner on or off
+        self._refresh_panel_summaries()
 
     def _apply_target_mode_state(self) -> None:
         """Enable only what the target mode and action use (#102).
@@ -494,6 +569,7 @@ class AutoclickerApp(
     def _refresh_target_summary(self) -> None:
         if hasattr(self, "coord_var"):
             self.coord_var.set(self._target_summary())
+        self._refresh_click_summary()
 
     def _apply_action_state(self) -> None:
         """Enable the hold time only for Hold and the key only for Key."""
@@ -654,8 +730,7 @@ class AutoclickerApp(
                 return
 
             if result.success:
-                self.start_btn.config(state=tk.DISABLED)
-                self.stop_btn.config(state=tk.NORMAL)
+                self._paint_run_mode("running")
                 self._set_status_message("Running...", "running")
                 self._shown_paused = None
                 self._hotkeys.set_running(True)
@@ -700,20 +775,13 @@ class AutoclickerApp(
     def _on_status_update(self) -> None:
         """Handle status updates from click engine."""
         status = self.click_engine.get_status()
-        self.click_count_var.set(f"Clicks: {status['click_count']}")
-        self.runtime_var.set(f"Runtime: {status['runtime']}")
+        stats = format_stats(status)
+        self.click_count_var.set(stats.clicks)
+        self.runtime_var.set(stats.runtime)
+        self.performance_var.set(stats.rate)
         if status.get("is_running"):
             state = "paused" if status.get("is_paused") else "running"
             self._set_tray_title(f"{state}, {status['click_count']:,} clicks")
-
-        if "performance" in status:
-            perf = status["performance"]
-            perf_text = (
-                f"Performance: {perf['clicks_per_second']} cps, {perf['success_rate']:.1f}% success"
-            )
-            self.performance_var.set(perf_text)
-        else:
-            self.performance_var.set("Performance: --")
 
     def _start_status_timer(self) -> None:
         """Start periodic status updates."""

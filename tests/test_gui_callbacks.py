@@ -16,7 +16,7 @@ from autoclicker.core.click_engine import (
     RunOutcome,
 )
 from autoclicker.gui.main_window import AutoclickerApp
-from autoclicker.gui.sections.status import STATUS_COLORS
+from autoclicker.gui.theme import STATUS_COLORS
 
 
 def _bare_app() -> AutoclickerApp:
@@ -29,8 +29,7 @@ def _bare_app() -> AutoclickerApp:
     app.coordinate_picker.is_picking.return_value = False
     app.status_var = MagicMock()
     app.pick_btn = MagicMock()
-    app.start_btn = MagicMock()
-    app.stop_btn = MagicMock()
+    app.run_button = MagicMock()
     app.preset_var = MagicMock()
     app.preset_manager = MagicMock()
     app.settings = MagicMock()
@@ -134,8 +133,9 @@ class TestStatusBar(unittest.TestCase):
         app.performance_var = MagicMock()
         app.click_engine.get_status.return_value = {"click_count": 1234, "runtime": "00:01:02"}
         app._paint_stopped("Stopped")
-        app.click_count_var.set.assert_called_with("Clicks: 1234")
-        app.runtime_var.set.assert_called_with("Runtime: 00:01:02")
+        app.click_count_var.set.assert_called_with("1,234")
+        app.runtime_var.set.assert_called_with("00:01:02")
+        app.performance_var.set.assert_called_with("--")
 
 
 class TestHotkeyWiring(unittest.TestCase):
@@ -289,18 +289,31 @@ class TestSettingsLock(unittest.TestCase):
         off_entry = _Widget("TEntry", disabled=True)
         radio = _Widget("TRadiobutton")
         header = _Widget("TButton", style="Toolbutton")
+        panel_header = _Widget("TButton", style="PanelHeader.Toolbutton")
+        segment = _Widget("TRadiobutton", style="Segment.Toolbutton")
         label = _Widget("TLabel")
         app = _bare_app()
         app.main_frame = _Widget(
-            "TFrame", _Widget("TFrame", entry, off_entry, label), radio, header
+            "TFrame",
+            _Widget("TFrame", entry, off_entry, label),
+            radio,
+            header,
+            panel_header,
+            segment,
         )
-        app._set_settings_locked(True)
+        with patch("autoclicker.gui.main_window.theme") as theme:
+            app._set_settings_locked(True)
+        theme.set_dimmed.assert_called_once_with(True)
         self.assertTrue(entry.disabled and radio.disabled)
+        self.assertTrue(segment.disabled)  # segmented controls are settings
         self.assertFalse(header.disabled)  # section headers stay usable
+        self.assertFalse(panel_header.disabled)
         self.assertFalse(label.disabled)
         app._set_settings_locked(True)  # idempotent
-        self.assertEqual(len(app._locked_widgets), 2)
-        app._set_settings_locked(False)
+        self.assertEqual(len(app._locked_widgets), 3)
+        with patch("autoclicker.gui.main_window.theme") as theme:
+            app._set_settings_locked(False)
+        theme.set_dimmed.assert_called_once_with(False)
         self.assertFalse(entry.disabled or radio.disabled)
         self.assertTrue(off_entry.disabled)  # was off before the lock; stays off
 
@@ -311,3 +324,63 @@ class TestSettingsLock(unittest.TestCase):
         app._set_settings_locked(True)
         app._paint_stopped("Stopped")
         self.assertFalse(entry.disabled)
+
+
+class TestRunMode(unittest.TestCase):
+    """The hero button mirrors idle / countdown / running."""
+
+    def test_paint_stopped_returns_the_button_to_idle(self):
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app._paint_stopped("Stopped")
+        app.run_button.set_mode.assert_called_with("idle", detail="")
+
+    def test_successful_start_shows_stop(self):
+        app = _bare_app()
+        app._collect_ui_settings = MagicMock(return_value={})
+        app.failsafe_var = MagicMock()
+        app.pause_unfocused_var = MagicMock()
+        app.controller.validate_and_start_clicking.return_value = StartClickResult(success=True)
+        app.start_clicking()
+        app.run_button.set_mode.assert_called_with("running", detail="")
+
+    def test_button_click_starts_when_idle(self):
+        app = _bare_app()
+        app.start_from_button = MagicMock()
+        app.stop_clicking = MagicMock()
+        app.toggle_from_button()
+        app.start_from_button.assert_called_once()
+        app.stop_clicking.assert_not_called()
+
+    def test_button_click_stops_a_run_or_a_countdown(self):
+        for running, job in ((True, None), (False, "after#1")):
+            with self.subTest(running=running, job=job):
+                app = _bare_app()
+                app.click_engine.is_running = running
+                app._countdown_job = job
+                app.start_from_button = MagicMock()
+                app.stop_clicking = MagicMock()
+                app.toggle_from_button()
+                app.stop_clicking.assert_called_once()
+                app.start_from_button.assert_not_called()
+
+    def test_status_colors_both_dots(self):
+        app = _bare_app()
+        app.status_dot = MagicMock()
+        app.brand_dot = MagicMock()
+        app._set_status_message("Running...", "running")
+        for dot in (app.status_dot, app.brand_dot):
+            dot.configure.assert_called_with(foreground=STATUS_COLORS["running"])
+
+    def test_hotkey_captions_follow_the_bindings(self):
+        app = _bare_app()
+        app.emergency_btn = MagicMock()
+        app._hotkeys.bindings = {"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}
+        app._refresh_hotkey_labels()
+        app.run_button.set_hotkey.assert_called_once_with("F6", "F7")
+        app.emergency_btn.config.assert_called_with(text="Emergency stop (Esc)")
+
+    def test_click_summary_tolerates_a_half_built_window(self):
+        app = _bare_app()
+        app._refresh_click_summary()  # no click_summary_var yet: nothing to do
+        app._refresh_panel_summaries()  # no panels yet

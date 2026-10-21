@@ -155,6 +155,7 @@ class ProfilesMixin(AppBase):
             self.target_mode_var.set(values["target_mode"])
             self._apply_target_mode_state()
         self._refresh_target_summary()
+        self._refresh_panel_summaries()
 
     def export_profiles(self) -> None:
         """Save every profile to a JSON file."""

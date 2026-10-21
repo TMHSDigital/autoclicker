@@ -9,6 +9,7 @@ ERROR = "Error.TLabel"
 BG_FRAME = "Bg.TFrame"
 BG_LABEL = "Bg.TLabel"
 BG_MUTED = "Bg.Muted.TLabel"
+BG_CHECK = "Bg.TCheckbutton"
 # A settings panel: raised surface with a hairline border (sv_ttk's card).
 PANEL = "Card.TFrame"
 PANEL_HEADING = "PanelHeading.TLabel"
@@ -18,5 +19,5 @@ SEGMENT = "Segment.Toolbutton"
 # Hero readouts: large numeral over a small caption.
 STAT = "Stat.TLabel"
 STAT_CAPTION = "StatCaption.TLabel"
-# Destructive text button (Emergency stop).
-DANGER = "Danger.TButton"
+# Destructive flat text button (Emergency stop).
+DANGER = "Danger.Toolbutton"

@@ -75,15 +75,21 @@ class AppBase:
     minimize_to_tray_var: tk.BooleanVar
     check_updates_var: tk.BooleanVar
     update_button: ttk.Button
-    start_btn: ttk.Button
-    stop_btn: ttk.Button
+    run_button: Any
+    brand_dot: ttk.Label
+    click_summary_var: tk.StringVar
+    timing_panel: Any
+    safety_panel: Any
+    overflow_menu: Any
+    header_frame: ttk.Frame
+    hero_frame: ttk.Frame
+    footer_frame: ttk.Frame
     emergency_btn: ttk.Button
     status_var: tk.StringVar
     status_dot: ttk.Label
     click_count_var: tk.StringVar
     runtime_var: tk.StringVar
     performance_var: tk.StringVar
-    bottom_frame: ttk.Frame
     sequence_frame: ttk.Frame
     image_frame: ttk.Frame
     image_info_var: tk.StringVar
@@ -129,6 +135,10 @@ class AppBase:
         def _apply_target_mode_state(self) -> None: ...
         def _apply_action_state(self) -> None: ...
         def _refresh_target_summary(self) -> None: ...
+        def _refresh_click_summary(self) -> None: ...
+        def _refresh_panel_summaries(self) -> None: ...
+        def _paint_run_mode(self, mode: str, detail: str = ...) -> None: ...
+        def toggle_from_button(self) -> None: ...
         def _hotkey_suffix(self, action: str) -> str: ...
         def show_window(self) -> None: ...
         def start_clicking(self, confirmed: bool = False) -> None: ...

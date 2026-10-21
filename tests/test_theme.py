@@ -66,6 +66,19 @@ class TestApply(unittest.TestCase):
         self.assertIs(result, p)
         self.assertIs(theme.current(), p)
 
+    def test_labels_drop_the_palette_defaults_so_styles_win(self):
+        """sv_ttk's tk_setPalette puts *background in the option database, and a
+        ttk label's own option beats its style; blank it for labels."""
+        root = MagicMock()
+        with patch("autoclicker.gui.theme.sv_ttk"):
+            theme.apply_theme(root, style=MagicMock())
+        root.option_add.assert_any_call("*TLabel.background", "")
+        root.option_add.assert_any_call("*TLabel.foreground", "")
+
+    def test_surface_matches_the_sv_ttk_card(self):
+        """Card.TFrame is an image sv_ttk draws in its own gray; panel bodies must match."""
+        self.assertEqual(theme.PALETTE["surface"], "#1c1c1c")
+
     def test_errors_are_swallowed(self):
         style = MagicMock()
         style.configure.side_effect = RuntimeError("no Tk")
