@@ -59,7 +59,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y, or <b>Pick Location</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order, or wherever a captured <b>image</b> appears. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
+      Click a fixed spot (type X/Y, or <b>Pick</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order, or wherever a captured <b>image</b> appears. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -81,7 +81,7 @@ built around safety stops that are on by default.
     </td>
     <td width="33%" valign="top">
       <h3>Remembers you</h3>
-      Light and dark themes, and every setting is saved to your profile and restored on next launch.
+      A dark control panel: a large Start/Stop button, live click, runtime and rate readouts, and every setting saved to your profile and restored on next launch.
     </td>
   </tr>
 </table>
@@ -106,7 +106,7 @@ built around safety stops that are on by default.
   <tr>
     <td align="center" width="25%"><h3>1</h3><b>Download</b><br /><sub><a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker.exe"><code>WindowsAutoclicker.exe</code></a></sub></td>
     <td align="center" width="25%"><h3>2</h3><b>Run it</b><br /><sub>no installer, no Python</sub></td>
-    <td align="center" width="25%"><h3>3</h3><b>Pick a target</b><br /><sub><b>Pick Location</b>, or use the cursor</sub></td>
+    <td align="center" width="25%"><h3>3</h3><b>Pick a target</b><br /><sub><b>Pick</b>, or use the cursor</sub></td>
     <td align="center" width="25%"><h3>4</h3><b>Press <kbd>F6</kbd></b><br /><sub><kbd>F7</kbd> or <kbd>Esc</kbd> to stop</sub></td>
   </tr>
 </table>
@@ -237,11 +237,11 @@ Set a click or time limit in the profile (or add `--clicks` / `--minutes`) so an
   <tbody>
     <tr><td align="center"><kbd>F6</kbd></td><td>Start clicking</td><td>Same as the <b>Start</b> button</td></tr>
     <tr><td align="center"><kbd>F7</kbd></td><td>Stop clicking</td><td>Same as the <b>Stop</b> button</td></tr>
-    <tr><td align="center"><kbd>Esc</kbd></td><td>Emergency stop</td><td>Halts immediately; cancels <b>Pick Location</b> if picking</td></tr>
+    <tr><td align="center"><kbd>Esc</kbd></td><td>Emergency stop</td><td>Halts immediately; cancels <b>Pick</b> if picking</td></tr>
   </tbody>
 </table>
 
-<p align="center"><sub>Hotkeys are global: they work while another window has focus. Change them, or add a single start/stop <b>toggle</b> key, under <b>App → Hotkeys…</b><br />The Stop and Emergency keys are only claimed while clicking, so <kbd>Esc</kbd> keeps working in other programs the rest of the time.</sub></p>
+<p align="center"><sub>Hotkeys are global: they work while another window has focus. Change them, or add a single start/stop <b>toggle</b> key, with the keyboard button in the top-right corner of the window.<br />The Stop and Emergency keys are only claimed while clicking, so <kbd>Esc</kbd> keeps working in other programs the rest of the time.</sub></p>
 
 ## Safety
 
@@ -255,7 +255,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
         <li><b>Corner failsafe</b> (on by default): slam the mouse into a corner of any monitor to abort; checked before every click. Corners where two screens meet don't count, so moving between monitors is safe. Turning it off asks for confirmation.</li>
         <li><b>Emergency stop</b>: <kbd>Esc</kbd> or the red button, from anywhere.</li>
         <li><b>Start countdown</b>: the Start button and tray menu wait 3 seconds before clicking (Timing, Start delay; 0 starts at once), so you can let go of the mouse. Any stop key cancels it. The Start hotkey always starts immediately. While counting down or clicking, the settings are locked (they would not change the running clicks); section headers still open so you can look.</li>
-        <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (App, on by default); double-click the icon to bring it back.</li>
+        <li><b>Tray icon</b>: Show, Start, Stop and Exit from the notification area. Minimizing hides the window there (the <b>Minimize to tray</b> toggle at the bottom of the window, on by default); double-click the icon to bring it back.</li>
       </ul>
     </td>
     <td width="50%" valign="top">
@@ -288,7 +288,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 
 | File | Contents |
 | :-- | :-- |
-| `autoclicker_settings.json` | Your settings and profiles, saved when you start clicking, change the theme or profiles, and on exit (a field that is invalid then keeps its last saved value) |
+| `autoclicker_settings.json` | Your settings and profiles, saved when you start clicking, change profiles, and on exit (a field that is invalid then keeps its last saved value) |
 | `autoclicker.log` | Application log, rotated at 1 MB (keeps 2 backups) |
 | `sessions.log` | One line per run start and stop, with the stop reason and click count; rotated at 1 MB (keeps 3 backups) |
 
@@ -328,15 +328,15 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explore
 | `start_delay_seconds` | `3` | Countdown before a Start-button or tray start, 0 to 60; `0` = start at once. Hotkey starts are immediate |
 | `start_at` | `""` | A 24-hour time such as `09:30`: Start waits until then instead of the delay; blank = off |
 | `max_cps_ceiling` | `50` | Runaway guard (Safety, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
-| `theme` | `"light"` | `"light"` or `"dark"` |
+| `theme` | `"light"` | Ignored: the window is dark only. Kept so older settings files still load |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
-| `check_for_updates` | `null` | Chosen with the checkbox in the first-launch hint (off unless ticked); `true` checks GitHub for a newer release at most once a day (App) |
+| `check_for_updates` | `null` | Chosen with the checkbox in the first-launch hint (off unless ticked); `true` checks GitHub for a newer release at most once a day (the **Daily update check** toggle at the bottom of the window) |
 | `last_update_check` | `0` | When the last successful update check ran (Unix time) |
 | `first_run_hint_dismissed` | `false` | Set when you press **Got it** on the first-launch hint that lists the ways to stop a run |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
 | `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, `click_spread`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
-**Network:** the app makes no network requests unless you allow the update check (a checkbox in the first-launch hint, off unless you tick it, changeable under App). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
+**Network:** the app makes no network requests unless you allow the update check (a checkbox in the first-launch hint, off unless you tick it, changeable with the **Daily update check** toggle at the bottom of the window). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
 An `autoclicker_settings.json` left next to the app by older versions is migrated into AppData once, automatically. If the file can't be read (say, after a hand edit with a typo), the app starts with defaults and keeps the broken file as `autoclicker_settings.json.corrupt-<time>` so you can fix and restore it.
 
@@ -407,7 +407,7 @@ If that app runs as administrator, Windows blocks input from non-elevated progra
 
 <br />
 
-Another program may already own the key; the status bar names any key that could not be registered. Pick a different one under **App → Hotkeys…**. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
+Another program may already own the key; the status bar names any key that could not be registered. Pick a different one with the keyboard button in the top-right corner of the window. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
 
 </details>
 

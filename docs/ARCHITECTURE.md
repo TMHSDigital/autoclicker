@@ -17,14 +17,18 @@ autoclicker/
     main_window.py          # Window shell, start/stop, settings lock; marshals worker callbacks
     features/               # Feature mixins: sequence, recording, image, profiles, condition,
                             #   countdown, updates, info; base.py declares shared widgets
-    sections/               # Section builders: title, coordinates, click_settings,
-                            #   advanced (collapsible), control, status bar, disclaimer
-                            #   + collapsible.py (reusable disclosure frame)
+    sections/               # Builders: header, hero (run button, tiles, status line),
+                            #   coordinates (Target panel), click_settings (Click panel),
+                            #   advanced (Timing and Safety panels), footer
+    widgets/                # Custom widgets: render (Pillow shapes), run_button,
+                            #   stat_tile, panel (Panel, CollapsiblePanel)
+    summaries.py            # Pure text for the status line and collapsed panels
+    theme.py                # Dark palette, fonts, ttk styles, set_dimmed()
     picker.py               # Full-desktop overlay: pick a point or drag an area
     dialogs.py              # messagebox/simpledialog/filedialog, patched in one place by tests
     hotkeys_dialog.py       # Rebind hotkeys (suspends all global keys while open)
     info_dialog.py          # About + Copy diagnostics
-    styles.py               # Theme-aware Muted/Error label styles (WCAG AA)
+    styles.py               # Names of the ttk styles the window uses
   core/
     settings_manager.py     # Parsing, validation, mode/action rules, atomic JSON persistence
     settings_paths.py       # AppData path + one-time legacy migration from next to the app
@@ -86,7 +90,7 @@ With an image target, an `ImageWatch` daemon thread (also tagged with the run id
 
 Recording (`gui/features/recording.py`, `core/recorder.py`) is not a run: no click thread exists. The hook thread posts each press through `_ui` to the Tk thread, which drops clicks on the app's own windows. The Stop and Emergency keys are claimed while recording and finish it, and Start is refused until it ends.
 
-While a countdown or run is in progress `AutoclickerApp._set_settings_locked` disables the controls in the scrolling settings frame (section headers stay usable), and `_paint_stopped` restores exactly the ones it disabled. Settings changed mid-run would not reach the engine.
+While a countdown or run is in progress `AutoclickerApp._set_settings_locked` disables the controls in the scrolling panel area and dims its text (`theme.set_dimmed`); panel headers and small Toolbutton actions stay usable, while the segmented Toolbutton radios lock like any other setting. `_paint_stopped` restores exactly the widgets it disabled. The header, hero and footer are pinned outside the scroll area and never lock, so the tray and update toggles stay usable during a run. Settings changed mid-run would not reach the engine.
 
 A Start-button or tray start first runs a countdown on the Tk thread (`root.after(1000, ...)`, `start_delay_seconds`). No click thread exists yet, so Stop, Emergency stop and the toggle key just cancel the pending `after` job; nothing is logged because no run started.
 

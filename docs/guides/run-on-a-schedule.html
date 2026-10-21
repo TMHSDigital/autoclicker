@@ -39,7 +39,7 @@
     <p>The same works from the command line: <code>WindowsAutoclicker.exe --profile Work --start-at 09:30 --start</code>.</p>
     <h2>Every day: Task Scheduler</h2>
     <ol>
-      <li>Save your setup as a profile (<b>Save Profile</b>), and give it a click or time limit so an unattended run ends on its own.</li>
+      <li>Save your setup as a profile (<b>Save</b> next to the profile box), and give it a click or time limit so an unattended run ends on its own.</li>
       <li>Open <b>Task Scheduler</b> and choose <b>Create Basic Task</b>. Pick a trigger such as <i>Daily</i> or <i>When I log on</i>.</li>
       <li>Action: <b>Start a program</b>. Program: the full path to <code>WindowsAutoclicker.exe</code>. Arguments: <code>--profile Work --start --minimized</code>, or <code>--profile Work --headless</code> to run without a window and exit when done.</li>
       <li>In the task's properties keep <b>Run only when user is logged on</b>.</li>
