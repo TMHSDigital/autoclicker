@@ -115,7 +115,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 - `Pillow`: screen grabs and template matching for image targets, the tray image
 - `pystray`: tray icon
 - `tkinter`: GUI (stdlib)
-- `sv-ttk`: Sun Valley ttk theme (light/dark)
+- `sv-ttk`: Sun Valley ttk theme (dark)
 
 ## Design decisions
 

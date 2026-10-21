@@ -143,10 +143,13 @@ class TestSafetySummary(unittest.TestCase):
             "failsafe on · stop after 10 min",
         )
 
-    def test_limit_toggle_off_hides_values(self):
+    def test_limit_toggle_off_hides_the_click_limit_only(self):
+        """The minutes limit is always live; only the click count sits behind the toggle."""
         self.assertEqual(
-            self.summary(max_clicks="1000", auto_stop_minutes="10"), "failsafe on · no limit"
+            self.summary(max_clicks="1000", auto_stop_minutes="10"),
+            "failsafe on · stop after 10 min",
         )
+        self.assertEqual(self.summary(max_clicks="1000"), "failsafe on · no limit")
 
     def test_speed_limit_shown_only_when_changed(self):
         self.assertIn("max 20/s", self.summary(max_cps="20"))

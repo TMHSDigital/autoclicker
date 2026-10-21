@@ -709,10 +709,19 @@ class AutoclickerApp(
         if blocked:
             self._set_status_message(blocked, "alert")
             return
-        # A Start hotkey during a countdown starts right away.
-        self._cancel_countdown(message=None)
-        if not confirmed and not self._confirm_guard_off():
+        # A Start hotkey during a countdown starts right away; the countdown already
+        # asked the guard question, and its locked, amber state must not outlive it.
+        cancelled = self._cancel_countdown(message=None)
+        if not (confirmed or cancelled) and not self._confirm_guard_off():
             return
+        try:
+            self._try_start()
+        finally:
+            if cancelled and not self.click_engine.is_running:
+                self._paint_stopped("Not started", "alert")
+
+    def _try_start(self) -> None:
+        """Validate, then ask the controller to start; reports errors, never raises."""
         try:
             result = self.controller.validate_and_start_clicking(
                 self._collect_ui_settings(),

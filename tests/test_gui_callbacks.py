@@ -380,6 +380,26 @@ class TestRunMode(unittest.TestCase):
         app.run_button.set_hotkey.assert_called_once_with("F6", "F7")
         app.emergency_btn.config.assert_called_with(text="Emergency stop (Esc)")
 
+    def test_start_key_during_a_countdown_repaints_on_failure(self):
+        """A Start hotkey cancels the countdown; if the start then fails, nothing may
+        stay amber or locked, and the guard question is not asked twice."""
+        app = _bare_app()
+        app._stop_status_timer = MagicMock()
+        app._countdown_job = "after#1"
+        app._confirm_guard_off = MagicMock(return_value=True)
+        app._collect_ui_settings = MagicMock(return_value={})
+        app.failsafe_var = MagicMock()
+        app.pause_unfocused_var = MagicMock()
+        app.controller.validate_and_start_clicking.return_value = StartClickResult(
+            success=False, validation_errors={"interval": "bad"}
+        )
+        with patch("autoclicker.gui.main_window.dialogs"):
+            app.start_clicking()
+        app._confirm_guard_off.assert_not_called()
+        app.run_button.set_mode.assert_called_with("idle", detail="")
+        app.status_var.set.assert_called_with("Not started")
+        app._hotkeys.set_running.assert_called_with(False)
+
     def test_click_summary_tolerates_a_half_built_window(self):
         app = _bare_app()
         app._refresh_click_summary()  # no click_summary_var yet: nothing to do

@@ -105,13 +105,12 @@ def safety_summary(
     """Safety values that matter at a glance, failsafe first."""
     parts = ["failsafe on" if failsafe else "failsafe off"]
     limits: list[str] = []
-    if limit_clicks:
-        clicks = int(_num(max_clicks))
-        minutes = _num(auto_stop_minutes)
-        if clicks > 0:
-            limits.append(f"{clicks:,} clicks")
-        if minutes > 0:
-            limits.append(f"{_plain(minutes)} min")
+    clicks = int(_num(max_clicks)) if limit_clicks else 0
+    if clicks > 0:
+        limits.append(f"{clicks:,} clicks")
+    minutes = _num(auto_stop_minutes)  # always live; only the click count has a toggle
+    if minutes > 0:
+        limits.append(f"{_plain(minutes)} min")
     parts.append("stop after " + " or ".join(limits) if limits else "no limit")
     cps = _num(max_cps, DEFAULT_MAX_CPS)
     if cps <= 0:

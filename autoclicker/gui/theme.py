@@ -107,8 +107,9 @@ def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
         # sv_ttk's tk_setPalette writes *background and *foreground into the option
         # database, and a ttk label's own option beats its style. Blank them for
         # labels so Bg.*, Stat.* and the dimming styles show; classic widgets
-        # (Listbox, Menu) keep the dark palette.
-        for option in ("background", "foreground"):
+        # (Listbox, Menu) keep the dark palette. The same goes for *Font, which
+        # the app sets as the default and which would hide the Stat fonts.
+        for option in ("background", "foreground", "font"):
             root.option_add(f"*TLabel.{option}", "")
     except Exception:
         _log.debug("Could not apply ttk styles", exc_info=True)

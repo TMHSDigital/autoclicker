@@ -74,6 +74,7 @@ class TestApply(unittest.TestCase):
             theme.apply_theme(root, style=MagicMock())
         root.option_add.assert_any_call("*TLabel.background", "")
         root.option_add.assert_any_call("*TLabel.foreground", "")
+        root.option_add.assert_any_call("*TLabel.font", "")  # *Font would hide Stat fonts
 
     def test_surface_matches_the_sv_ttk_card(self):
         """Card.TFrame is an image sv_ttk draws in its own gray; panel bodies must match."""
