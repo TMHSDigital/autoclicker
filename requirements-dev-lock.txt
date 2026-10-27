@@ -16,7 +16,7 @@ charset-normalizer==3.5.2
     # via requests
 colorama==0.4.6 ; sys_platform == 'win32'
     # via pytest
-coverage==7.16.2
+coverage==7.17.0
     # via
     #   -r requirements-dev.in
     #   pytest-cov
@@ -86,7 +86,7 @@ pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
-pre-commit==4.6.2
+pre-commit==4.7.0
     # via -r requirements-dev.in
 py-serializable==2.1.0
     # via cyclonedx-python-lib
@@ -118,7 +118,7 @@ requests==2.34.2
     #   pip-audit
 rich==15.0.0
     # via pip-audit
-ruff==0.17.0
+ruff==0.17.2
     # via -r requirements-dev.in
 setuptools==84.0.0
     # via
