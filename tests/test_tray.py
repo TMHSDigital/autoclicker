@@ -31,7 +31,9 @@ class TestTrayMenu(unittest.TestCase):
             start_label=lambda: "Start (F6)", stop_label=lambda: "Stop (F7)", show_info=show_info
         )
         self.assertIsNotNone(icon)
-        show, start, stop, about, exit_item = menu
+        show, start, stop, profiles, about, exit_item = menu
+        self.assertEqual(profiles[0], "Profiles")
+        self.assertFalse(profiles[2]["visible"])  # no profile callbacks given (#178)
         self.assertEqual(show[:2], ("Show", callbacks["show"]))
         self.assertTrue(show[2]["default"])  # double-click restores the window
         # Start/Stop labels are callables so they follow hotkey changes.
@@ -46,7 +48,7 @@ class TestTrayMenu(unittest.TestCase):
 
     def test_about_hidden_without_a_handler(self):
         _icon, menu, _callbacks = self._create()
-        self.assertFalse(menu[3][2]["visible"])
+        self.assertFalse(menu[4][2]["visible"])
 
     def test_failure_is_reported_not_raised(self):
         on_error = MagicMock()

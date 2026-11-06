@@ -210,6 +210,7 @@ class ProfilesMixin(AppBase):
         dialogs.messagebox.showinfo("Import Profiles", "\n".join(lines))
 
     def update_preset_list(self) -> None:
-        """Update preset combobox with current presets."""
+        """Update preset combobox (and the tray's Profiles submenu) with current presets."""
         preset_names = self.preset_manager.get_preset_names()
         self.preset_combo["values"] = preset_names
+        self._refresh_tray_menu()

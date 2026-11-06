@@ -164,6 +164,9 @@ class AutoclickerApp(
             start_label=lambda: "Start" + self._hotkey_suffix("start"),
             stop_label=lambda: "Stop" + self._hotkey_suffix("stop"),
             show_info=lambda: self._ui(self._show_info_from_tray),
+            profile_names=self.preset_manager.get_preset_names,
+            load_profile=lambda name: self._ui(self._load_profile_from_tray, name),
+            can_switch_profile=self._can_switch_profile,
         )
         self._refresh_hotkey_labels()
         warning = getattr(self.settings, "load_warning", None)
@@ -283,6 +286,35 @@ class AutoclickerApp(
         button = getattr(self, "run_button", None)
         if button is not None:
             button.set_mode(mode, detail=detail)
+        if mode != getattr(self, "_painted_mode", None):
+            self._painted_mode = mode
+            self._refresh_tray_menu()  # tray profiles grey out while a run is on (#178)
+
+    def _refresh_tray_menu(self) -> None:
+        tray = getattr(self, "tray_icon", None)
+        if tray is not None:
+            with contextlib.suppress(Exception):
+                tray.update_menu()
+
+    def _can_switch_profile(self) -> bool:
+        """(Any thread) True when loading a profile cannot affect a run (#178)."""
+        return not (
+            self.click_engine.is_running
+            or getattr(self, "_countdown_job", None) is not None
+            or getattr(self, "_recorder", None) is not None
+        )
+
+    def _load_profile_from_tray(self, name: str) -> None:
+        """Tray Profiles submenu: load ``name`` into the form, as the Profile list does."""
+        if not self._can_switch_profile():
+            self._set_status_message("Stop clicking before switching profiles", "alert")
+            return
+        if self.preset_manager.load_profile(name) is None:
+            self._set_status_message(f"No profile named '{name}'", "error")
+            return
+        self.preset_var.set(name)
+        self.load_preset()
+        self._set_status_message(f"Loaded profile '{name}'")
 
     def _refresh_click_summary(self) -> None:
         """The hero's one-line description of the Click panel."""
@@ -435,10 +467,7 @@ class AutoclickerApp(
             )
         if hasattr(self, "emergency_btn"):
             self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
-        tray = getattr(self, "tray_icon", None)
-        if tray is not None:
-            with contextlib.suppress(Exception):
-                tray.update_menu()
+        self._refresh_tray_menu()
 
     def open_hotkeys_dialog(self) -> None:
         """Rebind hotkeys; global keys are released while the dialog is open."""
