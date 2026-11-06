@@ -29,8 +29,7 @@ built around safety stops that are on by default.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.png" />
-  <source media="(prefers-color-scheme: light)" srcset="docs/images/screenshot-light.png" />
-  <img src="docs/images/screenshot-light.png" alt="Windows Autoclicker main window: target coordinates, click settings, start and stop controls, and a status bar" width="440" />
+  <img src="docs/images/screenshot-dark.png" alt="Windows Autoclicker main window: a large Start button with Clicks, Runtime and Rate readouts, the Target and Click panels side by side, and the collapsed Timing and Safety panels" width="440" />
 </picture>
 
 <br />
@@ -162,22 +161,22 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 
 | Setting | What it controls | Range |
 | :-- | :-- | :-: |
-| **Interval**<br /><sub>Click Settings</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 to 60 000 ms<br /><sub>or 0.001 to 60 s</sub> |
-| **± variation**<br /><sub>Click Settings</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
+| **Every**<br /><sub>Click</sub> | Wait between bursts (or between clicks, when a burst is 1 click) | 0 to 60 000 ms<br /><sub>or 0.001 to 60 s</sub> |
+| **±** (variation)<br /><sub>Click, after Every</sub> | Random offset added to each interval | 0 ms to just under<br /><sub>the interval</sub> |
 | **Burst clicks**<br /><sub>Timing, Burst</sub> | Clicks fired per burst | 1 to 100 |
 | **Burst pause**<br /><sub>Timing, "ms apart"</sub> | Wait between the clicks *inside* a burst | 0 to 60 000 ms |
 
 </div>
 
-**Spread** (Click Settings) does for position what variation does for time: each click lands at a random spot up to that many pixels from the target, for a more natural pattern or to avoid wearing one spot. It applies to fixed points, sequence steps and image targets (staying on the image), not to the cursor or key presses, and clicks never leave the screen. 0, the default, clicks the exact point.
+**Spread** (Click panel) does for position what variation does for time: each click lands at a random spot up to that many pixels from the target, for a more natural pattern or to avoid wearing one spot. It applies to fixed points, sequence steps and image targets (staying on the image), not to the cursor or key presses, and clicks never leave the screen. 0, the default, clicks the exact point.
 
 ## Sequences
 
 Choose **Sequence** under Target to click several points in order, for example *claim, close, next*.
 
-1. Press **Record** and click through the routine once, then press **Record** again (or the Stop key). Each click becomes a step with the button you used, and the time between clicks becomes the wait; two quick clicks on the same spot become a double click. Or press **Add point** and pick each spot by hand; those steps use the button and click type selected in Click Settings.
+1. Press **Record** and click through the routine once, then press **Record** again (or the Stop key). Each click becomes a step with the button you used, and the time between clicks becomes the wait; two quick clicks on the same spot become a double click. Or press **Add point** and pick each spot by hand; those steps use the button and click type selected in the Click panel.
 2. Select a step and use **Wait...** to set how long to wait before the next step (500 ms by default), or **Up**, **Down** and **Remove** to rearrange.
-3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Interval** is the wait between rounds; burst settings don't apply.
+3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Every** time is the wait between rounds; burst settings don't apply.
 
 Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles. Recording only notes where you click and when, never keystrokes, and uses a mouse hook that exists only while recording.
 
@@ -186,7 +185,7 @@ Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time
 Choose **Image** under Target to click a button wherever it shows up, even after its window moves.
 
 1. Press **Capture...** and drag a rectangle around the button. The app saves that image and searches for it within **Search** px around the spot (150 by default).
-2. Start as usual. Each click goes to the center of the image where it was last found; while it isn't on screen the run waits and the status bar says so.
+2. Start as usual. Each click goes to the center of the image where it was last found; while it isn't on screen the run waits and the status line says so.
 
 A small preview of the captured image sits next to **Capture...**, and **Clear** forgets it. Matching is exact by default. If the button's colors shift a little (HDR, Night light, a translucent theme), raise **Tolerance**: each color channel of each pixel may then differ by that much, 0 to 64. Keep it as low as works, since a high tolerance can match something else of the same shape. Recapture if the button really changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Each click waits for a fresh search that started after the previous click, so a click that closes the image is never repeated on whatever is underneath; image mode therefore clicks at most about 10 times a second. Every stop path, limit and the runaway guard work as usual.
 
@@ -213,12 +212,13 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--start-at HH:MM` | Wait until this time of day (24-hour) before starting |
 | `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
 | `--headless` | No window: run once, then exit. Hotkeys, the corner failsafe and every limit still apply, and saved settings are left alone |
+| `--version` | Print the version and exit |
 
 A headless run exits with `0` when it finishes or you press Stop, `2` for bad options, `3` after an emergency stop, `4` for the failsafe or runaway guard, `5` on an error and `6` if the app is already running. `--help` lists everything; the `.exe` shows it in a dialog.
 
 ### Start on a schedule
 
-For a one-off start later today, set **Timing, Start at** (24-hour, such as `09:30`) and press Start: the status bar counts down to that time, and Stop, the tray's Stop or the toggle key cancel it. The global Stop and Emergency keys are claimed only for the last minute, so Esc keeps working in other apps while you wait. From the command line, `--start-at 09:30` does the same.
+For a one-off start later today, set **Timing, Start at** (24-hour, such as `09:30`) and press Start: the status line counts down to that time, and Stop, the tray's Stop or the toggle key cancel it. The global Stop and Emergency keys are claimed only for the last minute, so Esc keeps working in other apps while you wait. From the command line, `--start-at 09:30` does the same.
 
 To start every day, or while you're away, use Windows **Task Scheduler**:
 
@@ -265,7 +265,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
         <li><b>Auto-stop</b>: stop after N minutes (Safety, Limits).</li>
         <li><b>Runaway guard</b>: stops if more than 50 button presses land in any one second (a double click is two). Change it under <b>Safety, Speed limit</b>; 0 turns it off after a confirmation.</li>
         <li><b>Only when a pixel matches</b> (Safety, Only when): <b>Sample...</b> a point's color, then clicking waits (or stops) whenever that pixel changes, so a run doesn't keep clicking after the window it was meant for closes or moves.</li>
-        <li><b>Pause when unfocused</b>: pauses whenever the target window isn't in front, and the status bar shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button; the first click brings it to the front. In a sequence, any window a step clicks into counts. In cursor mode it's the next window you bring to the front. A <code>--headless</code> run typed into a terminal treats that terminal like the autoclicker's own window, so it is never taken as the target. Paused time counts toward auto-stop, which still ends a paused run on time. Refuses to start if it can't read the foreground window.</li>
+        <li><b>Pause when the target window isn't in front</b> (Safety): pauses whenever it isn't, and the status line shows <b>Paused</b>. The target window is the one in front when you press the Start hotkey, or the window under the target point when you press the Start button; the first click brings it to the front. In a sequence, any window a step clicks into counts. In cursor mode it's the next window you bring to the front. A <code>--headless</code> run typed into a terminal treats that terminal like the autoclicker's own window, so it is never taken as the target. Paused time counts toward auto-stop, which still ends a paused run on time. Refuses to start if it can't read the foreground window.</li>
       </ul>
     </td>
   </tr>
@@ -358,7 +358,7 @@ A dialog lists any field that failed validation. Check that the coordinates are 
 
 <br />
 
-Check the status bar and `sessions.log` for the reason: a click or time limit in **Safety**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second; raise **Safety, Speed limit** if that speed is intended), or **Pause when unfocused** if another window came to the front.
+Check the status line and `sessions.log` for the reason: a click or time limit in **Safety**, the corner failsafe (did the cursor touch a corner?), the runaway guard (a 0 ms interval with large bursts can pass 50 clicks per second; raise **Safety, Speed limit** if that speed is intended), or the **Pause when the target window isn't in front** option if another window came to the front.
 
 </details>
 
@@ -387,9 +387,9 @@ Matching is exact, pixel for pixel, so anything that changes how the button is d
 - **Display scaling or resolution changed**, or the window moved to a monitor with a different scale: capture again.
 - **Hover, focus or pressed states**: capture the button the way it looks when the cursor is *not* on it, and remember the cursor rests on it after a click.
 - **Animations, blinking cursors, HDR, Night light or color filters** change pixels: capture a still part of the button, such as its label, or raise **Tolerance** a little (try 8 to 16).
-- **The window moved** further than the search margin: raise **Search margin** (no recapture needed; it applies at the next Start), or move the window back.
+- **The window moved** further than the search margin: raise **Search** in the Target panel (no recapture needed; it applies at the next Start), or move the window back.
 
-The status bar says *Paused: waiting for the captured image to appear* while it looks. A run whose screen grabs keep failing stops with an error instead of waiting forever.
+The status line says *Paused: waiting for the captured image to appear* while it looks. A run whose screen grabs keep failing stops with an error instead of waiting forever.
 
 </details>
 
@@ -407,7 +407,7 @@ If that app runs as administrator, Windows blocks input from non-elevated progra
 
 <br />
 
-Another program may already own the key; the status bar names any key that could not be registered. Pick a different one with the keyboard button in the top-right corner of the window. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
+Another program may already own the key; the status line names any key that could not be registered. Pick a different one with the keyboard button in the top-right corner of the window. Hotkeys also don't reach the app while an elevated (admin) window has focus unless the autoclicker runs as administrator too.
 
 </details>
 

@@ -33,7 +33,8 @@ autoclicker/
     settings_manager.py     # Parsing, validation, mode/action rules, atomic JSON persistence
     settings_paths.py       # AppData path + one-time legacy migration from next to the app
     click_engine.py         # Click loop, sequences, hold/key, pixel and image watchers, safety
-    image_match.py          # Exact template search in a screen region; captured image storage
+    image_match.py          # Exact or tolerant template search in a screen region; captured image storage
+    lazy_pyautogui.py       # PyAutoGUI, imported on first use instead of at startup
     recorder.py             # WH_MOUSE_LL hook, installed only while recording a sequence
     safety.py               # Failsafe + fail-closed foreground window helpers
     session_log.py          # Session events, rotated at 1 MB
@@ -41,6 +42,7 @@ autoclicker/
     app_data.py             # %APPDATA%/WindowsAutoclicker (never CWD-relative)
     dpi.py                  # Per-monitor DPI awareness, set before PyAutoGUI loads
     screen.py               # Virtual-desktop bounds, monitor corners, cursor position
+    schedule.py             # Start at: parse a time of day and count down to it
     diagnostics.py          # Copy diagnostics report (personal details summarized)
     updates.py              # Opt-in daily check of the latest GitHub release
     resources.py            # Asset paths (autoclicker/assets) for source, wheel and frozen runs

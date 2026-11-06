@@ -13,7 +13,7 @@ PyAutoGUI and `urllib.request` are not imported at startup (#163). `core/lazy_py
 | Change | Rationale |
 |--------|-----------|
 | Welford running mean/variance for timings | `get_status()` / `get_performance_metrics()` no longer call `statistics.mean/stdev` over up to 1000 deque entries on every poll |
-| Per-run `ClickStats` dataclass | Replaced the untyped metrics dict and the unused 1000-sample timing deque; reset on every start so the status bar's success rate is per run (#68) |
+| Per-run `ClickStats` dataclass | Replaced the untyped metrics dict and the unused 1000-sample timing deque; reset on every start so the success rate in Copy diagnostics is per run (#68) |
 
 ## Profiling (local, Windows)
 

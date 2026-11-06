@@ -59,6 +59,8 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Documentation
 
+- The README, website and guides use the new panel and field names (Click panel, Every, Search, the status line, Pause when the target window isn't in front), show the dark screenshot only, and list `--version`. The bug report form offers Sequence and Image as target modes (#159, #160).
+
 - Troubleshooting covers antivirus false positives (how to verify the download and report it) and an image that is never found; the website FAQ answers the antivirus question too (#114).
 - The website shows recording and image targets, the Scoop install command and the current version and size, with a search-friendly title, structured data (app and FAQ), complete social preview tags, robots.txt and a sitemap (#116).
 - README and website say who the app is for (easing repetitive strain, testing, repetitive work, games where allowed), and release notes now open with how to install and a short summary (#117).
