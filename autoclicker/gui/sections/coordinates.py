@@ -136,15 +136,26 @@ def _build_sequence_panel(app, body: ttk.Frame, settings) -> None:
     app.sequence_list = tk.Listbox(
         app.sequence_frame, height=6, width=18, activestyle="none", exportselection=False
     )
-    app.sequence_list.grid(row=0, column=0, rowspan=6, sticky=(tk.W, tk.E, tk.N, tk.S))
+    app.sequence_list.grid(row=0, column=0, rowspan=7, sticky=(tk.W, tk.E, tk.N, tk.S))
+    # Edit a step in place and keyboard shortcuts on the list (#175).
+    app.sequence_list.bind("<Double-Button-1>", app.show_sequence_step_menu)
+    app.sequence_list.bind("<Button-3>", app.show_sequence_step_menu)
+    for sequence, action in (
+        ("<Delete>", "delete"),
+        ("<Alt-Up>", "up"),
+        ("<Alt-Down>", "down"),
+        ("<Control-z>", "undo"),
+    ):
+        app.sequence_list.bind(sequence, lambda _e, a=action: app._on_sequence_key(a))
 
     buttons = (
         ("Record", app.toggle_sequence_recording),
         ("Add point", app.add_sequence_point),
-        ("Wait…", app.edit_sequence_delay),
+        ("Edit…", app.show_sequence_step_menu),
         ("Up", lambda: app.move_sequence_step(-1)),
         ("Down", lambda: app.move_sequence_step(1)),
         ("Remove", app.remove_sequence_step),
+        ("Undo", app.undo_sequence_change),
     )
     for row, (text, command) in enumerate(buttons):
         ttk.Button(app.sequence_frame, text=text, width=9, command=command).grid(
@@ -152,7 +163,7 @@ def _build_sequence_panel(app, body: ttk.Frame, settings) -> None:
         )
 
     repeat_frame = ttk.Frame(app.sequence_frame)
-    repeat_frame.grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))
+    repeat_frame.grid(row=7, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))
     ttk.Label(repeat_frame, text="Repeat").pack(side=tk.LEFT)
     app.sequence_repeat_entry = ttk.Entry(repeat_frame, width=5)
     app.sequence_repeat_entry.pack(side=tk.LEFT, padx=(5, 5))

@@ -1,17 +1,23 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Sequence target mode: the step list and its editing (#72)."""
+"""Sequence target mode: the step list and its editing (#72, #175)."""
 
 from __future__ import annotations
 
+import functools
 import tkinter as tk
 
 from ...core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS
 from .. import dialogs
 from .base import AppBase
 
+_BUTTONS = (("Left", "left"), ("Right", "right"), ("Middle", "middle"))
+_CLICK_TYPES = (("Single", "single"), ("Double", "double"))
+
 
 class SequenceMixin(AppBase):
     _DEFAULT_STEP_DELAY_MS = 500
+    # One level of undo for Remove and Record (#175): (steps before, what changed).
+    _sequence_undo: tuple[list[dict], str] | None = None
 
     def _refresh_sequence_list(self, select: int | None = None) -> None:
         listbox = self.sequence_list
@@ -93,5 +99,117 @@ class SequenceMixin(AppBase):
         index = self._selected_step()
         if index is None:
             return
+        self._remember_for_undo(f"Removed step {index + 1}")
         del self.sequence_steps[index]
         self._sequence_changed(select=min(index, len(self.sequence_steps) - 1))
+        self._set_status_message(f"Removed step {index + 1} (Ctrl+Z or Undo restores it)", "alert")
+
+    # -- undo (#175) ---------------------------------------------------------
+
+    def _remember_for_undo(self, what: str) -> None:
+        """Keep the steps as they are now, so the next change can be undone once."""
+        self._sequence_undo = ([dict(step) for step in self.sequence_steps], what)
+
+    def undo_sequence_change(self) -> None:
+        """Put back the steps from before the last Remove or Record."""
+        if self._sequence_undo is None:
+            self._set_status_message("Nothing to undo", "alert")
+            return
+        steps, what = self._sequence_undo
+        self._sequence_undo = None
+        self.sequence_steps = steps
+        self._sequence_changed(select=0 if steps else None)
+        self._set_status_message(f"Undone: {what.lower()}", "alert")
+
+    # -- editing a step in place (#175) --------------------------------------
+
+    def _step_or_hint(self) -> int | None:
+        index = self._selected_step()
+        if index is None:
+            self._set_status_message("Select a step first", "alert")
+        return index
+
+    def show_sequence_step_menu(self, event=None) -> None:
+        """Edit menu for the selected step: re-pick, button, click type, wait, duplicate."""
+        if event is not None and getattr(event, "y", None) is not None:
+            # Right-click or double-click selects the step under the pointer.
+            index = self.sequence_list.nearest(event.y)
+            if 0 <= index < len(self.sequence_steps):
+                self.sequence_list.selection_clear(0, tk.END)
+                self.sequence_list.selection_set(index)
+        index = self._step_or_hint()
+        if index is None:
+            return
+        menu = self._sequence_step_menu(index)
+        x = event.x_root if event is not None else self.sequence_list.winfo_rootx()
+        y = event.y_root if event is not None else self.sequence_list.winfo_rooty()
+        try:
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
+
+    def _sequence_step_menu(self, index: int) -> tk.Menu:
+        step = self.sequence_steps[index]
+        menu = tk.Menu(self.sequence_list, tearoff=0)
+        menu.add_command(label="Re-pick point…", command=lambda: self.repick_sequence_point(index))
+        menu.add_separator()
+        for label, value in _BUTTONS:
+            menu.add_radiobutton(
+                label=f"{label} button",
+                value=value,
+                variable=tk.StringVar(menu, value=step["button"]),
+                command=functools.partial(self.set_sequence_step, index, button=value),
+            )
+        menu.add_separator()
+        for label, value in _CLICK_TYPES:
+            menu.add_radiobutton(
+                label=f"{label} click",
+                value=value,
+                variable=tk.StringVar(menu, value=step["click_type"]),
+                command=functools.partial(self.set_sequence_step, index, click_type=value),
+            )
+        menu.add_separator()
+        menu.add_command(label="Wait after this step…", command=self.edit_sequence_delay)
+        menu.add_command(label="Duplicate", command=lambda: self.duplicate_sequence_step(index))
+        return menu
+
+    def set_sequence_step(self, index: int, **changes: str) -> None:
+        """Change the button or click type of one step."""
+        if not 0 <= index < len(self.sequence_steps):
+            return
+        self.sequence_steps[index].update(changes)
+        self._sequence_changed(select=index)
+
+    def repick_sequence_point(self, index: int) -> None:
+        """Pick a new point for an existing step, keeping its other settings."""
+
+        def picked(x: int, y: int) -> None:
+            if 0 <= index < len(self.sequence_steps):
+                self.sequence_steps[index].update(x=x, y=y)
+                self._sequence_changed(select=index)
+                self._set_status_message(f"Moved step {index + 1} to ({x}, {y})", "alert")
+            self.show_window()
+
+        self.start_coordinate_picker(on_selected=picked)
+
+    def duplicate_sequence_step(self, index: int) -> None:
+        """Insert a copy of a step right after it."""
+        if len(self.sequence_steps) >= MAX_SEQUENCE_STEPS:
+            self._set_status_message(f"A sequence has at most {MAX_SEQUENCE_STEPS} steps", "alert")
+            return
+        if not 0 <= index < len(self.sequence_steps):
+            return
+        self.sequence_steps.insert(index + 1, dict(self.sequence_steps[index]))
+        self._sequence_changed(select=index + 1)
+
+    def _on_sequence_key(self, action: str) -> str:
+        """Keyboard shortcuts on the step list; "break" keeps Tk from also handling them."""
+        if action == "delete":
+            self.remove_sequence_step()
+        elif action == "up":
+            self.move_sequence_step(-1)
+        elif action == "down":
+            self.move_sequence_step(1)
+        elif action == "undo":
+            self.undo_sequence_change()
+        return "break"

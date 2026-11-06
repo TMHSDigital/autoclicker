@@ -64,6 +64,8 @@ class RecordingMixin(AppBase):
             if not replace:
                 steps = self.sequence_steps + steps
         recorded = len(steps)
+        if self.sequence_steps:
+            self._remember_for_undo("Recording")
         self.sequence_steps = steps[:MAX_SEQUENCE_STEPS]
         self.target_mode_var.set("sequence")
         self._apply_target_mode_state()

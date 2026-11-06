@@ -175,7 +175,7 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 Choose **Sequence** under Target to click several points in order, for example *claim, close, next*.
 
 1. Press **Record** and click through the routine once, then press **Record** again (or the Stop key). Each click becomes a step with the button you used, and the time between clicks becomes the wait; two quick clicks on the same spot become a double click. Or press **Add point** and pick each spot by hand; those steps use the button and click type selected in the Click panel.
-2. Select a step and use **Wait...** to set how long to wait before the next step (500 ms by default), or **Up**, **Down** and **Remove** to rearrange.
+2. Select a step and press **Edit...** (or double-click or right-click it) to re-pick its point, change its button or single/double click, set how long to wait before the next step (500 ms by default) or duplicate it. **Up**, **Down** and **Remove** rearrange the list, as do Alt+Up, Alt+Down and Delete on the list. **Undo** (or Ctrl+Z) brings back the steps from before the last Remove or Record.
 3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Every** time is the wait between rounds; burst settings don't apply.
 
 Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles. Recording only notes where you click and when, never keystrokes, and uses a mouse hook that exists only while recording.

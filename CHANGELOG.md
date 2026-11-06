@@ -18,6 +18,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 - **Spread**: each click can land at a random spot up to N pixels (0 to 50) from its target, like variation does for timing. Works for fixed points, sequence steps and image targets (staying on the image), also as `--spread` and in profiles (#120).
 - Portable mode: with a `portable.txt` file next to `WindowsAutoclicker.exe`, settings, logs and captured images stay in a `data` folder beside it instead of `%APPDATA%`. Releases include a ready-made `WindowsAutoclicker-portable.zip`, smoke-tested in CI (#122).
 
+- Sequences: **Edit...** (or double-click or right-click a step) re-picks a step's point, changes its button or single/double click, sets its wait or duplicates it, without removing and re-adding it. Delete, Alt+Up and Alt+Down work on the step list, and **Undo** (Ctrl+Z) brings back the steps from before the last Remove or Record (#175).
 - With Windows **High Contrast** on, the window takes the system's colors instead of its own dark palette, custom-drawn controls included (#181).
 - The tray menu has a **Profiles** submenu that loads a saved profile into the window, greyed out while a run, countdown or recording is on (#178).
 - While a run with limits is going, the Clicks readout shows progress such as `57 / 200`, the Runtime caption counts down to the earliest time limit (auto-stop minutes or Stop at), and the tray tooltip says the same (#173).
