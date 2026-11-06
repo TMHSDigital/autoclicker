@@ -1,7 +1,7 @@
 # Runtime dependencies. Source for requirements-lock.txt (tools/refresh_lock.py);
 # keep in step with [project].dependencies in pyproject.toml.
-pyautogui>=0.9.53
-pywin32>=227
-Pillow>=9.0.0
-pystray>=0.19.4
-sv-ttk>=2.6.0
+pyautogui>=0.9.54
+pywin32>=306
+Pillow>=12.0
+pystray>=0.19.5
+sv-ttk>=2.6.1
