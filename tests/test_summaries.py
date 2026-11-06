@@ -162,5 +162,31 @@ class TestSafetySummary(unittest.TestCase):
         self.assertIn("stop on pixel", self.summary(condition="stop"))
 
 
+class TestNonFiniteNumbersDoNotRaise(unittest.TestCase):
+    """``float("inf")``/``float("nan")`` parse fine, so ``int()`` used to overflow."""
+
+    def timing(self, **overrides):
+        return timing_summary(**{**_TIMING_DEFAULTS, **overrides})
+
+    def safety(self, **overrides):
+        return safety_summary(**{**_SAFETY_DEFAULTS, **overrides})
+
+    def test_timing_burst_inf_and_nan_count_as_unset(self):
+        self.assertEqual(self.timing(burst_clicks="inf"), "3 s delay")
+        self.assertEqual(self.timing(burst_clicks="nan"), "3 s delay")
+
+    def test_hold_inf_counts_as_unset(self):
+        text = click_summary(**{**_CLICK_DEFAULTS, "action": "hold", "hold_ms": "inf"})
+        self.assertIn("Hold left 0 ms", text)
+
+    def test_safety_inf_clicks_and_nonfinite_minutes_show_no_limit(self):
+        self.assertIn("no limit", self.safety(limit_clicks=True, max_clicks="inf"))
+        self.assertIn("no limit", self.safety(auto_stop_minutes="nan"))
+        self.assertIn("no limit", self.safety(auto_stop_minutes="inf"))
+
+    def test_inf_cps_falls_back_to_the_default_limit(self):
+        self.assertNotIn("max", self.safety(max_cps="inf"))
+
+
 if __name__ == "__main__":
     unittest.main()

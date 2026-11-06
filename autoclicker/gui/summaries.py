@@ -7,6 +7,7 @@ run without Tk. Bad numbers never raise: they read as unset or as "?".
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
@@ -21,11 +22,12 @@ class Stats(NamedTuple):
 
 
 def _num(text: Any, default: float = 0) -> float:
-    """``text`` as a number, or ``default`` when blank or not a number."""
+    """``text`` as a number, or ``default`` when blank, not a number, or not finite."""
     try:
-        return float(str(text).strip())
+        value = float(str(text).strip())
     except (TypeError, ValueError):
         return default
+    return value if math.isfinite(value) else default
 
 
 def _plain(value: float) -> str:
