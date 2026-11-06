@@ -59,7 +59,9 @@ Tests never start a real Tk window: GUI tests build the app with `AutoclickerApp
 
 Commit the updated lock files. When the ruff or mypy version in the dev lock changes, update the matching `rev` in `.pre-commit-config.yaml` so pre-commit and CI run the same versions.
 
-Dependabot opens weekly pull requests for the direct and transitive runtime packages in `requirements-lock.txt` (the transitive ones grouped together), the dev tools, the pre-commit hook revs and the GitHub Actions. Two things still need a person: a Dependabot bump of ruff or mypy in one place (dev lock or pre-commit) should be matched in the other before merging, and a new transitive dependency only shows up after `make lock`. The `audit` step in CI (`pip-audit` on both lock files) catches known vulnerabilities in between.
+Dependabot opens weekly pull requests for every pin in both lock files, direct and transitive (the runtime transitives and the main dev tools grouped together), the pre-commit hook revs and the GitHub Actions. Two things still need a person: a Dependabot bump of ruff or mypy in one place (dev lock or pre-commit) should be matched in the other before merging, and a new transitive dependency only shows up after `make lock`. The `audit` step in CI (`pip-audit` on both lock files) catches known vulnerabilities in between.
+
+The exe leaves out `mouseinfo`, `pymsgbox` and `pyperclip`: pyautogui imports them optionally, the app never uses them, and the first two are GPLv3+. The `excludes` list in `WindowsAutoclicker.spec` and `NOT_BUNDLED` in `tools/third_party_notices.py` must match (a test checks), and the CI build fails if one of them ends up in the exe. Every build also writes `build/THIRD_PARTY_NOTICES.txt` (`tools/third_party_notices.py`, run by the spec) with the license of each bundled package, read from the installed runtime lock; it ships inside the exe, in the portable zip and with each release.
 
 ## Pre-commit (optional)
 

@@ -2,6 +2,7 @@
 """Frozen Windows build. Icons ship in autoclicker/assets (regenerate with tools/create_icon.py)."""
 
 import re
+import runpy
 from pathlib import Path
 
 from PyInstaller.utils.win32.versioninfo import (
@@ -43,6 +44,12 @@ version_info = VSVersionInfo(
     ],
 )
 
+# License texts of the bundled packages, generated from the installed runtime
+# lock on every build (#153). CI also attaches build/THIRD_PARTY_NOTICES.txt
+# to each release.
+_tools = runpy.run_path("tools/third_party_notices.py")
+_notices = _tools["write_notices"]()
+
 a = Analysis(
     ["autoclicker.py"],
     pathex=[],
@@ -50,12 +57,16 @@ a = Analysis(
     datas=[
         ("autoclicker/assets/autoclicker.ico", "autoclicker/assets"),
         ("autoclicker/assets/autoclicker.png", "autoclicker/assets"),
+        (str(_notices), "."),
+        ("LICENSE", "."),
     ],
     hiddenimports=["sv_ttk", "PIL.ImageTk"],  # ImageTk: image thumbnail, imported lazily
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Optional pyautogui imports the app never uses; mouseinfo and pymsgbox are
+    # GPLv3+ (#153). Keep in sync with NOT_BUNDLED in tools/third_party_notices.py.
+    excludes=["mouseinfo", "pymsgbox", "pyperclip"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

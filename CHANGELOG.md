@@ -28,6 +28,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 ### Fixed
 
 - If a hotkey could not be registered at startup (say F6 is taken by another program), every hotkey stopped working for the session, Stop and Emergency stop included, and the "Hotkey unavailable" message was lost. Now only the taken key is missing and the message shows once the window is up (#144).
+- The exe no longer bundles mouseinfo and pymsgbox (GPLv3+, optional pyautogui imports the app never used) or pyperclip. Releases now ship `THIRD_PARTY_NOTICES.txt` with the license of every bundled package, inside the exe, in the portable zip and as a release download (#153).
 - Stopping a run (button, hotkey, tray, Quit) no longer freezes the window for about a second, and Stop while recording no longer blocks it for up to two seconds. Background threads now hand their updates to the window through a queue instead of calling it directly (#145).
 - Hint, summary and error text now meet WCAG AA contrast (the gray was 2.9:1, the error red 3.2:1) (#104).
 - The Hotkeys dialog can no longer be opened during the Start countdown, while recording or while picking, and nothing starts while it is open. Before, a countdown could finish behind the dialog and start a run with every global stop key released (#93).

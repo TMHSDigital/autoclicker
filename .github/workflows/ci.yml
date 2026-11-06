@@ -128,6 +128,14 @@ jobs:
       - name: Build executable
         run: .venv\Scripts\pyinstaller.exe --clean --noconfirm WindowsAutoclicker.spec
 
+      - name: Excluded modules stay out of the exe (#153)
+        shell: pwsh
+        run: |
+          $toc = Get-Content build\WindowsAutoclicker\PYZ-00.toc -Raw
+          foreach ($module in "mouseinfo", "pymsgbox", "pyperclip") {
+            if ($toc -match "'$module['.]") { Write-Error "$module is bundled in the exe"; exit 1 }
+          }
+
       # Code signing (Azure Artifact Signing) runs on release tags once the
       # repository variables below are set; until then releases stay unsigned.
       # Setup is described in docs/RELEASING.md.
@@ -181,7 +189,7 @@ jobs:
         run: |
           $dir = Join-Path $env:RUNNER_TEMP "portable"
           New-Item -ItemType Directory -Force $dir | Out-Null
-          Copy-Item dist\WindowsAutoclicker.exe $dir
+          Copy-Item dist\WindowsAutoclicker.exe, build\THIRD_PARTY_NOTICES.txt $dir
           "Settings, logs and captured images are kept in the data folder next to WindowsAutoclicker.exe. Delete this file to keep them in %APPDATA% instead." | Out-File -Encoding utf8 (Join-Path $dir "portable.txt")
           $env:APPDATA = Join-Path $env:RUNNER_TEMP "portable-appdata"
           $p = Start-Process -FilePath (Join-Path $dir "WindowsAutoclicker.exe") -WorkingDirectory $env:RUNNER_TEMP -PassThru
@@ -194,6 +202,9 @@ jobs:
           $hash = (Get-FileHash dist\WindowsAutoclicker-portable.zip -Algorithm SHA256).Hash.ToLower()
           "$hash  WindowsAutoclicker-portable.zip" | Out-File -Encoding ascii dist\WindowsAutoclicker-portable.zip.sha256
           Get-Content dist\WindowsAutoclicker-portable.zip.sha256
+
+      - name: Third-party notices next to the exe
+        run: copy build\THIRD_PARTY_NOTICES.txt dist\
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -282,6 +293,7 @@ jobs:
             dist/WindowsAutoclicker.exe.sha256
             dist/WindowsAutoclicker-portable.zip
             dist/WindowsAutoclicker-portable.zip.sha256
+            dist/THIRD_PARTY_NOTICES.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
