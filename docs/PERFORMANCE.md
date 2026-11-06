@@ -4,6 +4,10 @@
 
 `ClickEngine._click_loop` → `_perform_burst` → `_perform_click` (one `pyautogui.click(x, y, ...)` call with `PAUSE=0`; the target is passed on every click so a mouse moved mid-run never drags the clicks with it, #62).
 
+## Startup
+
+PyAutoGUI and `urllib.request` are not imported at startup (#163). `core/lazy_pyautogui.py` stands in for PyAutoGUI and imports it the first time an attribute is read; settings assigned before then (`FAILSAFE`, `PAUSE`) are handed over when it loads. The window loads it on a background thread a second after it appears, so the first Start does not wait. From source this took 0.3 to 1 s off every launch and `--headless` run (PyAutoGUI pulls in pyscreeze, pygetwindow and mouseinfo); the exe already leaves mouseinfo out (#153). `urllib.request` is imported inside the update check.
+
 ## Running statistics
 
 | Change | Rationale |

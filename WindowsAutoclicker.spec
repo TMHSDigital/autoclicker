@@ -60,7 +60,8 @@ a = Analysis(
         (str(_notices), "."),
         ("LICENSE", "."),
     ],
-    hiddenimports=["sv_ttk", "PIL.ImageTk"],  # ImageTk: image thumbnail, imported lazily
+    # ImageTk: image thumbnail; pyautogui: loaded through importlib (#163). Both lazy.
+    hiddenimports=["sv_ttk", "PIL.ImageTk", "pyautogui"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

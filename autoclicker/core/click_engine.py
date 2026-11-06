@@ -13,8 +13,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-import pyautogui
-
 from .exceptions import (
     ClickEngineError,
     CoordinateError,
@@ -22,6 +20,7 @@ from .exceptions import (
     create_user_friendly_error,
 )
 from .image_match import ImageTarget
+from .lazy_pyautogui import pyautogui
 from .safety import (
     apply_failsafe,
     get_foreground_window_handle,

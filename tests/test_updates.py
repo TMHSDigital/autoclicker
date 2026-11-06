@@ -39,7 +39,7 @@ class TestFetch(unittest.TestCase):
             "tag_name": "v1.6.0",
             "html_url": "https://github.com/TMHSDigital/autoclicker/releases/tag/v1.6.0",
         }
-        with patch.object(updates.urllib.request, "urlopen", return_value=self._response(payload)):
+        with patch("urllib.request.urlopen", return_value=self._response(payload)):
             release = updates.fetch_latest_release()
         self.assertEqual(release, Release("1.6.0", payload["html_url"]))
 
@@ -53,18 +53,14 @@ class TestFetch(unittest.TestCase):
         ):
             with self.subTest(url=url):
                 payload = {"tag_name": "v9.9.9", "html_url": url}
-                with patch.object(
-                    updates.urllib.request, "urlopen", return_value=self._response(payload)
-                ):
+                with patch("urllib.request.urlopen", return_value=self._response(payload)):
                     release = updates.fetch_latest_release()
                 self.assertEqual(release, Release("9.9.9", RELEASES_PAGE))
 
     def test_failures_are_quiet(self):
-        with patch.object(updates.urllib.request, "urlopen", side_effect=OSError("offline")):
+        with patch("urllib.request.urlopen", side_effect=OSError("offline")):
             self.assertIsNone(updates.fetch_latest_release())
-        with patch.object(
-            updates.urllib.request, "urlopen", return_value=self._response({"tag_name": "x"})
-        ):
+        with patch("urllib.request.urlopen", return_value=self._response({"tag_name": "x"})):
             self.assertIsNone(updates.fetch_latest_release())
 
 

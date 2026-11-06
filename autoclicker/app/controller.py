@@ -11,8 +11,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-import pyautogui
-
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
 from ..core.image_match import (
     DEFAULT_MARGIN,
@@ -22,6 +20,7 @@ from ..core.image_match import (
     open_template,
     search_region,
 )
+from ..core.lazy_pyautogui import pyautogui
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event

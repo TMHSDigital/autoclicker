@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import os
 
-import pyautogui
+from .lazy_pyautogui import pyautogui
 
 try:
     import win32gui

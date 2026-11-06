@@ -29,6 +29,7 @@ from ..core.click_engine import (
     RunOutcome,
 )
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
+from ..core.lazy_pyautogui import pyautogui
 from ..core.resources import resource_path
 from ..core.settings_manager import allowed_actions, field_label, uses_point
 from . import dialogs, theme
@@ -173,6 +174,12 @@ class AutoclickerApp(
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.root.after(1500, self._maybe_check_for_updates)
+        # PyAutoGUI loads lazily (#163); load it in the background once the window
+        # is up, so the first Start does not wait for the import.
+        self.root.after(
+            1000,
+            lambda: threading.Thread(target=pyautogui.load, daemon=True, name="Imports").start(),
+        )
 
     def setup_window(self) -> None:
         """Configure main window properties."""

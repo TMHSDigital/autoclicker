@@ -13,8 +13,7 @@ import tkinter as tk
 from collections.abc import Callable
 from typing import Any
 
-import pyautogui
-
+from ..core.lazy_pyautogui import pyautogui
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 
 _OVERLAY_ALPHA = 0.25

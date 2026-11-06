@@ -13,7 +13,6 @@ import json
 import logging
 import re
 import time
-import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
@@ -60,6 +59,10 @@ def check_due(last_check: Any, now: float | None = None) -> bool:
 
 def fetch_latest_release(timeout: float = 5.0) -> Release | None:
     """The latest published release, or None if it can't be read."""
+    # Imported here: http.client and friends cost startup time, and the
+    # check runs well after the window is up, if at all (#163).
+    import urllib.request
+
     request = urllib.request.Request(
         LATEST_RELEASE_API,
         headers={"Accept": "application/vnd.github+json", "User-Agent": "WindowsAutoclicker"},
