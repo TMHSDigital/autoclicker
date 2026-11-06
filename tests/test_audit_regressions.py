@@ -15,7 +15,7 @@ from autoclicker.core.settings_manager import SettingsManager
 class TestStopHaltsClicking(unittest.TestCase):
     """#38: no click may be emitted after a stop call returns."""
 
-    def _run_and_stop(self, stop_name: str) -> int:
+    def _run_and_stop(self, stop_name: str) -> None:
         clicks: list[int] = []
         with patch("autoclicker.core.click_engine.pyautogui") as mock_pyautogui:
             mock_pyautogui.size.return_value = (1920, 1080)
@@ -23,22 +23,32 @@ class TestStopHaltsClicking(unittest.TestCase):
             engine = ClickEngine(enable_performance_monitoring=False)
             engine.configure_safety(max_cps=0)
             self.assertTrue(engine.start_clicking(10, 10, 0, 0, 1, 0, 0, 0, "left", "single"))
-            deadline = time.monotonic() + 2.0
-            while not clicks and time.monotonic() < deadline:
-                time.sleep(0.005)
-            getattr(engine, stop_name)()
             thread = engine.click_thread
-            if thread is not None:
-                thread.join(timeout=2.0)
-            at_stop = len(clicks)
-            time.sleep(0.2)
-            return len(clicks) - at_stop
+            assert thread is not None
+            try:
+                deadline = time.monotonic() + 5.0
+                while not clicks and time.monotonic() < deadline:
+                    time.sleep(0.005)
+                self.assertTrue(clicks, "the run never clicked")
+                getattr(engine, stop_name)()
+                if stop_name == "stop_clicking":
+                    # stop_clicking joins the click thread before it returns.
+                    self.assertFalse(thread.is_alive(), "stop_clicking returned while clicking")
+                # Only the click thread clicks, so once it has ended no click can
+                # follow: checking that it ended replaces a fixed wait.
+                thread.join(timeout=5.0)
+                self.assertFalse(thread.is_alive(), "click thread still running after stop")
+                self.assertFalse(engine.is_running)
+            finally:
+                if thread.is_alive():
+                    engine.emergency_stop()
+                    thread.join(timeout=5.0)
 
     def test_no_clicks_after_stop_clicking(self):
-        self.assertEqual(self._run_and_stop("stop_clicking"), 0)
+        self._run_and_stop("stop_clicking")
 
     def test_no_clicks_after_emergency_stop_thread_exits(self):
-        self.assertEqual(self._run_and_stop("emergency_stop"), 0)
+        self._run_and_stop("emergency_stop")
 
     def test_queue_api_removed(self):
         engine = ClickEngine(enable_performance_monitoring=False)

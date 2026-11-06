@@ -64,6 +64,24 @@ class TestFindTemplate(unittest.TestCase):
         self.assertIsNone(target.locate(grabber=lambda _r: Image.new("RGB", (320, 240))))
 
 
+def _wait_until(predicate, timeout=5.0):
+    """Poll ``predicate`` until it is true or ``timeout`` seconds pass."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return bool(predicate())
+
+
+def _halt(engine):
+    """Stop ``engine`` and wait for its click thread, so it cannot outlive a test."""
+    thread = engine.click_thread
+    if thread is not None and thread.is_alive():
+        engine.emergency_stop()
+        thread.join(timeout=5.0)
+
+
 def _mock(m):
     m.size.return_value = (1920, 1080)
     m.FailSafeException = pyautogui.FailSafeException
@@ -85,12 +103,14 @@ class TestEngineImageTarget(unittest.TestCase):
             None, None, 0, 0, 1, 0, 3, 0, "left", "single",
             lambda o: (outcomes.append(o), done.set()), image=target,
         )  # fmt: skip
-        time.sleep(0.3)
-        self.assertTrue(engine.is_paused)
-        self.assertEqual(engine.pause_reason, PAUSE_IMAGE)
-        m.click.assert_not_called()
-        positions[0] = (640, 360)
-        self.assertTrue(done.wait(3))
+        try:
+            self.assertTrue(_wait_until(lambda: engine.is_paused))
+            self.assertEqual(engine.pause_reason, PAUSE_IMAGE)
+            m.click.assert_not_called()
+            positions[0] = (640, 360)
+            self.assertTrue(done.wait(5))
+        finally:
+            _halt(engine)
         self.assertEqual(outcomes[0].reason, STOP_COMPLETED)
         m.click.assert_called_with(x=640, y=360, button="left", clicks=1)
 
@@ -99,11 +119,17 @@ class TestEngineImageTarget(unittest.TestCase):
         """#96: clicking the image closes it; the old position must not be clicked again."""
         _mock(m)
         clicked = threading.Event()
+        searched_after_click = threading.Event()
+        searches_after_click = []
         m.click.side_effect = lambda **_k: clicked.set()
 
         def locate():
             on_screen = not clicked.is_set()  # what the screenshot shows
             time.sleep(0.03)  # the search itself takes time
+            if not on_screen:
+                searches_after_click.append(1)
+                if len(searches_after_click) >= 3:
+                    searched_after_click.set()
             return (640, 360) if on_screen else None
 
         target = MagicMock(spec=ImageTarget)
@@ -113,10 +139,16 @@ class TestEngineImageTarget(unittest.TestCase):
         engine.start_clicking(
             None, None, 0, 0, 1, 0, 0, 0, "left", "single", None, image=target
         )  # fmt: skip
-        time.sleep(0.6)
-        engine.stop_clicking()
+        try:
+            # Several full search cycles after the click, none of which may click again.
+            self.assertTrue(clicked.wait(5))
+            self.assertTrue(searched_after_click.wait(5))
+        finally:
+            engine.stop_clicking()
         self.assertEqual(m.click.call_count, 1)
-        self.assertTrue(engine.click_thread is None or not engine.click_thread.is_alive())
+        self.assertTrue(
+            _wait_until(lambda: engine.click_thread is None or not engine.click_thread.is_alive())
+        )
 
 
 class TestImageSettings(unittest.TestCase):

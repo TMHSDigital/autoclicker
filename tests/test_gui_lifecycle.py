@@ -247,6 +247,15 @@ class TestFirstRunHint(GuiHarness):
 
 
 class TestRunLifecycle(GuiHarness):
+    def _wait_for_clicks(self, timeout=5.0):
+        """Wait until the click thread is really clicking (no fixed sleep)."""
+        deadline = time.monotonic() + timeout
+        while self.pyautogui.click.call_count == 0:
+            if time.monotonic() >= deadline:
+                raise AssertionError("click run did not start clicking")
+            time.sleep(0.005)
+        self.assertTrue(self.app.click_engine.is_running)
+
     def test_max_clicks_run_reports_completion_once(self):
         app = self.app
         self.set_fields(interval="5")
@@ -266,7 +275,7 @@ class TestRunLifecycle(GuiHarness):
         app = self.app
         self.set_fields(interval="20")
         app.start_clicking()
-        time.sleep(0.05)
+        self._wait_for_clicks()
         app.stop_clicking()
         _settle(app)
         self.assertEqual(app.status_var.get(), "Stopped")
@@ -278,7 +287,7 @@ class TestRunLifecycle(GuiHarness):
         app = self.app
         self.set_fields(interval="20")
         app.start_clicking()
-        time.sleep(0.05)
+        self._wait_for_clicks()
         app.emergency_stop()
         _settle(app)
         self.assertEqual(app.status_var.get(), "Emergency stop")
@@ -295,7 +304,7 @@ class TestRunLifecycle(GuiHarness):
         app = self.app
         self.set_fields(interval="20")
         app.start_clicking()
-        time.sleep(0.05)
+        self._wait_for_clicks()
         self.picker_cls.return_value.is_picking.return_value = True
         app.emergency_stop()
         _settle(app)

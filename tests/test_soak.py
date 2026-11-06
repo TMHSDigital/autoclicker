@@ -12,11 +12,12 @@ opt-in (real pyautogui, real time).
 from __future__ import annotations
 
 import gc
-import threading
 import time
 import tracemalloc
 import unittest
 from unittest.mock import patch
+
+import pytest
 
 from autoclicker.core.click_engine import ClickEngine
 
@@ -24,6 +25,7 @@ from autoclicker.core.click_engine import ClickEngine
 class TestSoakSustainedClicking(unittest.TestCase):
     """Engine should remain stable and bounded across thousands of clicks."""
 
+    @pytest.mark.slow
     def test_sustained_clicking_is_stable(self):
         """Patch the pyautogui module attribute with a lightweight stub so
         Mock's call-tracking machinery doesn't dominate the allocation budget."""
@@ -53,7 +55,6 @@ class TestSoakSustainedClicking(unittest.TestCase):
             gc.collect()
             tracemalloc.start()
             snap_before = tracemalloc.take_snapshot()
-            threads_before = threading.active_count()
 
             engine.start_clicking(
                 x=100,
@@ -68,17 +69,24 @@ class TestSoakSustainedClicking(unittest.TestCase):
                 click_type="single",
             )
 
-            deadline = time.time() + 10.0
-            while engine.is_running and time.time() < deadline:
+            click_thread = engine.click_thread
+            self.assertIsNotNone(click_thread)
+            assert click_thread is not None
+
+            deadline = time.monotonic() + 30.0
+            while engine.is_running and time.monotonic() < deadline:
                 time.sleep(0.05)
 
             engine.stop_clicking()
+            click_thread.join(timeout=5.0)
             gc.collect()
 
             snap_after = tracemalloc.take_snapshot()
             tracemalloc.stop()
-            threads_after = threading.active_count()
         finally:
+            if engine.click_thread is not None and engine.click_thread.is_alive():
+                engine.emergency_stop()
+                engine.click_thread.join(timeout=5.0)
             ce.pyautogui = original
 
         self.assertGreaterEqual(engine.click_count, 5_000, "engine stopped before reaching max")
@@ -89,11 +97,8 @@ class TestSoakSustainedClicking(unittest.TestCase):
             engine._recent_click_ts.maxlen,
             "recent-click ts deque must stay bounded",
         )
-        self.assertEqual(
-            threads_after,
-            threads_before,
-            "click thread must be joined and removed on stop",
-        )
+        # Only this engine's thread counts; other tests' daemon threads may come and go.
+        self.assertFalse(click_thread.is_alive(), "click thread must end on stop")
 
         # Budget: ~500 KiB for incidental Python/test machinery across 5k clicks.
         diff = snap_after.compare_to(snap_before, "filename")

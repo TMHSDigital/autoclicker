@@ -18,6 +18,24 @@ from autoclicker.core.click_engine import (
 from autoclicker.core.exceptions import ClickEngineError, CoordinateError, SafetyError
 
 
+def _wait_until(predicate, timeout=5.0):
+    """Poll ``predicate`` until it is true or ``timeout`` seconds pass."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return bool(predicate())
+
+
+def _halt(engine):
+    """Stop ``engine`` and wait for its click thread, so it cannot outlive a test."""
+    thread = engine.click_thread
+    if thread is not None and thread.is_alive():
+        engine.emergency_stop()
+        thread.join(timeout=5.0)
+
+
 class TestClickEngineLifecycle(unittest.TestCase):
     """Start/stop and status."""
 
@@ -316,11 +334,15 @@ class TestRunOutcome(unittest.TestCase):
             )
             thread = engine.click_thread
             assert thread is not None
-            if stop is not None:
-                time.sleep(0.05)
-                getattr(engine, stop)()
-            thread.join(timeout=2.0)
-            time.sleep(0.05)
+            try:
+                if stop is not None:
+                    # Stop a run that is really clicking, not one still starting up.
+                    self.assertTrue(_wait_until(lambda: mock_pyautogui.click.call_count > 0))
+                    getattr(engine, stop)()
+                thread.join(timeout=5.0)
+                self.assertFalse(thread.is_alive())
+            finally:
+                _halt(engine)  # never leave a thread clicking once the mock is gone
         self.assertEqual(len(outcomes), 1, outcomes)
         return outcomes[0]
 
@@ -355,11 +377,17 @@ class TestFocusPauseLimits(unittest.TestCase):
 
     def _run_paused(self, pause_side_effect, steps=None):
         outcomes: list = []
+        paused = threading.Event()
+
+        def should_pause():
+            result = pause_side_effect()
+            if result:
+                paused.set()
+            return result
+
         with (
             patch("autoclicker.core.click_engine.pyautogui") as mock_pyautogui,
-            patch.object(
-                ClickEngine, "_should_pause_for_foreground", side_effect=pause_side_effect
-            ),
+            patch.object(ClickEngine, "_should_pause_for_foreground", side_effect=should_pause),
         ):
             mock_pyautogui.size.return_value = (1920, 1080)
             engine = ClickEngine(enable_performance_monitoring=False)
@@ -369,11 +397,15 @@ class TestFocusPauseLimits(unittest.TestCase):
                     10, 10, 5, 0, 1, 0, 0, 1, "left", "single", outcomes.append, steps=steps
                 )
             )
-            time.sleep(0.15)
-            self.assertTrue(engine.is_running)  # paused, not finished
-            engine.start_time -= 61  # one minute passes while paused
-            assert engine.click_thread is not None
-            engine.click_thread.join(timeout=2.0)
+            try:
+                self.assertTrue(paused.wait(5.0))  # the loop has reached the focus pause
+                self.assertTrue(engine.is_running)  # paused, not finished
+                engine.start_time -= 61  # one minute passes while paused
+                assert engine.click_thread is not None
+                engine.click_thread.join(timeout=5.0)
+                self.assertFalse(engine.click_thread.is_alive())
+            finally:
+                _halt(engine)
         self.assertEqual(len(outcomes), 1, outcomes)
         return outcomes[0]
 
