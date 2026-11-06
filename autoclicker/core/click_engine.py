@@ -898,8 +898,8 @@ class ClickEngine:
         sx = sy = self._spread
         if self._image is not None:
             # (x, y) is the image's center: stay on the image.
-            sx = min(sx, max(0, (self._image.prepared.width - 1) // 2))
-            sy = min(sy, max(0, (self._image.prepared.height - 1) // 2))
+            sx = min(sx, max(0, (self._image.ready.width - 1) // 2))
+            sy = min(sy, max(0, (self._image.ready.height - 1) // 2))
         nx = min(max(x + random.randint(-sx, sx), bounds.left), bounds.right - 1)
         ny = min(max(y + random.randint(-sy, sy), bounds.top), bounds.bottom - 1)
         return nx, ny

@@ -14,6 +14,7 @@ import binascii
 import ctypes
 import hashlib
 import io
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -43,6 +44,22 @@ TEMPLATE_FORMATS = ("PNG",)
 def images_dir() -> Path:
     """Folder that holds captured and imported images."""
     return app_data_dir() / "images"
+
+
+def is_app_image(path: str | Path) -> bool:
+    """True if ``path`` names a file directly inside images_dir().
+
+    Captures and imported images always land there, so a stored path anywhere
+    else (a hand-edited or copied settings file) is never opened. Checked on
+    the text alone: resolving or opening a path elsewhere could make Windows
+    connect to another computer (#98).
+    """
+    text = str(path or "")
+    if not text.strip():
+        return False
+    folder = os.path.normcase(os.path.normpath(str(images_dir())))
+    candidate = os.path.normcase(os.path.normpath(text))
+    return os.path.dirname(candidate) == folder and os.path.basename(candidate) not in ("", ".")
 
 
 def open_template(source: str | Path | IO[bytes]) -> Image.Image:
@@ -106,6 +123,11 @@ class PreparedTemplate:
 
     @classmethod
     def from_image(cls, needle: Image.Image) -> PreparedTemplate:
+        """Rows, anchor and probes, counted with Pillow's C code (#162).
+
+        Python loops over every pixel took about 2 s for a full-screen capture,
+        on the Tk thread at every Start.
+        """
         pin = needle.convert("RGB")
         width, height = pin.size
         data, stride = pin.tobytes(), width * 3
@@ -114,42 +136,70 @@ class PreparedTemplate:
         # Anchor on the row with the most distinct colors: a plain row (often
         # the first) would match almost everywhere and make the scan slow.
         def distinct_colors(r: int) -> int:
-            return len({rows[r][i : i + 3] for i in range(0, stride, 3)})
+            return len(pin.crop((0, r, width, r + 1)).getcolors(width) or ())
 
         anchor = max(range(height), key=distinct_colors) if height else 0
-        return cls(width, height, rows, anchor, pin, _probes(data, width, height))
+        return cls(width, height, rows, anchor, pin, _probes(pin))
 
 
-def _probes(
-    data: bytes, width: int, height: int
-) -> tuple[tuple[int, int, tuple[int, int, int]], ...]:
-    """The rarest-colored pixel of each quadrant: few places on screen share it."""
+def _probes(pin: Image.Image) -> tuple[tuple[int, int, tuple[int, int, int]], ...]:
+    """The rarest-colored pixel of each quadrant: few places on screen share it.
+
+    Ordered rarest first, so the tolerant search starts with the most selective one.
+    """
+    width, height = pin.size
     if width == 0 or height == 0:
         return ()
-    pixels = [(data[i], data[i + 1], data[i + 2]) for i in range(0, width * height * 3, 3)]
-    counts: dict[tuple[int, int, int], int] = {}
-    for color in pixels:
-        counts[color] = counts.get(color, 0) + 1
+    Color = tuple[int, int, int]
+    colors: list[tuple[int, Color]] = pin.getcolors(width * height) or []  # type: ignore[assignment, unused-ignore]
+    counts = {color: count for count, color in colors}
     half_w, half_h = max(1, (width + 1) // 2), max(1, (height + 1) // 2)
-    probes = []
+    probes: list[tuple[int, int, tuple[int, int, int]]] = []
     for x0, y0 in ((0, 0), (half_w, 0), (0, half_h), (half_w, half_h)):
-        best = None
-        for y in range(y0, min(height, y0 + half_h)):
-            for x in range(x0, min(width, x0 + half_w)):
-                color = pixels[y * width + x]
-                if best is None or counts[color] < counts[best[2]]:
-                    best = (x, y, color)
-        if best is not None and best not in probes:
-            probes.append(best)
-    return tuple(probes)
+        box = (x0, y0, min(width, x0 + half_w), min(height, y0 + half_h))
+        if box[0] >= box[2] or box[1] >= box[3]:
+            continue
+        quadrant = pin.crop(box)
+        in_quadrant: list[tuple[int, Color]] = quadrant.getcolors(width * height) or []  # type: ignore[assignment, unused-ignore]
+        ranked = sorted((counts[c], c) for _n, c in in_quadrant)
+        # Prefer a color no other probe uses: a second probe of the same color
+        # narrows the candidates far less than a different color does.
+        used = {probe[2] for probe in probes}
+        color = next((c for _n, c in ranked if c not in used), ranked[0][1])
+        x, y = _first_pixel(quadrant, color)
+        probe = (x0 + x, y0 + y, color)
+        if probe not in probes:
+            probes.append(probe)
+    return tuple(sorted(probes, key=lambda p: counts[p[2]]))
 
 
-def _close_to(hay: Image.Image, color: tuple[int, int, int], tolerance: int) -> Image.Image:
+def _first_pixel(image: Image.Image, color: tuple[int, int, int]) -> tuple[int, int]:
+    """(x, y) of the first pixel of ``color`` in row-major order (it must be present)."""
+    data, key, width = image.tobytes(), bytes(color), image.size[0]
+    index = data.find(key)
+    while index % 3:  # a match straddling two pixels
+        index = data.find(key, index + 1)
+    return (index // 3) % width, (index // 3) // width
+
+
+# Below this many candidate positions, checking each one directly is cheaper
+# than building another probe mask over the whole region (#161).
+_FEW_CANDIDATES = 64
+
+
+def _within_lut(value: int, tolerance: int) -> list[int]:
+    """Point table for one band: 255 where the band is within ``tolerance`` of ``value``."""
+    return [255 if abs(v - value) <= tolerance else 0 for v in range(256)]
+
+
+def _close_to(
+    bands: tuple[Image.Image, ...], color: tuple[int, int, int], tolerance: int
+) -> Image.Image:
     """Mode "L" mask: 255 where every channel is within ``tolerance`` of ``color``."""
-    diff = ImageChops.difference(hay, Image.new("RGB", hay.size, color))
-    red, green, blue = diff.split()
-    worst = ImageChops.lighter(ImageChops.lighter(red, green), blue)
-    return worst.point([255 if v <= tolerance else 0 for v in range(256)])
+    red, green, blue = (
+        band.point(_within_lut(c, tolerance)) for band, c in zip(bands, color, strict=True)
+    )
+    return ImageChops.darker(ImageChops.darker(red, green), blue)
 
 
 def _find_tolerant(
@@ -159,14 +209,22 @@ def _find_tolerant(
 
     All the per-pixel work runs in Pillow's C code: each probe pixel gives a
     mask of the places it could be, shifted to template top-left positions and
-    intersected, and only the surviving candidates are compared in full.
+    intersected, and only the surviving candidates are compared in full. The
+    rarest probe goes first, and once few candidates are left the remaining
+    probes are skipped, so a typical search builds one or two masks (#161).
     """
     hw, hh = hay.size
     cols, lines = hw - needle.width + 1, hh - needle.height + 1
+    bands = hay.split()
+    masks: dict[tuple[int, int, int], Image.Image] = {}  # one mask per probe color
     candidates = None
     for px, py, color in needle.probes:
-        mask = _close_to(hay, color, tolerance).crop((px, py, px + cols, py + lines))
+        if color not in masks:
+            masks[color] = _close_to(bands, color, tolerance)
+        mask = masks[color].crop((px, py, px + cols, py + lines))
         candidates = mask if candidates is None else ImageChops.darker(candidates, mask)
+        if candidates.histogram()[255] < _FEW_CANDIDATES:
+            break
     if candidates is None:
         return None
     flags = candidates.tobytes()
@@ -333,15 +391,23 @@ class ImageTarget:
     region: ScreenBounds
     # Per-channel difference allowed for every pixel; 0 = exact match (#123).
     tolerance: int = 0
-    prepared: PreparedTemplate = field(init=False, repr=False, compare=False)
+    # Worked out from ``template`` unless the caller already has it (#162).
+    prepared: PreparedTemplate | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "prepared", PreparedTemplate.from_image(self.template))
+        if self.prepared is None:
+            object.__setattr__(self, "prepared", PreparedTemplate.from_image(self.template))
+
+    @property
+    def ready(self) -> PreparedTemplate:
+        """The prepared template (always set once the target exists)."""
+        assert self.prepared is not None
+        return self.prepared
 
     def locate(self, grabber=grab) -> tuple[int, int] | None:
         """Screen coordinates of the template's center, or None if it isn't there."""
-        found = find_template(grabber(self.region), self.prepared, self.tolerance)
+        found = find_template(grabber(self.region), self.ready, self.tolerance)
         if found is None:
             return None
-        width, height = self.prepared.width, self.prepared.height
+        width, height = self.ready.width, self.ready.height
         return self.region.left + found[0] + width // 2, self.region.top + found[1] + height // 2

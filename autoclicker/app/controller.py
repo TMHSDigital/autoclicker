@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import math
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -12,7 +14,14 @@ from typing import Any
 import pyautogui
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
-from ..core.image_match import DEFAULT_MARGIN, ImageTarget, open_template, search_region
+from ..core.image_match import (
+    DEFAULT_MARGIN,
+    ImageTarget,
+    PreparedTemplate,
+    is_app_image,
+    open_template,
+    search_region,
+)
 from ..core.safety import get_foreground_window_handle
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -57,11 +66,12 @@ def _load_image_target(
     Without ``desktop`` the capture rectangle itself is searched.
     """
     path = str(sanitized.get("image_path", ""))
-    if path.replace("/", "\\").startswith("\\\\"):
-        # Never open a network path: Windows would send the user's credentials (#98).
-        return None, "The image must be a local file; capture it again"
+    if not is_app_image(path):
+        # Only the app's own captures and imports are opened, never a path
+        # from elsewhere such as another computer on the network (#98).
+        return None, "The image must be one captured in this app; capture it again"
     try:
-        template = open_template(path)
+        template, prepared = _prepared_template(path)
     except ValueError:
         return None, "The captured image is missing or unreadable; capture it again"
     region = ScreenBounds(*sanitized["image_region"])
@@ -69,7 +79,28 @@ def _load_image_target(
         margin = int(sanitized.get("image_margin", DEFAULT_MARGIN))
         region = search_region(region, margin, desktop)
     tolerance = int(sanitized.get("image_tolerance", 0))
-    return ImageTarget(template=template, region=region, tolerance=tolerance), None
+    target = ImageTarget(template=template, region=region, tolerance=tolerance, prepared=prepared)
+    return target, None
+
+
+def _prepared_template(path: str) -> tuple[Any, PreparedTemplate]:
+    """The template at ``path`` and its prepared form, reused while the file is unchanged.
+
+    Preparing a large capture takes a noticeable moment on the Tk thread, so
+    every Start after the first one skips it (#162). Raises ValueError like
+    open_template.
+    """
+    try:
+        stat = os.stat(path)
+    except OSError as e:
+        raise ValueError(f"Unreadable image: {e}") from e
+    return _prepare_cached(path, stat.st_mtime_ns, stat.st_size)
+
+
+@functools.lru_cache(maxsize=4)
+def _prepare_cached(path: str, _mtime_ns: int, _size: int) -> tuple[Any, PreparedTemplate]:
+    template = open_template(path)
+    return template, PreparedTemplate.from_image(template)
 
 
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:

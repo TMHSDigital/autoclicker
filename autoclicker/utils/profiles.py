@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..core.image_match import encode_image, store_embedded_image
+from ..core.image_match import encode_image, is_app_image, store_embedded_image
 
 _log = logging.getLogger(__name__)
 
@@ -176,10 +176,13 @@ class PresetManager:
         for name, stored in self._profiles().items():
             profile = dict(stored) if isinstance(stored, dict) else stored
             if isinstance(profile, dict) and profile.get("image_path"):
-                try:
-                    profile["image_png"] = encode_image(profile["image_path"])
-                except OSError as e:
-                    _log.warning("Profile %r: image not exported: %s", name, e)
+                if is_app_image(profile["image_path"]):
+                    try:
+                        profile["image_png"] = encode_image(profile["image_path"])
+                    except OSError as e:
+                        _log.warning("Profile %r: image not exported: %s", name, e)
+                else:
+                    _log.warning("Profile %r: image outside the images folder not exported", name)
                 del profile["image_path"]
             profiles[name] = profile
         payload = {"format": EXPORT_FORMAT, "version": EXPORT_VERSION, "profiles": profiles}

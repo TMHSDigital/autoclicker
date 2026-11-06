@@ -41,7 +41,17 @@ The `ImageWatch` thread grabs the search region and looks for the captured image
 
 `image_match.grab` copies only the region with `BitBlt` from the screen DC (#97). Pillow's `ImageGrab.grab(all_screens=True)`, still the fallback if that fails, copies the whole virtual desktop and then crops it, so its cost follows the desktop size rather than the margin. The remaining ~17 ms is one display frame at 60 Hz: with desktop composition on, a screen `BitBlt` waits for the compositor. The wait happens inside a ctypes call, which releases the GIL, so the click thread keeps its timing.
 
-The template's rows and its anchor row (the one with the most distinct colors) are prepared once per run (`PreparedTemplate`). The search scans each region row for the anchor with `bytes.find` and compares the full template only at those hits.
+The template's rows, its anchor row (the one with the most distinct colors) and up to four probe pixels are prepared with Pillow's C code (`getcolors`), and the result is cached while the image file is unchanged, so later Starts skip it (#162). Preparing a full-screen 1920x1080 capture takes about 0.1 s (it was about 1 to 2 s, on the Tk thread at every Start). The exact search scans each region row for the anchor with `bytes.find` and compares the full template only at those hits.
+
+With a **Tolerance** above 0 the search builds, per probe color, a mask of the places within tolerance (three band lookups and two `darker` passes in C), intersects the masks shifted to template positions, and compares the full template only at the surviving candidates. The rarest probe goes first and the remaining probes are skipped once fewer than 64 candidates are left (#161). Synthetic benchmark, 60x30 template, 2560 x 1080 region (the maximum margin):
+
+| Haystack | Tolerance 0 | Tolerance 8 or 32 |
+|----------|-------------|-------------------|
+| Random noise | about 7 ms | 45 to 57 ms (was 70 ms) |
+| UI-like (flat panels) | about 7 ms | 50 to 65 ms (was 70 ms) |
+| 700 x 400 region, noise | | about 4 ms (was 7 ms) |
+
+A wide margin with tolerance is still the costliest setting, so the watcher waits at least as long as its last search took before searching again: it never keeps a core busy, and the match it acts on is at most about two searches old.
 
 ## Targets
 

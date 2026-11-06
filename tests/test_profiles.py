@@ -140,7 +140,11 @@ class TestImageProfiles(ProfileTestCase):
         env = patch.dict(os.environ, {"APPDATA": self.appdata})
         env.start()
         self.addCleanup(env.stop)
-        self.image_file = self.path("capture.png")
+        from autoclicker.core.image_match import images_dir
+
+        # Captures live in the images folder; only images there are exported.
+        images_dir().mkdir(parents=True)
+        self.image_file = str(images_dir() / "target-capture.png")
         Image.new("RGB", (30, 12), (200, 10, 10)).save(self.image_file)
         self.profile = {
             "x": 1,
@@ -182,6 +186,20 @@ class TestImageProfiles(ProfileTestCase):
         # Importing the same profile again reuses the same file.
         fresh.import_profiles(profiles, replace_existing=True)
         self.assertEqual(fresh.load_profile("Ok button")["image_path"], stored)
+
+    def test_export_skips_an_image_outside_the_images_folder(self):
+        outside = self.path("elsewhere.png")
+        from PIL import Image
+
+        Image.new("RGB", (4, 4)).save(outside)
+        self.manager.save_profile("Moved", {**self.profile, "image_path": outside})
+        out = self.path("export.json")
+        with self.assertLogs("autoclicker.utils.profiles", "WARNING"):
+            self.manager.export_profiles(out)
+        with open(out, encoding="utf-8") as fh:
+            exported = json.load(fh)["profiles"]["Moved"]
+        self.assertNotIn("image_png", exported)
+        self.assertNotIn("image_path", exported)
 
     def test_import_never_trusts_a_path_from_the_file(self):
         raw = {**self.profile, "image_path": "\\\\attacker\\share\\x.png"}

@@ -28,6 +28,13 @@ def _scene():
     return hay
 
 
+def _images_in(folder):
+    """Treat ``folder`` as the app's images folder (only images there are opened)."""
+    from pathlib import Path
+
+    return patch("autoclicker.core.image_match.images_dir", return_value=Path(folder))
+
+
 class TestFindTemplate(unittest.TestCase):
     def test_finds_exact_position(self):
         hay = _scene()
@@ -145,7 +152,7 @@ class TestImageSettings(unittest.TestCase):
 
 class TestLoadImageTarget(unittest.TestCase):
     def test_loads_or_reports(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
             path = os.path.join(tmp, "t.png")
             Image.new("RGB", (8, 6), (1, 2, 3)).save(path)
             target, error = _load_image_target({"image_path": path, "image_region": [0, 0, 50, 50]})
@@ -201,20 +208,60 @@ class TestPickerAreaMode(unittest.TestCase):
 class TestLoadImageTargetSafety(unittest.TestCase):
     """#98/#100: never open network paths; oversized images are an error, not a crash."""
 
-    def test_network_paths_are_refused(self):
-        for path in ("\\\\server\\share\\x.png", "//server/share/x.png"):
-            with self.subTest(path=path), patch("autoclicker.core.image_match.Image.open") as op:
-                target, error = _load_image_target(
-                    {"image_path": path, "image_region": [0, 0, 5, 5]}
-                )
-                self.assertIsNone(target)
-                self.assertIn("local file", error)
-                op.assert_not_called()
+    def test_paths_outside_the_images_folder_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
+            for path in (
+                "\\\\server\\share\\x.png",
+                "//server/share/x.png",
+                "\\??\\UNC\\server\\share\\x.png",
+                "\\\\?\\UNC\\server\\share\\x.png",
+                os.path.join(tmp, "..", "x.png"),
+                os.path.join(tmp, "sub", "x.png"),
+                tmp,
+                "",
+            ):
+                with (
+                    self.subTest(path=path),
+                    patch("autoclicker.core.image_match.Image.open") as op,
+                    patch("autoclicker.app.controller.os.stat") as stat,
+                ):
+                    target, error = _load_image_target(
+                        {"image_path": path, "image_region": [0, 0, 5, 5]}
+                    )
+                    self.assertIsNone(target)
+                    self.assertIn("captured in this app", error)
+                    op.assert_not_called()
+                    stat.assert_not_called()
+
+    def test_is_app_image(self):
+        from autoclicker.core.image_match import is_app_image
+
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
+            self.assertTrue(is_app_image(os.path.join(tmp, "target-1.png")))
+            self.assertTrue(is_app_image(os.path.join(tmp.upper(), "x.png")))
+            self.assertTrue(is_app_image(os.path.join(tmp, ".", "x.png")))
+            self.assertFalse(is_app_image("\\??\\UNC\\host\\share\\x.png"))
+            self.assertFalse(is_app_image(None))
+
+    def test_prepared_template_is_reused_until_the_file_changes(self):
+        from autoclicker.app import controller
+
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
+            path = os.path.join(tmp, "t.png")
+            Image.new("RGB", (8, 6), (1, 2, 3)).save(path)
+            first, _ = _load_image_target({"image_path": path, "image_region": [0, 0, 9, 9]})
+            second, _ = _load_image_target({"image_path": path, "image_region": [0, 0, 9, 9]})
+            self.assertIs(first.prepared, second.prepared)
+            Image.new("RGB", (5, 4), (1, 2, 3)).save(path)
+            os.utime(path, ns=(1, 1))
+            third, _ = _load_image_target({"image_path": path, "image_region": [0, 0, 9, 9]})
+            self.assertEqual(third.prepared.width, 5)
+            controller._prepare_cached.cache_clear()
 
     def test_oversized_or_bomb_images_report_an_error(self):
         from PIL import Image as PILImage
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
             path = os.path.join(tmp, "big.png")
             PILImage.new("RGB", (10, 10)).save(path)
             for limit in (50, None):
@@ -238,7 +285,7 @@ class TestImageRobustness(unittest.TestCase):
     """#100: margin applied at Start, unreadable screens end the run, overlay hints."""
 
     def test_margin_is_applied_when_the_run_starts(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
             path = os.path.join(tmp, "t.png")
             Image.new("RGB", (8, 6)).save(path)
             desktop = ScreenBounds(0, 0, 1920, 1080)
@@ -382,7 +429,7 @@ class TestTolerance(unittest.TestCase):
                     {"target_mode": "cursor", "image_tolerance": value}, 1920, 1080
                 )
                 self.assertEqual("image_tolerance" not in result["errors"], ok)
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, _images_in(tmp):
             path = os.path.join(tmp, "t.png")
             self.button.save(path)
             target, _error = _load_image_target(

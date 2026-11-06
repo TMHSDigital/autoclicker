@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from ...core.image_match import TEMPLATE_FORMATS, grab, images_dir
+from ...core.image_match import TEMPLATE_FORMATS, grab, images_dir, is_app_image
 from ...core.screen import ScreenBounds
 from .base import AppBase
 
@@ -74,11 +74,8 @@ class ImageMixin(AppBase):
         if not path:
             return
         old = Path(path)
-        try:
-            if old.parent.resolve() != images_dir().resolve() or not old.name.startswith("target-"):
-                return  # only our own captures; imported images are shared by content
-        except OSError:
-            return
+        if not is_app_image(path) or not old.name.startswith("target-"):
+            return  # only our own captures; imported images are shared by content
         for name in self.preset_manager.get_preset_names():
             profile = self.preset_manager.load_profile(name) or {}
             if profile.get("image_path") == path:
@@ -110,7 +107,7 @@ class ImageMixin(AppBase):
         if preview is None:
             return
         photo = None
-        if self.image_path:
+        if is_app_image(self.image_path):
             try:
                 from PIL import ImageTk
 
