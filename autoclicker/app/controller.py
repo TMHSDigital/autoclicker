@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
+from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunConfig, RunOutcome
 from ..core.image_match import (
     DEFAULT_MARGIN,
     ImageTarget,
@@ -304,7 +304,6 @@ class AutoclickerController:
         interval_unit = sanitized["interval_unit"]
         variation = sanitized["variation"]
         burst_clicks = sanitized["burst_clicks"]
-        burst_pause = sanitized["burst_pause"] / 1000
 
         if interval_unit == "seconds":
             interval_ms = interval * 1000
@@ -328,19 +327,18 @@ class AutoclickerController:
                 },
             )
 
-        started = self.click_engine.start_clicking(
+        config = RunConfig(
             x=x,
             y=y,
-            interval=interval_ms,
-            variation=variation,
+            interval_ms=interval_ms,
+            variation_ms=variation,
             burst_clicks=burst_clicks,
-            burst_pause=burst_pause,
+            burst_pause_ms=sanitized["burst_pause"],
             max_clicks=sanitized["max_clicks"],
             auto_stop_minutes=sanitized["auto_stop_minutes"],
             mouse_button=sanitized["mouse_button"],
             click_type=sanitized["click_type"],
-            on_finished=lambda outcome: self._run_finished(outcome, on_finished),
-            steps=steps,
+            steps=tuple(steps or ()),
             repeat=int(sanitized.get("sequence_repeat", 0)),
             action=action,
             hold_ms=float(sanitized.get("hold_ms", 0) or 0),
@@ -349,6 +347,9 @@ class AutoclickerController:
             image=image,
             spread=int(sanitized.get("click_spread", 0)),
             stop_at=_stop_deadline(str(sanitized.get("stop_at") or "")),
+        )
+        started = self.click_engine.start(
+            config, lambda outcome: self._run_finished(outcome, on_finished)
         )
 
         if started:

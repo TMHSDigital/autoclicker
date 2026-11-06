@@ -59,7 +59,7 @@ class TestSpreadEngine(EngineCase):
         engine._spread = 3
         engine._steps = (ClickStep(100, 100), ClickStep(800, 600))
         engine.is_running = True
-        engine._perform_sequence(0, 0)
+        engine._perform_sequence()
         (x1, y1), (x2, y2) = _clicks(self.m)
         self.assertTrue(abs(x1 - 100) <= 3 and abs(y1 - 100) <= 3)
         self.assertTrue(abs(x2 - 800) <= 3 and abs(y2 - 600) <= 3)

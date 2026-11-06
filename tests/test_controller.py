@@ -163,7 +163,7 @@ class TestStartClickForegroundGate(unittest.TestCase):
             )
         self.assertFalse(result.success)
         self.assertIn("pause_when_unfocused", result.validation_errors)
-        controller.click_engine.start_clicking.assert_not_called()
+        controller.click_engine.start.assert_not_called()
 
 
 class TestRunFinishedLogging(unittest.TestCase):
@@ -208,7 +208,7 @@ class TestCursorModeStart(unittest.TestCase):
         controller.settings._save_settings = MagicMock()
         controller.click_engine = MagicMock()
         controller.click_engine.is_running = False
-        controller.click_engine.start_clicking.return_value = True
+        controller.click_engine.start.return_value = True
         raw = {
             "target_mode": "cursor",
             "x_coord": "",
@@ -232,9 +232,9 @@ class TestCursorModeStart(unittest.TestCase):
                 screen_bounds=ScreenBounds(0, 0, 1920, 1080),
             )
         self.assertTrue(result.success, result.validation_errors)
-        kwargs = controller.click_engine.start_clicking.call_args.kwargs
-        self.assertIsNone(kwargs["x"])
-        self.assertIsNone(kwargs["y"])
+        config = controller.click_engine.start.call_args.args[0]
+        self.assertIsNone(config.x)
+        self.assertIsNone(config.y)
         self.assertEqual(log.call_args.kwargs["target"], "cursor")
 
 

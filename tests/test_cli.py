@@ -181,7 +181,7 @@ class TestHeadless(HeadlessCase):
         from autoclicker.core.click_engine import ClickEngine
 
         seen = []
-        real_start = ClickEngine.start_clicking
+        real_start = ClickEngine.start
 
         def spy(engine, *args, **kwargs):
             seen.append(engine.launcher_windows)
@@ -189,7 +189,7 @@ class TestHeadless(HeadlessCase):
 
         with (
             patch.object(cli, "_launcher_window", return_value=4242),
-            patch.object(ClickEngine, "start_clicking", spy),
+            patch.object(ClickEngine, "start", spy),
         ):
             code = self.run_cli(
                 "--at", "10,10", "--interval", "0ms", "--clicks", "1", "--delay", "0"

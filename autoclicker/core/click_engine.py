@@ -148,6 +148,45 @@ class ClickStats:
         return float((self.timing_m2 / (self.timing_count - 1)) ** 0.5)
 
 
+@dataclass(frozen=True)
+class RunConfig:
+    """Everything one run needs (#171). Times are in milliseconds unless named otherwise.
+
+    x, y: the target point, or None for both to click wherever the cursor is.
+    interval_ms, variation_ms: wait between bursts (or rounds) and its random +/- range.
+    burst_clicks, burst_pause_ms: clicks per burst and the wait between them.
+    max_clicks, auto_stop_minutes: limits (0 = none); stop_at is a
+        ``(time.monotonic() deadline, "HH:MM")`` for Stop at (#177).
+    steps, repeat: sequence mode (x, y, button, click type and burst are then
+        per step or ignored) and its rounds (0 = until stopped).
+    action: "click", "hold" (press mouse_button for hold_ms; released on every
+        stop path) or "key" (press ``key``, such as "f5" or "ctrl+r").
+    condition: only click while this pixel condition holds.
+    image: click the center of this image wherever it is found (x, y ignored).
+    spread: land each click up to this many px from the target, at random.
+    """
+
+    x: int | None
+    y: int | None
+    interval_ms: float
+    variation_ms: int = 0
+    burst_clicks: int = 1
+    burst_pause_ms: float = 0.0
+    max_clicks: int = 0
+    auto_stop_minutes: float = 0.0
+    mouse_button: str = "left"
+    click_type: str = "single"
+    steps: tuple[ClickStep, ...] = ()
+    repeat: int = 0
+    action: str = "click"
+    hold_ms: float = 0.0
+    key: str = ""
+    condition: PixelCondition | None = None
+    image: ImageTarget | None = None
+    spread: int = 0
+    stop_at: tuple[float, str] | None = None
+
+
 class ClickEngine:
     """Handles mouse clicking operations with threading and safety features"""
 
@@ -255,7 +294,7 @@ class ClickEngine:
         burst_clicks: int,
         burst_pause: float,
         max_clicks: int,
-        auto_stop_minutes: int,
+        auto_stop_minutes: float,
         mouse_button: str,
         click_type: str,
         on_finished: Callable[[RunOutcome], None] | None = None,
@@ -270,42 +309,44 @@ class ClickEngine:
         spread: int = 0,
         stop_at: tuple[float, str] | None = None,
     ) -> bool:
-        """
-        Start the clicking process
+        """Start a run from loose arguments; see RunConfig. ``burst_pause`` is in seconds.
 
-        Args:
-            x, y: Target coordinates, or None for both to click wherever the
-                cursor is (cursor mode)
-            interval: Base interval between clicks (ms)
-            variation: Random variation range (±ms)
-            burst_clicks: Number of clicks per burst
-            burst_pause: Pause between bursts (seconds)
-            max_clicks: Maximum clicks (0 = unlimited)
-            auto_stop_minutes: Auto-stop after minutes (0 = disabled)
-            mouse_button: 'left', 'right', or 'middle'
-            click_type: 'single' or 'double'
-            on_finished: Called exactly once, from the click thread, when the
-                run ends for any reason (see RunOutcome)
-            steps: Sequence mode. Each round clicks every step in order (x, y,
-                mouse_button, click_type and burst settings are ignored), then
-                waits ``interval`` before the next round
-            repeat: Rounds to run in sequence mode (0 = until stopped)
-            action: "click", "hold" (press mouse_button for ``hold_ms``, then
-                release; released on every stop path) or "key" (press ``key``,
-                such as "f5" or "ctrl+r", wherever the focus is)
-            condition: Only click while this pixel condition holds
-            image: Image target mode: click the center of this image wherever it
-                is found in its search region (x and y are ignored); wait while
-                it isn't there
-            spread: Click up to this many px away from the target, at random,
-                in fixed, sequence and image modes (kept inside the image and
-                on screen); ignored at the cursor and for key presses
-            stop_at: ``(time.monotonic() deadline, "HH:MM")``: end the run then,
-                like auto_stop_minutes; whichever limit comes first wins (#177)
-
-        Returns:
-            True if started successfully, False otherwise
+        Kept for callers and tests that predate RunConfig; new code uses start().
         """
+        config = RunConfig(
+            x=x,
+            y=y,
+            interval_ms=interval,
+            variation_ms=variation,
+            burst_clicks=burst_clicks,
+            burst_pause_ms=burst_pause * 1000,
+            max_clicks=max_clicks,
+            auto_stop_minutes=auto_stop_minutes,
+            mouse_button=mouse_button,
+            click_type=click_type,
+            steps=tuple(steps or ()),
+            repeat=repeat,
+            action=action,
+            hold_ms=hold_ms,
+            key=key,
+            condition=condition,
+            image=image,
+            spread=spread,
+            stop_at=stop_at,
+        )
+        return self.start(config, on_finished)
+
+    def start(
+        self, config: RunConfig, on_finished: Callable[[RunOutcome], None] | None = None
+    ) -> bool:
+        """Start a run. True if it started; False if one is still running or shutting down.
+
+        ``on_finished`` is called exactly once, from the click thread, when the
+        run ends for any reason (see RunOutcome).
+        """
+        x, y = config.x, config.y
+        steps, repeat, action = config.steps, config.repeat, config.action
+        condition, image = config.condition, config.image
         if self.is_running:
             return False
         if self.click_thread is not None and self.click_thread.is_alive():
@@ -316,14 +357,14 @@ class ClickEngine:
         self._steps = tuple(steps or ())
         self._repeat = max(0, int(repeat))
         self._action = "click" if self._steps else action
-        self._hold_ms = max(0.0, float(hold_ms))
-        self._key = key
+        self._hold_ms = max(0.0, float(config.hold_ms))
+        self._key = config.key
         self._condition = condition
         self._condition_state = None
         self._image = image
         self._image_match = (None, 0.0)
         self._image_clicked_at = float("-inf")
-        self._spread = max(0, int(spread))
+        self._spread = max(0, int(config.spread))
         self._last_click_pos = None
         self.current_step = 0
         if self.pause_when_unfocused:
@@ -350,8 +391,8 @@ class ClickEngine:
         self.stats = ClickStats()
         self.start_time = time.monotonic()
         self.end_time = 0.0
-        self._stop_at = stop_at
-        self._limits = (max(0, int(max_clicks)), max(0.0, float(auto_stop_minutes)))
+        self._stop_at = config.stop_at
+        self._limits = (max(0, int(config.max_clicks)), max(0.0, float(config.auto_stop_minutes)))
         self._image_missing_since = 0.0
         self._stop_event.clear()
         self._recent_click_ts.clear()
@@ -375,19 +416,7 @@ class ClickEngine:
 
         self.click_thread = threading.Thread(
             target=self._click_loop,
-            args=(
-                x,
-                y,
-                interval,
-                variation,
-                burst_clicks,
-                burst_pause,
-                max_clicks,
-                auto_stop_minutes,
-                mouse_button,
-                click_type,
-                on_finished,
-            ),
+            args=(config, on_finished),
             daemon=True,
             name="ClickLoop",
         )
@@ -450,43 +479,22 @@ class ClickEngine:
         self._request_stop()
 
     def _click_loop(
-        self,
-        x: int | None,
-        y: int | None,
-        interval: float,
-        variation: int,
-        burst_clicks: int,
-        burst_pause: float,
-        max_clicks: int,
-        auto_stop_minutes: int,
-        mouse_button: str,
-        click_type: str,
-        on_finished: Callable[[RunOutcome], None] | None,
+        self, config: RunConfig, on_finished: Callable[[RunOutcome], None] | None
     ) -> None:
         """Main clicking loop. Reports exactly one RunOutcome via on_finished."""
+        x, y = config.x, config.y
         error: BaseException | None = None
         rounds = 0
         try:
             while self.is_running and not self._stop_event.is_set():
                 if self._should_pause_for_foreground():
                     # A run paused for focus still ends on time (#94).
-                    limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
-                    if limit_message:
-                        self._set_stop_reason(STOP_COMPLETED, limit_message)
+                    if self._check_limits():
                         break
                     self._stop_event.wait(timeout=0.1)
                     continue
 
-                if self._check_runaway_cps():
-                    self._trigger_safety_stop(
-                        f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
-                    )
-                    break
-
-                # Check auto-stop conditions
-                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
-                if limit_message:
-                    self._set_stop_reason(STOP_COMPLETED, limit_message)
+                if self._runaway_tripped() or self._check_limits():
                     break
 
                 verdict = self._check_condition()
@@ -517,7 +525,7 @@ class ClickEngine:
 
                 # Perform clicks
                 if self._steps:
-                    if not self._perform_sequence(max_clicks, auto_stop_minutes):
+                    if not self._perform_sequence():
                         break
                     rounds += 1
                     if self._repeat and rounds >= self._repeat:
@@ -527,7 +535,14 @@ class ClickEngine:
                         )
                         break
                 else:
-                    self._perform_burst(x, y, burst_clicks, burst_pause, mouse_button, click_type)
+                    self._perform_burst(
+                        x,
+                        y,
+                        config.burst_clicks,
+                        config.burst_pause_ms / 1000,
+                        config.mouse_button,
+                        config.click_type,
+                    )
                     if self._image is not None:
                         self._image_clicked_at = time.monotonic()
                 if self._safety_fired:
@@ -535,7 +550,7 @@ class ClickEngine:
 
                 # Wait for next burst
                 if self.is_running and not self._stop_event.is_set():
-                    self._wait_with_variation(interval, variation)
+                    self._wait_with_variation(config.interval_ms, config.variation_ms)
 
         except (SafetyError, pyautogui.FailSafeException):
             self._trigger_safety_stop("Failsafe: mouse moved to a screen corner")
@@ -736,7 +751,21 @@ class ClickEngine:
         seconds = f"{limit:g}"
         return f"Stopped: image not seen for {seconds} s"
 
-    def _limit_reached(self, max_clicks: int, auto_stop_minutes: int) -> str | None:
+    def _check_limits(self) -> bool:
+        """End the run (completed) if one of its limits is reached; True if so (#171)."""
+        message = self._limit_reached(*self._limits)
+        if message:
+            self._set_stop_reason(STOP_COMPLETED, message)
+        return message is not None
+
+    def _runaway_tripped(self) -> bool:
+        """Fire the runaway guard if the recent click rate is over the ceiling (#171)."""
+        if not self._check_runaway_cps():
+            return False
+        self._trigger_safety_stop(f"Runaway guard: over {self.max_cps_ceiling} clicks per second")
+        return True
+
+    def _limit_reached(self, max_clicks: int, auto_stop_minutes: float) -> str | None:
         """Return a completion message if a click or time limit was reached."""
         if max_clicks > 0 and self.click_count >= max_clicks:
             return f"Done: reached {max_clicks:,} click{'s' * (max_clicks != 1)}"
@@ -745,14 +774,14 @@ class ClickEngine:
             elapsed_minutes = (time.monotonic() - self.start_time) / 60
             if elapsed_minutes >= auto_stop_minutes:
                 unit = "minute" if auto_stop_minutes == 1 else "minutes"
-                return f"Done: auto-stopped after {auto_stop_minutes} {unit}"
+                return f"Done: auto-stopped after {auto_stop_minutes:g} {unit}"
 
         if self._stop_at is not None and time.monotonic() >= self._stop_at[0]:
             return f"Done: stopped at {self._stop_at[1]}"
 
         return None
 
-    def _perform_sequence(self, max_clicks: int, auto_stop_minutes: int) -> bool:
+    def _perform_sequence(self) -> bool:
         """Click every step once, in order. Returns False if the run should end.
 
         Stop requests, limits, pause when unfocused and the runaway guard are
@@ -764,22 +793,16 @@ class ClickEngine:
             while self._should_pause_for_foreground():
                 if self._stop_event.wait(timeout=0.1):
                     return False
-                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
-                if limit_message:
-                    self._set_stop_reason(STOP_COMPLETED, limit_message)
+                if self._check_limits():
                     return False
             if not self.is_running or self._stop_event.is_set():
                 return False
-            limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
-            if limit_message:
-                self._set_stop_reason(STOP_COMPLETED, limit_message)
+            if self._check_limits():
                 return False
             while (verdict := self._check_condition()) == "wait":
                 if self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS):
                     return False
-                limit_message = self._limit_reached(max_clicks, auto_stop_minutes)
-                if limit_message:
-                    self._set_stop_reason(STOP_COMPLETED, limit_message)
+                if self._check_limits():
                     return False
             if verdict == "stop":
                 return False
@@ -787,10 +810,7 @@ class ClickEngine:
             self.current_step = index
             self._perform_click(step.x, step.y, step.button, step.click_type)
 
-            if self._check_runaway_cps():
-                self._trigger_safety_stop(
-                    f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
-                )
+            if self._runaway_tripped():
                 return False
             if index < last and step.delay_ms > 0:
                 self._stop_event.wait(timeout=step.delay_ms / 1000)
@@ -812,10 +832,7 @@ class ClickEngine:
 
             self._perform_click(x, y, mouse_button, click_type)
 
-            if self._check_runaway_cps():
-                self._trigger_safety_stop(
-                    f"Runaway guard: over {self.max_cps_ceiling} clicks per second"
-                )
+            if self._runaway_tripped():
                 break
 
             # Wait between clicks in burst (except for last click)

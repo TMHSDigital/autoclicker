@@ -14,6 +14,7 @@ from autoclicker.core.click_engine import (
     STOP_SAFETY,
     STOP_USER,
     ClickEngine,
+    RunConfig,
 )
 from autoclicker.core.exceptions import ClickEngineError, CoordinateError, SafetyError
 
@@ -238,7 +239,7 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
             patch.object(engine, "_perform_burst", side_effect=stop_after_burst),
             patch.object(engine, "_wait_with_variation"),
         ):
-            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", complete)
+            engine._click_loop(RunConfig(x=1, y=1, interval_ms=10), complete)
         complete.assert_called_once()
         self.assertFalse(engine.is_running)
 
@@ -290,7 +291,7 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
         engine.start_time = time.monotonic()
         finished = MagicMock()
         with patch.object(engine, "_check_runaway_cps", return_value=True):
-            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", finished)
+            engine._click_loop(RunConfig(x=1, y=1, interval_ms=10), finished)
         finished.assert_called_once()
         outcome = finished.call_args.args[0]
         self.assertEqual(outcome.reason, STOP_SAFETY)
@@ -307,7 +308,7 @@ class TestClickEngineLoopAndLimits(unittest.TestCase):
             "_perform_burst",
             side_effect=SafetyError("fail_safe", "detected", "corner"),
         ):
-            engine._click_loop(1, 1, 10, 0, 1, 0, 0, 0, "left", "single", finished)
+            engine._click_loop(RunConfig(x=1, y=1, interval_ms=10), finished)
         outcome = finished.call_args.args[0]
         self.assertEqual(outcome.reason, STOP_SAFETY)
         self.assertIn("Failsafe", outcome.message)
@@ -530,3 +531,59 @@ class TestCursorMode(unittest.TestCase):
         mock_pyautogui.size.assert_not_called()
         mock_pyautogui.click.assert_called_once_with(button="left", clicks=1)
         self.assertEqual(engine.click_count, 1)
+
+
+class TestRunConfig(unittest.TestCase):
+    """#171: one frozen config per run; start_clicking is a thin wrapper."""
+
+    def test_wrapper_converts_burst_pause_seconds_to_ms(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        with patch.object(engine, "start", return_value=True) as start:
+            engine.start_clicking(1, 2, 100, 5, 3, 0.25, 10, 2, "right", "double", key="f5")
+        config = start.call_args.args[0]
+        self.assertEqual(
+            (config.x, config.y, config.interval_ms, config.variation_ms), (1, 2, 100, 5)
+        )
+        self.assertEqual((config.burst_clicks, config.burst_pause_ms), (3, 250))
+        self.assertEqual((config.max_clicks, config.auto_stop_minutes), (10, 2))
+        self.assertEqual(
+            (config.mouse_button, config.click_type, config.key), ("right", "double", "f5")
+        )
+
+    def test_config_is_frozen(self):
+        import dataclasses
+
+        config = RunConfig(x=None, y=None, interval_ms=10)
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            config.x = 5  # type: ignore[misc]
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_burst_pause_reaches_the_burst_in_seconds(self, mock_pyautogui):
+        mock_pyautogui.size.return_value = (1920, 1080)
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.configure_safety(failsafe=False, max_cps=0)
+        seen = []
+        engine._perform_burst = lambda *args: (seen.append(args), engine._request_stop())
+        done = threading.Event()
+        engine.start(
+            RunConfig(x=5, y=6, interval_ms=0, burst_clicks=2, burst_pause_ms=40),
+            lambda _outcome: done.set(),
+        )
+        try:
+            self.assertTrue(done.wait(5))
+        finally:
+            engine.emergency_stop()
+            engine.stop_clicking()
+        self.assertEqual(seen[0], (5, 6, 2, 0.04, "left", "single"))
+
+    def test_limits_and_runaway_share_one_check(self):
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.start_time = time.monotonic()
+        engine._limits = (3, 0.0)
+        engine.click_count = 3
+        self.assertTrue(engine._check_limits())
+        self.assertEqual(engine._stop_reason, (STOP_COMPLETED, "Done: reached 3 clicks"))
+        with patch.object(engine, "_check_runaway_cps", return_value=True):
+            self.assertTrue(engine._runaway_tripped())
+        with patch.object(engine, "_check_runaway_cps", return_value=False):
+            self.assertFalse(engine._runaway_tripped())

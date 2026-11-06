@@ -58,7 +58,7 @@ autoclicker/
 | Thread / scheduler | Owner | Role |
 |--------------------|-------|------|
 | Main thread | Tkinter | UI event loop, `AutoclickerApp.run()` |
-| Click thread | `ClickEngine.start_clicking` | Daemon thread running `_click_loop` |
+| Click thread | `ClickEngine.start(RunConfig, on_finished)` (`start_clicking` is a wrapper) | Daemon thread running `_click_loop` |
 | Hotkey thread | `app.hotkeys.HotkeyManager` | Daemon thread owning `RegisterHotKey` and its message loop |
 | Tray thread | `app.tray` | Daemon thread running `pystray` icon |
 | Status timer | Tk `root.after(1000, ...)` | Periodic status label updates |
@@ -84,7 +84,7 @@ Hotkeys use `RegisterHotKey`, which delivers a key only to this app. To avoid ta
 | max_clicks / auto_stop | `completed` | yes (`finally`) | UI reaps via `finish_run` |
 | exception in the loop | `error` (carries the exception) | yes (`finally`) | UI reaps via `finish_run` |
 
-In sequence mode (`ClickEngine.start_clicking(..., steps=[ClickStep, ...], repeat=N)`) each round calls `_perform_sequence`, which re-checks stop requests, limits, pause when unfocused and the runaway guard before every step and waits each step's `delay_ms` with `_stop_event.wait`. The round's last step is followed by the normal interval. Errors name the step (`Step 2: ...`).
+In sequence mode (`RunConfig(steps=(ClickStep, ...), repeat=N)`) each round calls `_perform_sequence`, which re-checks stop requests, limits (`_check_limits`), pause when unfocused and the runaway guard (`_runaway_tripped`) before every step and waits each step's `delay_ms` with `_stop_event.wait`. The round's last step is followed by the normal interval. Errors name the step (`Step 2: ...`).
 
 With a pixel condition, a `PixelWatch` daemon thread (tagged with the run id, so a stale one exits) keeps `_condition_state` current; before each burst and each sequence step `_check_condition` returns go, wait (shown as Paused with `pause_reason`) or stop. No reading yet counts as wait.
 
