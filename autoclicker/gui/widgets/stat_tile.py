@@ -18,5 +18,9 @@ class StatTile:
         self.caption = ttk.Label(self.frame, text=caption.upper(), style=STAT_CAPTION)
         self.caption.grid(row=1, column=0, sticky=tk.W)
 
+    def set_caption(self, caption: str) -> None:
+        """Change the small label under the value (e.g. a countdown, #173)."""
+        self.caption.configure(text=caption.upper())
+
     def grid(self, **kwargs: Any) -> None:
         self.frame.grid(**kwargs)

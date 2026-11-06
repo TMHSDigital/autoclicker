@@ -157,6 +157,8 @@ class ClickEngine:
         self.start_time = 0.0
         # Stop at a time of day: (monotonic deadline, "HH:MM"), or None (#177).
         self._stop_at: tuple[float, str] | None = None
+        # The run's (max_clicks, auto_stop_minutes), for progress readouts (#173).
+        self._limits: tuple[int, float] = (0, 0.0)
         # When the image target was first missed in a row (0 = seen or not yet searched).
         self._image_missing_since = 0.0
         # When the last run's loop ended (0 while running), so idle readouts
@@ -348,6 +350,7 @@ class ClickEngine:
         self.start_time = time.monotonic()
         self.end_time = 0.0
         self._stop_at = stop_at
+        self._limits = (max(0, int(max_clicks)), max(0.0, float(auto_stop_minutes)))
         self._image_missing_since = 0.0
         self._stop_event.clear()
         self._recent_click_ts.clear()
@@ -969,6 +972,21 @@ class ClickEngine:
             return 0.0
         return max(0.0, (self.end_time or time.monotonic()) - self.start_time)
 
+    def seconds_left(self) -> float | None:
+        """Time until the run's earliest time limit (auto-stop or Stop at), or None.
+
+        None when no run is going or no time limit is set (#173).
+        """
+        if not self.is_running or self.start_time <= 0:
+            return None
+        now = time.monotonic()
+        deadlines = []
+        if self._limits[1] > 0:
+            deadlines.append(self.start_time + self._limits[1] * 60)
+        if self._stop_at is not None:
+            deadlines.append(self._stop_at[0])
+        return max(0.0, min(deadlines) - now) if deadlines else None
+
     def get_status(self) -> dict[str, Any]:
         """Get current clicking status"""
         elapsed = int(self.run_seconds())
@@ -982,6 +1000,9 @@ class ClickEngine:
             "click_count": self.click_count,
             "runtime": f"{hours:02d}:{minutes:02d}:{seconds:02d}",
             "thread_alive": self.click_thread.is_alive() if self.click_thread else False,
+            # Progress toward the run's limits (#173); 0 and None mean no limit.
+            "max_clicks": self._limits[0],
+            "seconds_left": self.seconds_left(),
         }
 
         # Add performance metrics if enabled

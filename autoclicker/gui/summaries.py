@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
+from ..core.schedule import describe_wait
+
 SEP = " · "  # middle dot between parts
 DEFAULT_MAX_CPS = 50
 
@@ -18,6 +20,8 @@ class Stats(NamedTuple):
     clicks: str
     runtime: str
     rate: str
+    # "28:50 left" while a time limit runs, else "" (#173).
+    time_left: str = ""
 
 
 def _num(text: Any, default: float = 0) -> float:
@@ -34,8 +38,18 @@ def _plain(value: float) -> str:
 
 
 def format_stats(status: Mapping[str, Any]) -> Stats:
-    """Tile values from ``ClickEngine.get_status()``."""
+    """Tile values from ``ClickEngine.get_status()``.
+
+    While a run with limits is going, Clicks reads ``57 / 200`` and
+    ``time_left`` counts down to the earliest time limit (#173).
+    """
     clicks = f"{int(status.get('click_count', 0)):,}"
+    running = bool(status.get("is_running"))
+    max_clicks = int(_num(status.get("max_clicks"), 0))
+    if running and max_clicks > 0:
+        clicks = f"{clicks} / {max_clicks:,}"
+    left = status.get("seconds_left")
+    time_left = f"{describe_wait(float(left))} left" if running and left is not None else ""
     runtime = str(status.get("runtime", "00:00:00"))
     perf = status.get("performance")
     rate = "--"
@@ -43,7 +57,7 @@ def format_stats(status: Mapping[str, Any]) -> Stats:
         cps = float(perf.get("clicks_per_second", 0))
         if cps > 0 or status.get("is_running"):
             rate = f"{cps:.1f}/s"
-    return Stats(clicks, runtime, rate)
+    return Stats(clicks, runtime, rate, time_left)
 
 
 def click_summary(

@@ -55,7 +55,7 @@ from .sections import (
     build_timing_panel,
 )
 from .styles import BG_FRAME
-from .summaries import click_summary, format_stats, safety_summary, timing_summary
+from .summaries import SEP, click_summary, format_stats, safety_summary, timing_summary
 from .theme import FONT, STATUS_COLORS, apply_theme
 
 _log = logging.getLogger(__name__)
@@ -830,9 +830,15 @@ class AutoclickerApp(
         self.click_count_var.set(stats.clicks)
         self.runtime_var.set(stats.runtime)
         self.performance_var.set(stats.rate)
+        tile = getattr(self, "runtime_tile", None)
+        if tile is not None:
+            tile.set_caption(f"Runtime{SEP}{stats.time_left}" if stats.time_left else "Runtime")
         if status.get("is_running"):
             state = "paused" if status.get("is_paused") else "running"
-            self._set_tray_title(f"{state}, {status['click_count']:,} clicks")
+            parts = [state, f"{stats.clicks} clicks"]
+            if stats.time_left:
+                parts.append(stats.time_left)
+            self._set_tray_title(", ".join(parts))
 
     def _start_status_timer(self) -> None:
         """Start periodic status updates."""
