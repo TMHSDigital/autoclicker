@@ -40,6 +40,7 @@ def build_header_section(app, parent) -> ttk.Frame:
     app.overflow_menu.add_command(label="Import profiles…", command=app.import_profiles)
     app.overflow_menu.add_command(label="Export profiles…", command=app.export_profiles)
     app.overflow_menu.add_command(label="Check for updates now", command=app.check_for_updates_now)
+    app.overflow_menu.add_command(label="Open data folder", command=app.open_data_folder)
     app.overflow_menu.add_separator()
     app.overflow_menu.add_command(label="Hotkeys…", command=app.open_hotkeys_dialog)
     app.overflow_menu.add_command(label="About", command=app.show_info)

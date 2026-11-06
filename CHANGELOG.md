@@ -18,6 +18,8 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 - **Spread**: each click can land at a random spot up to N pixels (0 to 50) from its target, like variation does for timing. Works for fixed points, sequence steps and image targets (staying on the image), also as `--spread` and in profiles (#120).
 - Portable mode: with a `portable.txt` file next to `WindowsAutoclicker.exe`, settings, logs and captured images stay in a `data` folder beside it instead of `%APPDATA%`. Releases include a ready-made `WindowsAutoclicker-portable.zip`, smoke-tested in CI (#122).
 
+- **Open data folder** in the menu opens the folder with your settings, logs and captured images, in portable mode too (#180).
+
 ### Changed
 
 - New dark control-panel window. A large Start/Stop button carries the hotkey and turns amber while counting down and red while running; Clicks, Runtime and Rate readouts and a status line that describes the click settings sit beside it. Target and Click are side-by-side panels with segmented controls; Timing and Safety collapse to a one-line summary of their non-default values; the tray and update toggles live in the footer. The light theme and the sun/moon toggle are gone, and a saved `theme` setting is ignored. Import/Export profiles and Check for updates now moved to the menu in the top-right corner. The success-rate figure no longer shows in the window (it is still in Copy diagnostics).

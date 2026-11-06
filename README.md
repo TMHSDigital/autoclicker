@@ -280,7 +280,7 @@ An autoclicker that won't stop is worse than none, so every run has more than on
 
 ## Settings and logs
 
-Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. Paste that into Explorer's address bar to open it.
+Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. **Open data folder** in the menu (top-right corner of the window) opens it, in portable mode too; or paste the path into Explorer's address bar.
 
 **Portable mode:** put an empty file named `portable.txt` next to `WindowsAutoclicker.exe` and everything is kept in a `data` folder beside the exe instead, which is handy on a USB stick or a synced folder. Each release also has a ready-made `WindowsAutoclicker-portable.zip`. Keep the folder somewhere you can write to (not `Program Files`). Copy diagnostics says *portable* when it is on.
 
