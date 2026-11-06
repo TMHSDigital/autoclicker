@@ -11,6 +11,7 @@ code that says how the run ended. Headless runs never change saved settings.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 import threading
@@ -64,6 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  autoclicker --cursor --interval 50ms --clicks 200 --start\n"
             "  autoclicker --profile Work --headless\n"
+            "  autoclicker --list-profiles\n"
             "Headless exit codes: 0 done or stopped, 2 bad options, 3 emergency stop,\n"
             "4 failsafe or runaway guard, 5 error, 6 already running."
         ),
@@ -82,6 +84,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="click wherever the captured image appears (the saved capture, or the profile's)",
     )
     parser.add_argument("--profile", metavar="NAME", help="load a saved profile first")
+    parser.add_argument(
+        "--list-profiles", action="store_true", help="print the saved profiles and exit"
+    )
     parser.add_argument(
         "--interval", metavar="TIME", help="wait between clicks or bursts, e.g. 100ms or 2s"
     )
@@ -111,6 +116,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="no window: run once with the given settings, then exit (implies --start)",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="with --headless: print the result as one JSON object on stdout "
+        "(reason, message, clicks, seconds, exit_code); progress goes to stderr",
+    )
     return parser
 
 
@@ -126,7 +137,11 @@ def has_overrides(args: argparse.Namespace) -> bool:
     return any(getattr(args, key) for key in keys)
 
 
-def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]) -> dict:
+def build_overrides(
+    args: argparse.Namespace,
+    load_profile: Callable[[str], Any],
+    profile_names: Callable[[], list[str]] | None = None,
+) -> dict:
     """Form values from the flags, shaped like a profile (``x``/``y`` for the point).
 
     Raises UsageError for values that can't be read. Range checks happen in the
@@ -136,7 +151,7 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
     if args.profile:
         profile = load_profile(args.profile)
         if profile is None:
-            raise UsageError(f"No profile named {args.profile!r}")
+            raise UsageError(_no_such_profile(args.profile, profile_names))
         values.update(profile)
     if args.at:
         parts = [p.strip() for p in args.at.split(",")]
@@ -186,6 +201,33 @@ def build_overrides(args: argparse.Namespace, load_profile: Callable[[str], Any]
     return values
 
 
+def _no_such_profile(name: str, profile_names: Callable[[], list[str]] | None) -> str:
+    """The not-found message, naming the profiles that do exist (#176)."""
+    message = f"No profile named {name!r}"
+    if profile_names is None:
+        return message
+    names = profile_names()
+    if not names:
+        return f"{message}; there are no saved profiles"
+    return f"{message}. Saved profiles: {', '.join(sorted(names, key=str.lower))}"
+
+
+def profile_listing() -> str:
+    """One line per saved profile, ``name: summary``, for --list-profiles (#176)."""
+    from .core.settings_manager import SettingsManager
+    from .utils.profiles import PresetManager, describe_profile
+
+    manager = PresetManager(SettingsManager())
+    names = sorted(manager.get_preset_names(), key=str.lower)
+    if not names:
+        return "No saved profiles."
+    lines = []
+    for name in names:
+        profile = manager.load_profile(name)
+        lines.append(f"{name}: {describe_profile(profile)}" if profile else name)
+    return "\n".join(lines)
+
+
 def _to_raw(saved: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     """Saved settings overlaid with profile-shaped overrides, as raw settings keys."""
     raw = dict(saved)
@@ -223,31 +265,70 @@ def _launcher_window() -> int | None:
 
 
 def run_headless(args: argparse.Namespace) -> int:
-    """Run once without a window and return the process exit code."""
+    """Run once without a window and return the process exit code.
+
+    With ``--json`` every exit, including bad options and a cancelled countdown,
+    ends with one JSON object on stdout and the progress lines go to stderr.
+    """
+    as_json = bool(getattr(args, "json", False))
+    say = (lambda text: _emit(text, error=True)) if as_json else _emit
+    code, outcome, seconds = _run_headless(args, say)
+    if as_json:
+        _emit(json.dumps(_json_result(code, outcome, seconds)))
+    return code
+
+
+def _json_result(code: int, outcome: RunOutcome, seconds: float) -> dict[str, Any]:
+    """The --json fields (#176). Keep them stable: scripts read them."""
+    return {
+        "reason": outcome.reason,
+        "message": outcome.message,
+        "clicks": outcome.clicks,
+        "seconds": round(seconds, 3),
+        "exit_code": code,
+    }
+
+
+# Reasons in --json output for exits that happen before a run starts.
+REASON_USAGE = "usage"
+REASON_ALREADY_RUNNING = "already_running"
+REASON_CANCELLED = "cancelled"
+
+
+def _run_headless(
+    args: argparse.Namespace, say: Callable[[str], None]
+) -> tuple[int, RunOutcome, float]:
     from .app.controller import AutoclickerController
     from .app.hotkeys import DEFAULT_HOTKEYS, HotkeyError, HotkeyManager, validate_bindings
     from .core.settings_manager import field_label
     from .core.single_instance import SingleInstance
 
+    def refused(code: int, reason: str, message: str) -> tuple[int, RunOutcome, float]:
+        return code, RunOutcome(reason, message, 0), 0.0
+
     launcher = _launcher_window()
     instance = SingleInstance()
     if not instance.acquire():
-        _emit("Windows Autoclicker is already running; close it first.", error=True)
-        return EXIT_ALREADY_RUNNING
+        message = "Windows Autoclicker is already running; close it first."
+        _emit(message, error=True)
+        return refused(EXIT_ALREADY_RUNNING, REASON_ALREADY_RUNNING, message)
 
     controller = AutoclickerController()
     try:
-        overrides = build_overrides(args, controller.preset_manager.load_profile)
+        overrides = build_overrides(
+            args, controller.preset_manager.load_profile, controller.preset_manager.get_preset_names
+        )
     except UsageError as e:
         _emit(f"autoclicker: {e}", error=True)
-        return EXIT_USAGE
+        return refused(EXIT_USAGE, REASON_USAGE, str(e))
 
     raw = _to_raw(controller.settings.get_all(), overrides)
     result = controller.validate(raw)
     if not result["valid"]:
-        for field, message in result["errors"].items():
-            _emit(f"autoclicker: {field_label(field)}: {message}", error=True)
-        return EXIT_USAGE
+        messages = [f"{field_label(f)}: {m}" for f, m in result["errors"].items()]
+        for message in messages:
+            _emit(f"autoclicker: {message}", error=True)
+        return refused(EXIT_USAGE, REASON_USAGE, "; ".join(messages))
 
     try:
         delay = int(result["sanitized_settings"].get("start_delay_seconds", 0))
@@ -256,21 +337,21 @@ def run_headless(args: argparse.Namespace) -> int:
     start_at = parse_start_at(str(result["sanitized_settings"].get("start_at") or ""))
     if start_at is not None:
         until = next_start(*start_at, datetime.now())
-        _emit(f"Starting at {until:%H:%M}. Ctrl+C to cancel.")
+        say(f"Starting at {until:%H:%M}. Ctrl+C to cancel.")
         try:
             while (left := (until - datetime.now()).total_seconds()) > 0:
                 time.sleep(min(1.0, left))
         except KeyboardInterrupt:
-            _emit("Cancelled.")
-            return EXIT_OK
+            say("Cancelled.")
+            return refused(EXIT_OK, REASON_CANCELLED, "Cancelled")
         delay = 0
     for remaining in range(delay, 0, -1):
-        _emit(f"Starting in {remaining}... (Ctrl+C to cancel)")
+        say(f"Starting in {remaining}... (Ctrl+C to cancel)")
         try:
             time.sleep(1)
         except KeyboardInterrupt:
-            _emit("Cancelled.")
-            return EXIT_OK
+            say("Cancelled.")
+            return refused(EXIT_OK, REASON_CANCELLED, "Cancelled")
 
     done = threading.Event()
     outcomes: list[RunOutcome] = []
@@ -310,12 +391,13 @@ def run_headless(args: argparse.Namespace) -> int:
     )
     if not started.success:
         hotkeys.unregister()
-        for field, message in (started.validation_errors or {}).items():
-            _emit(f"autoclicker: {field_label(field)}: {message}", error=True)
-        return EXIT_USAGE
+        messages = [f"{field_label(f)}: {m}" for f, m in (started.validation_errors or {}).items()]
+        for message in messages:
+            _emit(f"autoclicker: {message}", error=True)
+        return refused(EXIT_USAGE, REASON_USAGE, "; ".join(messages) or "Could not start")
 
     stop_keys = ", ".join(k for k in (bindings.get("stop"), bindings.get("emergency")) if k)
-    _emit(f"Clicking. Press {stop_keys} (or Ctrl+C) to stop.")
+    say(f"Clicking. Press {stop_keys} (or Ctrl+C) to stop.")
     try:
         while not done.wait(0.2):
             pass
@@ -327,5 +409,6 @@ def run_headless(args: argparse.Namespace) -> int:
         controller.finish_run()
 
     outcome = outcomes[0] if outcomes else RunOutcome(STOP_ERROR, "No result", 0)
-    _emit(f"{outcome.message} ({outcome.clicks:,} click{'s' * (outcome.clicks != 1)})")
-    return EXIT_CODES.get(outcome.reason, EXIT_ERROR)
+    say(f"{outcome.message} ({outcome.clicks:,} click{'s' * (outcome.clicks != 1)})")
+    seconds = controller.click_engine.run_seconds()
+    return EXIT_CODES.get(outcome.reason, EXIT_ERROR), outcome, seconds

@@ -203,6 +203,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | :-- | :-- |
 | `--at X,Y`, `--cursor`, `--sequence`, `--image` | Target: a point, wherever the cursor is, the saved sequence, or wherever the captured image appears (the saved capture, or the one in `--profile`) |
 | `--profile NAME` | Load a saved profile first (other flags apply on top) |
+| `--list-profiles` | Print the saved profiles, one per line with a summary, and exit |
 | `--interval 100ms` / `2s`, `--variation MS` | Timing |
 | `--spread PX` | Land each click up to PX pixels from the target (0 to 50) |
 | `--button left\|right\|middle`, `--double`, `--single` | What to click |
@@ -212,7 +213,10 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--start-at HH:MM` | Wait until this time of day (24-hour) before starting |
 | `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
 | `--headless` | No window: run once, then exit. Hotkeys, the corner failsafe and every limit still apply, and saved settings are left alone |
+| `--json` | With `--headless`: print the result as one JSON object on stdout (progress goes to stderr) |
 | `--version` | Print the version and exit |
+
+With `--json` the last line on stdout is always one JSON object, also for bad options or a cancelled countdown, with these fields: `reason` (`completed`, `user_stop`, `emergency`, `safety`, `error`, or `usage`, `already_running`, `cancelled` when no run started), `message`, `clicks`, `seconds` and `exit_code`.
 
 A headless run exits with `0` when it finishes or you press Stop, `2` for bad options, `3` after an emergency stop, `4` for the failsafe or runaway guard, `5` on an error and `6` if the app is already running. `--help` lists everything; the `.exe` shows it in a dialog.
 

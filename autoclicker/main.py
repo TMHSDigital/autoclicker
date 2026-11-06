@@ -23,6 +23,7 @@ from .cli import (  # noqa: E402
     build_overrides,
     build_parser,
     has_overrides,
+    profile_listing,
     run_headless,
 )
 from .core.logging_setup import configure_logging  # noqa: E402
@@ -56,6 +57,13 @@ def main(argv: list[str] | None = None) -> int:
     """Run the app (or a headless run). Returns the process exit code."""
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     configure_logging()
+    if args.list_profiles:
+        listing = profile_listing()
+        if sys.stdout is None:  # the windowed exe has no console
+            _show_dialog("Saved profiles", listing, error=False)
+        else:
+            print(listing)
+        return 0
     if args.headless:
         return run_headless(args)
 
@@ -85,7 +93,9 @@ def _apply_launch_options(app: AutoclickerApp, args: argparse.Namespace) -> None
     """Fill the form from flags, then hide to the tray and/or press Start."""
     if has_overrides(args):
         try:
-            overrides = build_overrides(args, app.preset_manager.load_profile)
+            overrides = build_overrides(
+                args, app.preset_manager.load_profile, app.preset_manager.get_preset_names
+            )
         except UsageError as e:
             app._set_status_message(f"Command line: {e}", "error")
             return
