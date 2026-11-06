@@ -77,6 +77,7 @@ FIELD_LABELS: dict[str, str] = {
     "pause_when_unfocused": "Pause when unfocused",
     "start_delay_seconds": "Start delay",
     "start_at": "Start at",
+    "stop_at": "Stop at",
     "sequence": "Sequence",
     "sequence_repeat": "Repeat",
     "action": "Action",
@@ -132,7 +133,7 @@ _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
 _LIST_KEYS = frozenset({"sequence", "image_region"})
 _STR_KEYS = frozenset(
-    {*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path", "start_at"}
+    {*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path", "start_at", "stop_at"}
 )
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
@@ -216,6 +217,7 @@ class SettingsManager:
         "max_cps_ceiling": 50,
         "start_delay_seconds": 3,
         "start_at": "",
+        "stop_at": "",
         "sequence": [],
         "sequence_repeat": 0,
         "action": "click",
@@ -771,6 +773,9 @@ class SettingsManager:
         start_at = str(parsed.get("start_at") or "").strip()
         if start_at and parse_start_at(start_at) is None:
             errors["start_at"] = "Use a 24-hour time such as 09:30, or leave it blank"
+        stop_at = str(parsed.get("stop_at") or "").strip()
+        if stop_at and parse_start_at(stop_at) is None:
+            errors["stop_at"] = "Use a 24-hour time such as 17:30, or leave it blank"
 
         return {
             "valid": not errors,

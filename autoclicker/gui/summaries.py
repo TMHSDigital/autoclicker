@@ -78,7 +78,9 @@ def click_summary(
     return text
 
 
-def timing_summary(*, burst_clicks: str, burst_pause: str, start_delay: str, start_at: str) -> str:
+def timing_summary(
+    *, burst_clicks: str, burst_pause: str, start_delay: str, start_at: str, stop_at: str = ""
+) -> str:
     """Non-default Timing values, or ``no delay · no burst``."""
     parts: list[str] = []
     burst = int(_num(burst_clicks, 1))
@@ -90,6 +92,8 @@ def timing_summary(*, burst_clicks: str, burst_pause: str, start_delay: str, sta
         parts.append(f"{_plain(delay)} s delay")
     if start_at.strip():
         parts.append(f"at {start_at.strip()}")
+    if stop_at.strip():
+        parts.append(f"until {stop_at.strip()}")
     return SEP.join(parts) if parts else f"no delay{SEP}no burst"
 
 

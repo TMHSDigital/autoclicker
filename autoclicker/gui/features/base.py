@@ -53,6 +53,7 @@ class AppBase:
     hold_entry: ttk.Entry
     spread_entry: ttk.Entry
     start_at_entry: ttk.Entry
+    stop_at_entry: ttk.Entry
     key_entry: ttk.Entry
     condition_var: tk.StringVar
     condition_label_var: tk.StringVar

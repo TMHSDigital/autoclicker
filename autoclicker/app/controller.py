@@ -7,8 +7,10 @@ import functools
 import logging
 import math
 import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunOutcome
@@ -22,6 +24,7 @@ from ..core.image_match import (
 )
 from ..core.lazy_pyautogui import pyautogui
 from ..core.safety import get_foreground_window_handle
+from ..core.schedule import next_start, parse_start_at
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
 from ..core.settings_manager import SettingsManager, uses_point
@@ -100,6 +103,20 @@ def _prepared_template(path: str) -> tuple[Any, PreparedTemplate]:
 def _prepare_cached(path: str, _mtime_ns: int, _size: int) -> tuple[Any, PreparedTemplate]:
     template = open_template(path)
     return template, PreparedTemplate.from_image(template)
+
+
+def _stop_deadline(stop_at: str) -> tuple[float, str] | None:
+    """``(monotonic deadline, "HH:MM")`` for Stop at, or None when it is blank (#177).
+
+    Worked out when the run starts, so a countdown or Start at before it is
+    accounted for; the next time the clock shows that time, across midnight too.
+    """
+    parsed = parse_start_at(stop_at)
+    if parsed is None:
+        return None
+    now = datetime.now()
+    seconds = (next_start(*parsed, now) - now).total_seconds()
+    return time.monotonic() + seconds, f"{parsed[0]:02d}:{parsed[1]:02d}"
 
 
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
@@ -195,6 +212,7 @@ class AutoclickerController:
             "max_cps_ceiling": ui_fields.get("max_cps_ceiling", 50),
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
             "start_at": ui_fields.get("start_at", ""),
+            "stop_at": ui_fields.get("stop_at", ""),
             "sequence": ui_fields.get("sequence", []),
             "sequence_repeat": ui_fields.get("sequence_repeat", 0),
             "action": ui_fields.get("action", "click"),
@@ -319,6 +337,7 @@ class AutoclickerController:
             condition=_pixel_condition(sanitized),
             image=image,
             spread=int(sanitized.get("click_spread", 0)),
+            stop_at=_stop_deadline(str(sanitized.get("stop_at") or "")),
         )
 
         if started:

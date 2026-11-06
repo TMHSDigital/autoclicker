@@ -313,6 +313,7 @@ class AutoclickerApp(
                     burst_pause=self.burst_pause_entry.get(),
                     start_delay=self.start_delay_entry.get(),
                     start_at=self.start_at_entry.get(),
+                    stop_at=self.stop_at_entry.get(),
                 )
             )
         safety = getattr(self, "safety_panel", None)
@@ -697,6 +698,7 @@ class AutoclickerApp(
                 "max_cps_ceiling": self.max_cps_entry.get(),
                 "start_delay_seconds": self.start_delay_entry.get(),
                 "start_at": self.start_at_entry.get(),
+                "stop_at": self.stop_at_entry.get(),
                 "sequence": [dict(step) for step in self.sequence_steps],
                 "sequence_repeat": self.sequence_repeat_entry.get(),
                 "image_path": self.image_path,

@@ -18,6 +18,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 - **Spread**: each click can land at a random spot up to N pixels (0 to 50) from its target, like variation does for timing. Works for fixed points, sequence steps and image targets (staying on the image), also as `--spread` and in profiles (#120).
 - Portable mode: with a `portable.txt` file next to `WindowsAutoclicker.exe`, settings, logs and captured images stay in a `data` folder beside it instead of `%APPDATA%`. Releases include a ready-made `WindowsAutoclicker-portable.zip`, smoke-tested in CI (#122).
 
+- **Stop at** a time of day (Timing, or `--stop-at 17:30`), the counterpart to Start at: the run ends the next time the clock shows that time, across midnight too, or earlier if a click or minute limit comes first (#177).
 - `--list-profiles` prints the saved profiles with a one-line summary each, and a `--profile` name that doesn't exist now lists the saved ones. `--headless --json` prints the result as one JSON object (`reason`, `message`, `clicks`, `seconds`, `exit_code`) for scripts (#176).
 - **Open data folder** in the menu opens the folder with your settings, logs and captured images, in portable mode too (#180).
 

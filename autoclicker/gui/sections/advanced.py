@@ -8,7 +8,7 @@ from ..widgets.panel import CollapsiblePanel, labeled_row
 
 
 def build_timing_panel(app, parent) -> CollapsiblePanel:
-    """Burst, start delay and start-at time."""
+    """Burst, start delay, start-at and stop-at times."""
     panel = CollapsiblePanel(parent, "Timing")
     _build_timing(app, panel.body, app.controller.settings)
     for entry in (
@@ -16,6 +16,7 @@ def build_timing_panel(app, parent) -> CollapsiblePanel:
         app.burst_pause_entry,
         app.start_delay_entry,
         app.start_at_entry,
+        app.stop_at_entry,
     ):
         _refresh_on_edit(app, entry)
     return panel
@@ -65,6 +66,15 @@ def _build_timing(app, body: ttk.Frame, settings) -> None:
     ttk.Label(
         start_at, text="24-hour time, e.g. 09:30 (blank = use the delay)", wraplength=170
     ).pack(side=tk.LEFT, padx=(5, 0))
+
+    # End the run at a time of day (#177), with the Safety limits: first one wins.
+    stop_at = labeled_row(body, 3, "Stop at")
+    app.stop_at_entry = ttk.Entry(stop_at, width=6)
+    app.stop_at_entry.pack(side=tk.LEFT)
+    app.stop_at_entry.insert(0, str(settings.get("stop_at", "") or ""))
+    ttk.Label(stop_at, text="24-hour time, e.g. 17:30 (blank = no end time)", wraplength=170).pack(
+        side=tk.LEFT, padx=(5, 0)
+    )
 
 
 def _build_safety(app, body: ttk.Frame, settings) -> None:

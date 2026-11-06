@@ -211,6 +211,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | `--burst N:MS`, `--clicks N`, `--minutes N`, `--repeat N` | Bursts, limits and sequence rounds |
 | `--delay SECONDS` | Countdown before clicking starts |
 | `--start-at HH:MM` | Wait until this time of day (24-hour) before starting |
+| `--stop-at HH:MM` | Stop at this time of day (24-hour), or earlier if another limit is reached |
 | `--start`, `--minimized` | Press Start after launch; start hidden in the tray |
 | `--headless` | No window: run once, then exit. Hotkeys, the corner failsafe and every limit still apply, and saved settings are left alone |
 | `--json` | With `--headless`: print the result as one JSON object on stdout (progress goes to stderr) |
@@ -223,6 +224,8 @@ A headless run exits with `0` when it finishes or you press Stop, `2` for bad op
 ### Start on a schedule
 
 For a one-off start later today, set **Timing, Start at** (24-hour, such as `09:30`) and press Start: the status line counts down to that time, and Stop, the tray's Stop or the toggle key cancel it. The global Stop and Emergency keys are claimed only for the last minute, so Esc keeps working in other apps while you wait. From the command line, `--start-at 09:30` does the same.
+
+To end a run at a time of day, set **Timing, Stop at** (such as `17:30`) or pass `--stop-at 17:30`. It is the next time the clock shows that time after the run starts, so it works across midnight, and it combines with the click and minute limits in **Safety**: whichever comes first ends the run.
 
 To start every day, or while you're away, use Windows **Task Scheduler**:
 

@@ -155,6 +155,8 @@ class ClickEngine:
         self.click_thread: threading.Thread | None = None
         self.click_count = 0
         self.start_time = 0.0
+        # Stop at a time of day: (monotonic deadline, "HH:MM"), or None (#177).
+        self._stop_at: tuple[float, str] | None = None
         # When the last run's loop ended (0 while running), so idle readouts
         # keep that run's runtime and rate instead of counting on (#148).
         self.end_time = 0.0
@@ -261,6 +263,7 @@ class ClickEngine:
         condition: PixelCondition | None = None,
         image: ImageTarget | None = None,
         spread: int = 0,
+        stop_at: tuple[float, str] | None = None,
     ) -> bool:
         """
         Start the clicking process
@@ -292,6 +295,8 @@ class ClickEngine:
             spread: Click up to this many px away from the target, at random,
                 in fixed, sequence and image modes (kept inside the image and
                 on screen); ignored at the cursor and for key presses
+            stop_at: ``(time.monotonic() deadline, "HH:MM")``: end the run then,
+                like auto_stop_minutes; whichever limit comes first wins (#177)
 
         Returns:
             True if started successfully, False otherwise
@@ -340,6 +345,7 @@ class ClickEngine:
         self.stats = ClickStats()
         self.start_time = time.monotonic()
         self.end_time = 0.0
+        self._stop_at = stop_at
         self._stop_event.clear()
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
@@ -711,6 +717,9 @@ class ClickEngine:
             if elapsed_minutes >= auto_stop_minutes:
                 unit = "minute" if auto_stop_minutes == 1 else "minutes"
                 return f"Done: auto-stopped after {auto_stop_minutes} {unit}"
+
+        if self._stop_at is not None and time.monotonic() >= self._stop_at[0]:
+            return f"Done: stopped at {self._stop_at[1]}"
 
         return None
 

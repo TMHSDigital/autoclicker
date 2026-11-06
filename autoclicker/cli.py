@@ -109,6 +109,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--start-at", metavar="HH:MM", help="wait until this time of day (24-hour) to start"
     )
+    parser.add_argument(
+        "--stop-at", metavar="HH:MM", help="stop at this time of day (24-hour), at the latest"
+    )
     parser.add_argument("--start", action="store_true", help="start clicking after launch")
     parser.add_argument("--minimized", action="store_true", help="start hidden in the tray")
     parser.add_argument(
@@ -132,7 +135,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
         "at", "cursor", "sequence", "image", "profile", "interval", "variation", "spread", "button", "double",
-        "single", "burst", "clicks", "minutes", "repeat", "delay", "start_at", "hold", "key",
+        "single", "burst", "clicks", "minutes", "repeat", "delay", "start_at", "stop_at", "hold",
+        "key",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
 
@@ -185,6 +189,7 @@ def build_overrides(
         "repeat": "sequence_repeat",
         "delay": "start_delay_seconds",
         "start_at": "start_at",
+        "stop_at": "stop_at",
     }
     for flag, key in simple.items():
         value = getattr(args, flag)
