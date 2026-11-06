@@ -11,6 +11,11 @@ from unittest.mock import patch
 from autoclicker.core.settings_manager import SettingsManager
 
 
+def _point(profile):
+    """A profile's target point, or None."""
+    return None if profile is None else (profile["x"], profile["y"])
+
+
 class TestSettingsManager(unittest.TestCase):
     """Test cases for SettingsManager"""
 
@@ -338,11 +343,9 @@ class TestSettingsManager(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             first = SettingsManager(os.path.join(tmp, "a.json"))
-            PresetManager(first).save_preset("Leaky", 1, 2)
+            PresetManager(first).save_profile("Leaky", {"x": 1, "y": 2})
             second = SettingsManager(os.path.join(tmp, "b.json"))
             self.assertEqual(second.get("presets"), {})
-            first.reset_to_defaults()
-            self.assertEqual(first.get("presets"), {})
         self.assertEqual(SettingsManager.DEFAULT_SETTINGS["presets"], {})
 
     def test_non_dict_json_uses_defaults(self):

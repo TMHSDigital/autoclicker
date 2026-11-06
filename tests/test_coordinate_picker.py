@@ -12,6 +12,11 @@ from autoclicker.gui.picker import CoordinatePicker
 from autoclicker.utils.profiles import PresetManager
 
 
+def _point(profile):
+    """A profile's target point, or None."""
+    return None if profile is None else (profile["x"], profile["y"])
+
+
 class TestOverlayPicker(unittest.TestCase):
     """#43: Pick Location uses a click-absorbing overlay on the Tk thread."""
 
@@ -111,7 +116,7 @@ class TestPresetManager(unittest.TestCase):
 
     def test_save_preset_success(self):
         """Test successful preset saving"""
-        result = self.preset_manager.save_preset("TestPreset", 100, 200)
+        result = self.preset_manager.save_profile("TestPreset", {"x": 100, "y": 200})
         self.assertTrue(result)
 
         # Check that preset was saved in settings
@@ -122,15 +127,15 @@ class TestPresetManager(unittest.TestCase):
     def test_load_preset_success(self):
         """Test successful preset loading"""
         # Save a preset first
-        self.preset_manager.save_preset("LoadTest", 300, 400)
+        self.preset_manager.save_profile("LoadTest", {"x": 300, "y": 400})
 
         # Load the preset
-        coords = self.preset_manager.load_preset("LoadTest")
+        coords = _point(self.preset_manager.load_profile("LoadTest"))
         self.assertEqual(coords, (300, 400))
 
     def test_load_preset_not_found(self):
         """Test loading non-existent preset"""
-        coords = self.preset_manager.load_preset("NonExistent")
+        coords = _point(self.preset_manager.load_profile("NonExistent"))
         self.assertIsNone(coords)
 
     def test_get_preset_names(self):
@@ -140,8 +145,8 @@ class TestPresetManager(unittest.TestCase):
         self.assertEqual(names, [])
 
         # Add some presets
-        self.preset_manager.save_preset("Preset1", 100, 100)
-        self.preset_manager.save_preset("Preset2", 200, 200)
+        self.preset_manager.save_profile("Preset1", {"x": 100, "y": 100})
+        self.preset_manager.save_profile("Preset2", {"x": 200, "y": 200})
 
         names = self.preset_manager.get_preset_names()
         self.assertEqual(set(names), {"Preset1", "Preset2"})
@@ -149,14 +154,14 @@ class TestPresetManager(unittest.TestCase):
     def test_delete_preset_success(self):
         """Test successful preset deletion"""
         # Save a preset first
-        self.preset_manager.save_preset("DeleteTest", 500, 600)
+        self.preset_manager.save_profile("DeleteTest", {"x": 500, "y": 600})
 
         # Delete the preset
         result = self.preset_manager.delete_preset("DeleteTest")
         self.assertTrue(result)
 
         # Check that it's gone
-        coords = self.preset_manager.load_preset("DeleteTest")
+        coords = _point(self.preset_manager.load_profile("DeleteTest"))
         self.assertIsNone(coords)
 
     def test_delete_preset_not_found(self):
@@ -167,14 +172,14 @@ class TestPresetManager(unittest.TestCase):
     def test_preset_persistence(self):
         """Test that presets persist across settings manager instances"""
         # Save preset with first manager
-        self.preset_manager.save_preset("Persistent", 123, 456)
+        self.preset_manager.save_profile("Persistent", {"x": 123, "y": 456})
 
         # Create new manager and preset manager
         new_settings = SettingsManager(self.settings_file)
         new_preset_manager = PresetManager(new_settings)
 
         # Load preset with new manager
-        coords = new_preset_manager.load_preset("Persistent")
+        coords = _point(new_preset_manager.load_profile("Persistent"))
         self.assertEqual(coords, (123, 456))
 
 

@@ -4,6 +4,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ...core.safety import DEFAULT_MAX_CPS
 from ..widgets.panel import CollapsiblePanel, labeled_row
 
 
@@ -115,7 +116,7 @@ def _build_safety(app, body: ttk.Frame, settings) -> None:
     speed = labeled_row(body, 2, "Speed limit")
     app.max_cps_entry = ttk.Entry(speed, width=4)
     app.max_cps_entry.pack(side=tk.LEFT)
-    app.max_cps_entry.insert(0, str(settings.get("max_cps_ceiling", "50")))
+    app.max_cps_entry.insert(0, str(settings.get("max_cps_ceiling", DEFAULT_MAX_CPS)))
     ttk.Label(speed, text="clicks per second max (0 = off)", wraplength=170).pack(
         side=tk.LEFT, padx=(5, 0)
     )

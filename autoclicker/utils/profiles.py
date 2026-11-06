@@ -114,17 +114,6 @@ class PresetManager:
 
     # -- coordinates only (kept for callers that only need the point) -----
 
-    def save_preset(self, name: str, x: int, y: int) -> bool:
-        """Save just a target point under ``name``."""
-        return self.save_profile(name, {"x": x, "y": y})
-
-    def load_preset(self, name: str) -> tuple[int, int] | None:
-        """The target point of a profile, or None."""
-        profile = self.load_profile(name)
-        if profile is None:
-            return None
-        return profile["x"], profile["y"]
-
     # -- profiles ----------------------------------------------------------
 
     def save_profile(self, name: str, values: dict[str, Any]) -> bool:

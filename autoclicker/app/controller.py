@@ -23,7 +23,7 @@ from ..core.image_match import (
     search_region,
 )
 from ..core.lazy_pyautogui import pyautogui
-from ..core.safety import get_foreground_window_handle
+from ..core.safety import DEFAULT_MAX_CPS, get_foreground_window_handle
 from ..core.schedule import next_start, parse_start_at
 from ..core.screen import ScreenBounds, virtual_screen_bounds
 from ..core.session_log import append_session_event
@@ -183,7 +183,7 @@ class AutoclickerController:
         """Apply persisted safety settings to the click engine."""
         self.click_engine.configure_safety(
             failsafe=bool(self.settings.get("enable_failsafe", True)),
-            max_cps=_stored_int(self.settings.get("max_cps_ceiling"), 50),
+            max_cps=_stored_int(self.settings.get("max_cps_ceiling"), DEFAULT_MAX_CPS),
             pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
         )
 
@@ -193,7 +193,11 @@ class AutoclickerController:
         """Reconfigure safety from live UI toggle values (speed limit from settings if not given)."""
         self.click_engine.configure_safety(
             failsafe=failsafe,
-            max_cps=int(self.settings.get("max_cps_ceiling", 50) if max_cps is None else max_cps),
+            max_cps=int(
+                self.settings.get("max_cps_ceiling", DEFAULT_MAX_CPS)
+                if max_cps is None
+                else max_cps
+            ),
             pause_when_unfocused=pause_when_unfocused,
         )
 
@@ -215,7 +219,7 @@ class AutoclickerController:
             "auto_stop_minutes": ui_fields["auto_stop_minutes"],
             "enable_failsafe": ui_fields["enable_failsafe"],
             "pause_when_unfocused": ui_fields["pause_when_unfocused"],
-            "max_cps_ceiling": ui_fields.get("max_cps_ceiling", 50),
+            "max_cps_ceiling": ui_fields.get("max_cps_ceiling", DEFAULT_MAX_CPS),
             "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
             "start_at": ui_fields.get("start_at", ""),
             "stop_at": ui_fields.get("stop_at", ""),
@@ -231,7 +235,7 @@ class AutoclickerController:
             "condition_tolerance": ui_fields.get("condition_tolerance", 16),
             "image_path": ui_fields.get("image_path", ""),
             "image_region": ui_fields.get("image_region", []),
-            "image_margin": ui_fields.get("image_margin", 150),
+            "image_margin": ui_fields.get("image_margin", DEFAULT_MARGIN),
             "image_tolerance": ui_fields.get("image_tolerance", 0),
             "image_missing_stop_seconds": ui_fields.get("image_missing_stop_seconds", 0),
             "click_spread": ui_fields.get("click_spread", 0),

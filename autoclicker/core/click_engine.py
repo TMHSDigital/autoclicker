@@ -22,6 +22,7 @@ from .exceptions import (
 from .image_match import ImageTarget
 from .lazy_pyautogui import pyautogui
 from .safety import (
+    DEFAULT_MAX_CPS,
     apply_failsafe,
     get_foreground_window_handle,
     is_foreground_window,
@@ -183,7 +184,7 @@ class ClickEngine:
         # Corner pixels of every monitor that abort a run (PyAutoGUI's own
         # failsafe only watches the primary monitor). Empty = not checked.
         self._failsafe_corners: frozenset[tuple[int, int]] = frozenset()
-        self.max_cps_ceiling = 50
+        self.max_cps_ceiling = DEFAULT_MAX_CPS
         self.pause_when_unfocused = False
         # Window that must stay in front while pause_when_unfocused is on.
         # None during a run means "adopt the next window in front that isn't ours".
@@ -230,7 +231,7 @@ class ClickEngine:
         self,
         *,
         failsafe: bool = True,
-        max_cps: int = 50,
+        max_cps: int = DEFAULT_MAX_CPS,
         pause_when_unfocused: bool = False,
     ) -> None:
         """Apply safety limits before starting."""

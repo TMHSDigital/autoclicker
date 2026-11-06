@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 from .exceptions import ValidationError
+from .image_match import DEFAULT_MARGIN
+from .safety import DEFAULT_MAX_CPS
 from .schedule import parse_start_at
 from .screen import ScreenBounds
 from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
@@ -137,7 +139,7 @@ _BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
 _LIST_KEYS = frozenset({"sequence", "image_region"})
 _STR_KEYS = frozenset(
-    {*_CHOICE_FIELDS, "theme", "key", "condition_color", "image_path", "start_at", "stop_at"}
+    {*_CHOICE_FIELDS, "key", "condition_color", "image_path", "start_at", "stop_at"}
 )
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
@@ -218,7 +220,7 @@ class SettingsManager:
         "max_clicks": 0,
         "auto_stop_minutes": 0,
         "enable_failsafe": True,
-        "max_cps_ceiling": 50,
+        "max_cps_ceiling": DEFAULT_MAX_CPS,
         "start_delay_seconds": 3,
         "start_at": "",
         "stop_at": "",
@@ -234,13 +236,12 @@ class SettingsManager:
         "condition_tolerance": 16,
         "image_path": "",
         "image_region": [],
-        "image_margin": 150,
+        "image_margin": DEFAULT_MARGIN,
         "image_tolerance": 0,
         # 0 = wait for the image as long as it takes (#174).
         "image_missing_stop_seconds": 0,
         "click_spread": 0,
         "pause_when_unfocused": False,
-        "theme": "light",
         "minimize_to_tray": True,
         # None until the user has been asked once; then True or False.
         "check_for_updates": None,
@@ -812,8 +813,3 @@ class SettingsManager:
     def get_all(self) -> dict[str, Any]:
         """Get all current settings"""
         return self._settings.copy()
-
-    def reset_to_defaults(self) -> bool:
-        """Reset all settings to defaults. False if the save failed."""
-        self._settings = self._defaults()
-        return self._save_settings()

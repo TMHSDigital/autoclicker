@@ -21,6 +21,11 @@ from unittest.mock import MagicMock, call, patch
 from autoclicker.app.hotkeys import DEFAULT_HOTKEYS
 
 
+def _point(profile):
+    """A profile's target point, or None."""
+    return None if profile is None else (profile["x"], profile["y"])
+
+
 class FakeVar:
     def __init__(self, master=None, value=None):
         self._value = value
@@ -704,7 +709,7 @@ class TestProfilesUi(GuiHarness):
         self.messagebox.askyesno.return_value = False
         app.save_preset()
         self.messagebox.askyesno.assert_called_once()
-        self.assertEqual(app.preset_manager.load_preset("Spot"), (100, 100))
+        self.assertEqual(_point(app.preset_manager.load_profile("Spot")), (100, 100))
 
     def test_invalid_form_is_not_saved(self):
         app = self.app

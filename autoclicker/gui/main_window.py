@@ -13,13 +13,7 @@ from collections.abc import Callable
 from tkinter import ttk
 
 from ..app.controller import AutoclickerController
-from ..app.hotkeys import (
-    DEFAULT_HOTKEYS,
-    HotkeyError,
-    HotkeyManager,
-    callbacks_for,
-    validate_bindings,
-)
+from ..app.hotkeys import HotkeyManager, callbacks_for, saved_bindings
 from ..app.tray import create_tray_icon
 from ..core.click_engine import (
     PAUSE_FOCUS,
@@ -31,6 +25,7 @@ from ..core.click_engine import (
 from ..core.exceptions import AutoclickerError, create_user_friendly_error
 from ..core.lazy_pyautogui import pyautogui
 from ..core.resources import resource_path
+from ..core.safety import DEFAULT_MAX_CPS
 from ..core.settings_manager import allowed_actions, field_label, uses_point
 from . import dialogs, theme
 from .features import (
@@ -413,11 +408,7 @@ class AutoclickerApp(
 
     def _saved_hotkeys(self) -> dict[str, str]:
         """Hotkeys from settings, falling back to the defaults if they are invalid."""
-        saved = self.settings.get("hotkeys")
-        try:
-            return validate_bindings(dict(saved or {}))
-        except (HotkeyError, TypeError, ValueError):
-            return dict(DEFAULT_HOTKEYS)
+        return saved_bindings(self.settings.get("hotkeys"))
 
     def _hotkey_suffix(self, action: str) -> str:
         """' (F6)' style suffix for labels; Start/Stop fall back to the toggle key."""
@@ -751,7 +742,7 @@ class AutoclickerApp(
         """Ask before the first run with the runaway guard turned off."""
         try:
             requested = float(self.max_cps_entry.get().strip())
-            saved = float(self.settings.get("max_cps_ceiling", 50))
+            saved = float(self.settings.get("max_cps_ceiling", DEFAULT_MAX_CPS))
         except (TypeError, ValueError, AttributeError):
             return True  # validation reports bad input
         if requested != 0 or saved == 0:

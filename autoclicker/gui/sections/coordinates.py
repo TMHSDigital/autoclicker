@@ -4,6 +4,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ...core.image_match import DEFAULT_MARGIN
 from ..styles import MUTED, SEGMENT
 from ..widgets.panel import Panel
 
@@ -103,7 +104,7 @@ def _build_image_panel(app, body: ttk.Frame, settings) -> None:
     ttk.Label(margin_row, text="Search").pack(side=tk.LEFT)
     app.image_margin_entry = ttk.Entry(margin_row, width=5)
     app.image_margin_entry.pack(side=tk.LEFT, padx=(5, 5))
-    app.image_margin_entry.insert(0, str(settings.get("image_margin", "150")))
+    app.image_margin_entry.insert(0, str(settings.get("image_margin", DEFAULT_MARGIN)))
     ttk.Label(margin_row, text="px around the capture").pack(side=tk.LEFT)
     tolerance_row = ttk.Frame(app.image_frame)
     tolerance_row.pack(fill=tk.X, pady=(6, 0))

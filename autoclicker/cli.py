@@ -310,7 +310,7 @@ def _run_headless(
     args: argparse.Namespace, say: Callable[[str], None]
 ) -> tuple[int, RunOutcome, float]:
     from .app.controller import AutoclickerController
-    from .app.hotkeys import DEFAULT_HOTKEYS, HotkeyError, HotkeyManager, validate_bindings
+    from .app.hotkeys import HotkeyManager, saved_bindings
     from .core.settings_manager import field_label
     from .core.single_instance import SingleInstance
 
@@ -371,10 +371,7 @@ def _run_headless(
         outcomes.append(outcome)
         done.set()
 
-    try:
-        bindings = validate_bindings(dict(controller.settings.get("hotkeys") or {}))
-    except (HotkeyError, TypeError, ValueError):
-        bindings = dict(DEFAULT_HOTKEYS)
+    bindings = saved_bindings(controller.settings.get("hotkeys"))
 
     def stop() -> None:
         controller.stop_clicking()

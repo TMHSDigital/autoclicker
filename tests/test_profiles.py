@@ -28,6 +28,11 @@ FULL = {
 }
 
 
+def _point(profile):
+    """A profile's target point, or None."""
+    return None if profile is None else (profile["x"], profile["y"])
+
+
 class ProfileTestCase(unittest.TestCase):
     def setUp(self):
         self._dir = tempfile.TemporaryDirectory()
@@ -44,7 +49,7 @@ class TestProfileStorage(ProfileTestCase):
         self.assertTrue(self.manager.save_profile("Game", {**FULL, "theme": "dark"}))
         loaded = self.manager.load_profile("Game")
         self.assertEqual(loaded, FULL)  # unrelated keys are not stored
-        self.assertEqual(self.manager.load_preset("Game"), (800, 600))
+        self.assertEqual(_point(self.manager.load_profile("Game")), (800, 600))
 
     def test_old_coordinate_only_presets_still_load(self):
         self.settings.set("presets", {"Old": {"x": 5, "y": 6}})
@@ -55,7 +60,7 @@ class TestProfileStorage(ProfileTestCase):
         self.assertIsNone(self.manager.load_profile("Bad"))
 
     def test_has_profile(self):
-        self.manager.save_preset("A", 1, 2)
+        self.manager.save_profile("A", {"x": 1, "y": 2})
         self.assertTrue(self.manager.has_profile("A"))
         self.assertFalse(self.manager.has_profile("B"))
 
@@ -81,7 +86,7 @@ class TestDescribe(unittest.TestCase):
 class TestImportExport(ProfileTestCase):
     def test_export_then_import_into_a_fresh_install(self):
         self.manager.save_profile("Game", FULL)
-        self.manager.save_preset("Spot", 10, 20)
+        self.manager.save_profile("Spot", {"x": 10, "y": 20})
         out = self.path("profiles.json")
         self.assertEqual(self.manager.export_profiles(out), 2)
         with open(out, encoding="utf-8") as fh:
@@ -93,14 +98,14 @@ class TestImportExport(ProfileTestCase):
         self.assertEqual(other.load_profile("Game"), FULL)
 
     def test_existing_names_kept_unless_replacing(self):
-        self.manager.save_preset("Spot", 1, 1)
+        self.manager.save_profile("Spot", {"x": 1, "y": 1})
         incoming = {"Spot": {"x": 9, "y": 9}}
         result = self.manager.import_profiles(incoming, replace_existing=False)
         self.assertEqual(result.skipped, ["Spot"])
-        self.assertEqual(self.manager.load_preset("Spot"), (1, 1))
+        self.assertEqual(_point(self.manager.load_profile("Spot")), (1, 1))
         result = self.manager.import_profiles(incoming, replace_existing=True)
         self.assertEqual(result.replaced, ["Spot"])
-        self.assertEqual(self.manager.load_preset("Spot"), (9, 9))
+        self.assertEqual(_point(self.manager.load_profile("Spot")), (9, 9))
 
     def test_invalid_entries_are_skipped(self):
         incoming = {

@@ -7,6 +7,9 @@ import os
 
 from .lazy_pyautogui import pyautogui
 
+# Default runaway-guard ceiling, clicks per second (Safety, Speed limit).
+DEFAULT_MAX_CPS = 50
+
 try:
     import win32gui
     import win32process

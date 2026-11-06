@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
-"""Deprecated alias for :mod:`autoclicker.utils.profiles` (renamed in 1.6.0)."""
+"""Deprecated alias for :mod:`autoclicker.utils.profiles` (renamed in 1.6.0).
+
+Scheduled for removal in 2.0; import from ``autoclicker.utils.profiles``.
+"""
 
 from .profiles import (
     EXPORT_FORMAT,

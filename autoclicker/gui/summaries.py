@@ -10,10 +10,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, NamedTuple
 
+from ..core.safety import DEFAULT_MAX_CPS
 from ..core.schedule import describe_wait
 
 SEP = " · "  # middle dot between parts
-DEFAULT_MAX_CPS = 50
 
 
 class Stats(NamedTuple):

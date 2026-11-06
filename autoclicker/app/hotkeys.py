@@ -137,6 +137,14 @@ def validate_bindings(bindings: dict[str, str]) -> dict[str, str]:
     return result
 
 
+def saved_bindings(saved: Any) -> dict[str, str]:
+    """Bindings from settings, or the defaults if they are missing or invalid."""
+    try:
+        return validate_bindings(dict(saved or {}))
+    except (HotkeyError, TypeError, ValueError):
+        return dict(DEFAULT_HOTKEYS)
+
+
 class HotkeyManager:
     """Owns the hotkey thread and claims keys according to the running state."""
 
