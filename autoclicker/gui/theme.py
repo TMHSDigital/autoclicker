@@ -16,6 +16,7 @@ from typing import Any
 
 import sv_ttk
 
+from .high_contrast import system_palette
 from .styles import (
     BG_CHECK,
     BG_FRAME,
@@ -92,16 +93,33 @@ def unregister(listener: Callable[[dict[str, str]], None]) -> None:
 
 
 def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
-    """Put sv_ttk in dark mode, configure our styles, then tell the custom widgets."""
+    """Put sv_ttk in dark mode, configure our styles, then tell the custom widgets.
+
+    With Windows High Contrast on, the system colors replace the palette (in
+    place, so every widget that reads PALETTE follows) and sv_ttk is skipped:
+    its themed images would keep the dark look (#181).
+    """
     global _current
+    system = system_palette()
+    if system is not None:
+        PALETTE.update(system)
+        STATUS_COLORS.update(
+            running=PALETTE["success"],
+            stopped=PALETTE["idle"],
+            alert=PALETTE["warning"],
+            error=PALETTE["error"],
+        )
     colors = PALETTE
     _current = colors
     try:
-        sv_ttk.set_theme("dark")
+        if system is None:
+            sv_ttk.set_theme("dark")
     except Exception:  # cosmetic; never block startup
         _log.debug("Could not set the sv_ttk theme", exc_info=True)
     try:
         style = style if style is not None else ttk.Style(root)
+        if system is not None:
+            style.theme_use("clam")  # plain shapes that take any colors
         _configure_styles(style, colors)
         root.configure(background=colors["bg"])
         # sv_ttk's tk_setPalette writes *background and *foreground into the option

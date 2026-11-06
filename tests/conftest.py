@@ -35,3 +35,9 @@ def _no_legacy_settings(request, monkeypatch, tmp_path_factory):
         return
     empty = tmp_path_factory.mktemp("legacy-app-dir")
     monkeypatch.setattr("autoclicker.core.settings_paths.legacy_app_dir", lambda: empty)
+
+
+@pytest.fixture(autouse=True)
+def _no_high_contrast(monkeypatch):
+    """The host may have High Contrast on; tests that need it patch system_palette (#181)."""
+    monkeypatch.setattr("autoclicker.gui.theme.system_palette", lambda: None)
