@@ -229,7 +229,13 @@ class HotkeyManager:
                 else:
                     failed.append(key)
         if failed:
-            self._on_error(f"Hotkey unavailable (used by another program?): {', '.join(failed)}")
+            message = f"Hotkey unavailable (used by another program?): {', '.join(failed)}"
+            _log.warning(message)
+            try:
+                self._on_error(message)
+            except Exception:
+                # A failing error callback must not end the hotkey thread (#144).
+                _log.exception("Hotkey error callback failed")
 
     def _dispatch(self, hotkey_id: int) -> None:
         action = self._registered.get(hotkey_id)
@@ -246,9 +252,13 @@ class HotkeyManager:
         msg = wintypes.MSG()
         # Create this thread's message queue before anyone posts to it.
         self._user32.PeekMessageW(ctypes.byref(msg), None, 0, 0, 0)
-        self._apply()
-        self._ready.set()
         try:
+            try:
+                self._apply()
+            except Exception:
+                _log.exception("Initial hotkey registration failed")
+            finally:
+                self._ready.set()
             while self._user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
                 if msg.message == WM_HOTKEY:
                     self._dispatch(int(msg.wParam))

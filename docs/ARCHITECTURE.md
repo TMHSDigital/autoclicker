@@ -68,7 +68,7 @@ autoclicker/
 
 All worker threads are daemon threads so process exit does not block on them.
 
-Worker callbacks (hotkeys, tray, run finished) are marshaled onto the Tk thread with `root.after(0, ...)`. The click thread never `join()`s itself.
+Worker callbacks (hotkeys, tray, recorder, run finished) are marshaled onto the Tk thread through `AutoclickerApp._ui`, which puts them on a queue that the Tk thread drains every 20 ms. Worker threads never call Tk themselves, not even `root.after`: with threaded Tcl that call blocks until the Tk thread services it, and raises before `mainloop` starts (#144, #145). The click thread never `join()`s itself, and the engine only drops its click thread reference once the thread has exited.
 
 Hotkeys use `RegisterHotKey`, which delivers a key only to this app. To avoid taking keys away from other programs, `HotkeyManager` claims the Start (and optional toggle) key while idle and the Stop and Emergency keys only while clicking; the GUI calls `set_running` when a run starts and ends. Bindings live in the `hotkeys` setting and are edited in the Hotkeys dialog, which suspends all keys while it is open.
 

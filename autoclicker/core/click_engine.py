@@ -407,13 +407,17 @@ class ClickEngine:
         self._stop_event.set()
 
     def _join_click_thread(self) -> None:
-        """Join the click loop if it is a different, still-alive thread."""
+        """Join the click loop if it is a different, still-alive thread.
+
+        The reference is only dropped once the thread has exited, so a join
+        that timed out still counts as busy in ``start_clicking`` (#145).
+        """
         thread = self.click_thread
-        if thread is None:
+        if thread is None or thread is threading.current_thread():
             return
-        if thread is not threading.current_thread() and thread.is_alive():
+        if thread.is_alive():
             thread.join(timeout=1.0)
-        if thread is not threading.current_thread():
+        if not thread.is_alive():
             self.click_thread = None
 
     def stop_clicking(self) -> None:

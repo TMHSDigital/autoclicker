@@ -40,6 +40,19 @@ class TestClickEngineLifecycle(unittest.TestCase):
         self.assertFalse(engine.is_running)
         self.assertIsNone(engine.click_thread)
 
+    def test_timed_out_join_keeps_the_click_thread(self):
+        """A thread still alive after the join stays tracked, so Start stays busy (#145)."""
+        engine = ClickEngine(enable_performance_monitoring=False)
+        thread = MagicMock()
+        thread.is_alive.return_value = True
+        engine.click_thread = thread
+        engine.stop_clicking()
+        thread.join.assert_called_once()
+        self.assertIs(engine.click_thread, thread)
+        thread.is_alive.return_value = False
+        engine.stop_clicking()
+        self.assertIsNone(engine.click_thread)
+
     def test_emergency_stop(self):
         engine = ClickEngine(enable_performance_monitoring=False)
         engine.is_running = True

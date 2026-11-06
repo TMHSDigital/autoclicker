@@ -1,6 +1,7 @@
 """Opt-in update check (#79)."""
 
 import json
+import queue
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -72,6 +73,7 @@ def _app(choice, last_check=0):
 
     app = AutoclickerApp.__new__(AutoclickerApp)
     app.root = MagicMock()
+    app._ui_calls = queue.SimpleQueue()
     app.click_engine = MagicMock(is_running=False)
     app.check_updates_var = MagicMock()
     app.update_button = MagicMock()
@@ -169,8 +171,8 @@ class TestGuiUpdateCheck(unittest.TestCase):
         app.root.after.reset_mock()
         with patch("autoclicker.gui.features.updates.fetch_latest_release", return_value=release):
             app._check_for_updates()
-        for call in app.root.after.call_args_list:
-            _delay, callback, *args = call.args
+        while not app._ui_calls.empty():  # what _drain_ui does on the main thread
+            callback, args = app._ui_calls.get_nowait()
             callback(*args)
 
     def test_newer_version_shows_the_button(self):

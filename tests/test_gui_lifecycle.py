@@ -68,6 +68,9 @@ _PENDING: list = []
 _PENDING_LOCK = threading.Lock()
 
 
+_DRAINS: list = []  # the app's _drain_ui poller, registered through after()
+
+
 class FakeRoot(MagicMock):
     """Tk root whose after(0, fn) queues fn for pump(), like the Tk event loop."""
 
@@ -75,17 +78,24 @@ class FakeRoot(MagicMock):
         if delay == 0 and fn is not None:
             with _PENDING_LOCK:
                 _PENDING.append((fn, args))
+        elif getattr(fn, "__name__", "") == "_drain_ui":
+            with _PENDING_LOCK:
+                _DRAINS[:] = [fn]
         return f"after#{delay}"
 
 
 def pump():
-    """Run queued Tk callbacks on the calling (UI) thread."""
+    """Run queued Tk callbacks and worker-thread _ui calls on the calling (UI) thread."""
     while True:
         with _PENDING_LOCK:
-            if not _PENDING:
-                return
-            fn, args = _PENDING.pop(0)
-        fn(*args)
+            drain = _DRAINS[0] if _DRAINS else None
+            fn, args = _PENDING.pop(0) if _PENDING else (None, ())
+        if fn is not None:
+            fn(*args)
+        elif drain is not None and not drain.__self__._ui_calls.empty():
+            drain()
+        else:
+            return
 
 
 def _settle(app, timeout=3.0):
@@ -111,6 +121,7 @@ class GuiHarness(unittest.TestCase):
 
         with _PENDING_LOCK:
             _PENDING.clear()
+            _DRAINS.clear()
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
         p = self.stack.enter_context

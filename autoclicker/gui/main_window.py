@@ -5,6 +5,8 @@ Handles user interface and event coordination.
 """
 
 import contextlib
+import logging
+import queue
 import threading
 import tkinter as tk
 from collections.abc import Callable
@@ -54,6 +56,11 @@ from .sections import (
 from .styles import BG_FRAME
 from .summaries import click_summary, format_stats, safety_summary, timing_summary
 from .theme import FONT, STATUS_COLORS, apply_theme
+
+_log = logging.getLogger(__name__)
+
+# How often the main thread runs callbacks queued by worker threads.
+_UI_POLL_MS = 20
 
 # Status-dot state for each way a run can end; anything else is "stopped".
 _OUTCOME_STATE = {STOP_EMERGENCY: "error", STOP_SAFETY: "error", STOP_ERROR: "error"}
@@ -120,6 +127,8 @@ class AutoclickerApp(
 
     def __init__(self) -> None:
         self.root = tk.Tk()
+        self._ui_calls: queue.SimpleQueue = queue.SimpleQueue()
+        self._drain_ui()
         self.controller = AutoclickerController()
         self.settings = self.controller.settings
         self.click_engine = self.controller.click_engine
@@ -335,12 +344,28 @@ class AutoclickerApp(
             self.canvas.yview_scroll(steps, "units")
 
     def _ui(self, fn: Callable, *args) -> None:
-        """Marshal a callback onto the Tk main thread."""
+        """Run ``fn(*args)`` on the Tk main thread. Safe from any thread at any time.
 
-        def _run() -> None:
-            fn(*args)
+        Worker threads never call Tk: with threaded Tcl, ``root.after`` from
+        another thread blocks until the main thread services it, and raises
+        before ``mainloop`` has started. So callbacks go on a queue that the
+        main thread drains (#144, #145).
+        """
+        self._ui_calls.put((fn, args))
 
-        self.root.after(0, _run)
+    def _drain_ui(self) -> None:
+        """(Main thread) run the queued callbacks, then poll again."""
+        while True:
+            try:
+                fn, args = self._ui_calls.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                fn(*args)
+            except Exception:
+                _log.exception("UI callback failed")
+        with contextlib.suppress(tk.TclError):
+            self.root.after(_UI_POLL_MS, self._drain_ui)
 
     def _saved_hotkeys(self) -> dict[str, str]:
         """Hotkeys from settings, falling back to the defaults if they are invalid."""

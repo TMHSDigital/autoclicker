@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import queue
+import threading
 import tkinter as tk
 import unittest
 from unittest.mock import MagicMock, patch
@@ -22,6 +24,7 @@ from autoclicker.gui.theme import STATUS_COLORS
 def _bare_app() -> AutoclickerApp:
     app = AutoclickerApp.__new__(AutoclickerApp)
     app.root = MagicMock()
+    app._ui_calls = queue.SimpleQueue()
     app.controller = MagicMock()
     app.click_engine = MagicMock()
     app.click_engine.is_running = False
@@ -39,15 +42,45 @@ def _bare_app() -> AutoclickerApp:
 
 
 class TestUiMarshal(unittest.TestCase):
-    def test_ui_schedules_after_zero(self):
+    def test_ui_queues_and_drain_runs_on_the_main_thread(self):
         app = _bare_app()
         fn = MagicMock()
         app._ui(fn, 1, 2)
-        app.root.after.assert_called_once()
-        delay, callback = app.root.after.call_args[0]
-        self.assertEqual(delay, 0)
-        callback()
+        app.root.after.assert_not_called()
+        fn.assert_not_called()
+        app._drain_ui()
         fn.assert_called_once_with(1, 2)
+        delay, callback = app.root.after.call_args[0]
+        self.assertGreater(delay, 0)
+        self.assertEqual(callback, app._drain_ui)
+
+    def test_ui_from_a_worker_thread_never_touches_tk(self):
+        """Threaded Tcl blocks or raises on root.after from other threads (#144, #145)."""
+        app = _bare_app()
+        fn = MagicMock()
+        worker = threading.Thread(target=app._ui, args=(fn, "x"))
+        worker.start()
+        worker.join(timeout=1)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(app.root.method_calls, [])
+        app._drain_ui()
+        fn.assert_called_once_with("x")
+
+    def test_a_raising_callback_does_not_stop_the_drain(self):
+        app = _bare_app()
+        bad = MagicMock(side_effect=RuntimeError("boom"))
+        good = MagicMock()
+        app._ui(bad)
+        app._ui(good)
+        with self.assertLogs("autoclicker.gui.main_window", "ERROR"):
+            app._drain_ui()
+        good.assert_called_once()
+        app.root.after.assert_called_once()
+
+    def test_drain_after_destroy_is_quiet(self):
+        app = _bare_app()
+        app.root.after.side_effect = tk.TclError("application has been destroyed")
+        app._drain_ui()
 
 
 class TestCoordinatePickerUi(unittest.TestCase):
