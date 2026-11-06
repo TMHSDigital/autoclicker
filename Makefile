@@ -1,4 +1,4 @@
-.PHONY: install test coverage lint format typecheck check clean lock smoke audit
+.PHONY: install test coverage lint format typecheck check clean lock smoke audit snapshots
 
 PYTHON ?= python
 VENV ?= .venv
@@ -42,6 +42,10 @@ lock:
 
 smoke:
 	$(VENV_PYTHON) scripts/smoke_check.py
+
+# Render the main window in set states to build/ui-snapshots/ (look at them after UI changes)
+snapshots:
+	$(VENV_PYTHON) tools/ui_snapshots.py
 
 audit:
 	$(VENV_PYTHON) -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off

@@ -34,6 +34,7 @@ Please describe the testing performed to verify your changes.
 - [ ] Integration tests added/updated
 - [ ] Manual testing performed
 - [ ] All existing tests pass
+- [ ] UI changes: `make snapshots` run and the images checked by eye
 - [ ] Tested on Windows 10
 - [ ] Tested on Windows 11
 - [ ] Tested with different Python versions (3.11+)
@@ -45,7 +46,9 @@ Please describe the testing performed to verify your changes.
 
 ## Screenshots (if applicable)
 
-If your changes include UI modifications, please include screenshots showing:
+If your changes include UI modifications, run `make snapshots` (see
+CONTRIBUTING.md), look at `build/ui-snapshots/`, and attach the relevant
+images. Include:
 - Before and after comparison
 - New features in action
 - Error states or edge cases

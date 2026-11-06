@@ -17,6 +17,7 @@ if /i "%1"=="clean" goto clean
 if /i "%1"=="lock" goto lock
 if /i "%1"=="smoke" goto smoke
 if /i "%1"=="audit" goto audit
+if /i "%1"=="snapshots" goto snapshots
 goto usage
 
 :install
@@ -73,10 +74,14 @@ exit /b %ERRORLEVEL%
 "%PY%" scripts\smoke_check.py
 exit /b %ERRORLEVEL%
 
+:snapshots
+"%PY%" tools\ui_snapshots.py
+exit /b %ERRORLEVEL%
+
 :audit
 "%PY%" -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off
 exit /b %ERRORLEVEL%
 
 :usage
-echo Usage: tasks.bat ^<install^|test^|coverage^|lint^|format^|typecheck^|check^|clean^|lock^|smoke^|audit^>
+echo Usage: tasks.bat ^<install^|test^|coverage^|lint^|format^|typecheck^|check^|clean^|lock^|smoke^|audit^|snapshots^>
 exit /b 1

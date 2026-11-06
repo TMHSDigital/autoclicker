@@ -40,6 +40,7 @@ make typecheck
 make coverage
 make audit          # pip-audit on both lock files
 make smoke          # scripts/smoke_check.py (not pytest)
+make snapshots      # PNGs of the main window in set states, in build/ui-snapshots/
 ```
 
 Every target exists in `tasks.bat` too. To run a single test without the coverage gate:
@@ -83,10 +84,33 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) with an optiona
 
 Reference the issue in the body (`Closes #123`).
 
+## Checking UI changes by eye
+
+The tests run without a window, so they cannot tell you that a label sits on
+the wrong color, a font did not apply or text is cut off. Every change that
+touches what the window shows (anything in `autoclicker/gui/`, the theme, or
+text the window displays) needs a look at the result before it is done:
+
+1. Run `make snapshots` (or `tasks.bat snapshots`). It renders the main window
+   in each scenario in `tools/ui_snapshots.py` (default, panels open, image,
+   sequence, running, High Contrast) to `build/ui-snapshots/*.png`. Each one
+   uses a throwaway `%APPDATA%`, registers no hotkeys or tray icon, clicks
+   nothing, and its window is transparent and never takes focus, so it is safe
+   to run while you work.
+2. Open the PNGs and check the part you changed and the views around it:
+   alignment, text cut off, colors (including High Contrast), disabled states.
+3. If your change adds a view or state that no scenario shows, add a scenario
+   to `SCENARIOS` so the next person sees it too.
+
+Native popup menus (the sequence step menu) cannot be captured; their entries
+are written to `build/ui-snapshots/menus.txt`. Dialogs and the tray menu still
+need a manual look in the running app.
+
 ## Pull requests
 
 1. Fork and branch from `main`.
-2. Run `make check` (or `tasks.bat check`).
+2. Run `make check` (or `tasks.bat check`), and for UI changes `make snapshots`
+   and look at the results (see above).
 3. Add user-visible changes to `CHANGELOG.md` under `[Unreleased]`.
 4. Do not commit `autoclicker_settings.json`, `htmlcov/`, `.coverage`, `*.egg-info/`, `.env`, keys, or tokens.
 
