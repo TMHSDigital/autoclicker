@@ -10,6 +10,7 @@ import logging
 import math
 import os
 import re
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,13 @@ class SettingsManager:
             self.settings_file = settings_file
         # Set when the settings file could not be used; shown once in the UI.
         self.load_warning: str | None = None
+        # The last failed save's message (None once a save works again), and a
+        # hook the UI sets to hear about each new failure (#151).
+        self.save_error: str | None = None
+        self.on_save_error: Callable[[str], None] | None = None
+        # True when the file exists but could not be read (say, locked): saving
+        # would replace settings we never saw, so this session does not save.
+        self._read_failed = False
         self._settings = self._load_settings()
 
     def _defaults(self) -> dict[str, Any]:
@@ -270,8 +278,18 @@ class SettingsManager:
             _log.warning("Settings file is not valid JSON: %s", e)
             self._quarantine("is not valid JSON")
             return self._defaults()
-        except (OSError, UnicodeDecodeError) as e:
+        except UnicodeDecodeError as e:
+            # Saved as ANSI or UTF-16, say after editing in Notepad (#146).
+            _log.warning("Settings file is not UTF-8 text: %s", e)
+            self._quarantine("is not UTF-8 text")
+            return self._defaults()
+        except OSError as e:
             _log.warning("Could not load settings file: %s", e)
+            self._read_failed = True
+            self.load_warning = (
+                "Could not read the settings file; using defaults. "
+                "Changes in this session will not be saved"
+            )
             return self._defaults()
         if not isinstance(loaded_settings, dict):
             _log.warning("Settings file is not a JSON object; using defaults")
@@ -310,26 +328,44 @@ class SettingsManager:
             f"Settings file {problem}; using defaults. Saved a copy as {backup.name}"
         )
 
-    def _save_settings(self) -> None:
-        """Save current settings to file atomically"""
+    def _save_settings(self) -> bool:
+        """Save current settings to file atomically. False (and reported) on failure."""
+        if self._read_failed:
+            return self._save_failed(
+                "Settings not saved: the settings file could not be read at startup"
+            )
         try:
             atomic_write_json(Path(self.settings_file), self._settings)
         except OSError as e:
             _log.warning("Could not save settings file: %s", e)
+            return self._save_failed(f"Settings not saved: {e.strerror or e}")
+        self.save_error = None
+        return True
+
+    def _save_failed(self, message: str) -> bool:
+        """Remember a failed save and tell the UI, once per new problem (#151)."""
+        if message != self.save_error:
+            self.save_error = message
+            if self.on_save_error is not None:
+                try:
+                    self.on_save_error(message)
+                except Exception:
+                    _log.exception("Settings save-error callback failed")
+        return False
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a setting value"""
         return self._settings.get(key, default)
 
-    def set(self, key: str, value: Any) -> None:
-        """Set a setting value and save"""
+    def set(self, key: str, value: Any) -> bool:
+        """Set a setting value and save. False if the save failed."""
         self._settings[key] = value
-        self._save_settings()
+        return self._save_settings()
 
-    def update(self, settings_dict: dict[str, Any]) -> None:
-        """Update multiple settings and save"""
+    def update(self, settings_dict: dict[str, Any]) -> bool:
+        """Update multiple settings and save. False if the save failed."""
         self._settings.update(settings_dict)
-        self._save_settings()
+        return self._save_settings()
 
     def validate_coordinate(
         self,
@@ -761,7 +797,7 @@ class SettingsManager:
         """Get all current settings"""
         return self._settings.copy()
 
-    def reset_to_defaults(self) -> None:
-        """Reset all settings to defaults"""
+    def reset_to_defaults(self) -> bool:
+        """Reset all settings to defaults. False if the save failed."""
         self._settings = self._defaults()
-        self._save_settings()
+        return self._save_settings()

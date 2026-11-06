@@ -100,6 +100,27 @@ class TestNoMigrationOverUnreadablePrimary(unittest.TestCase):
                 self.assertEqual(settings_paths.resolve_settings_file(), str(primary))
             self.assertEqual(primary.read_text(encoding="utf-8"), "{broken")
 
+    def test_non_utf8_primary_is_left_for_quarantine(self):
+        """#146: a non-UTF-8 file used to raise out of resolve_settings_file."""
+        from autoclicker.core import settings_paths
+
+        with tempfile.TemporaryDirectory() as tmp:
+            primary = Path(tmp, "appdata", "autoclicker_settings.json")
+            primary.parent.mkdir()
+            primary.write_bytes('{"presets": {"Café": {}}}'.encode("cp1252"))
+            with (
+                patch.object(settings_paths, "appdata_settings_path", return_value=primary),
+                patch.object(
+                    settings_paths, "legacy_settings_path", return_value=Path(tmp, "none.json")
+                ),
+                patch.object(
+                    settings_paths,
+                    "legacy_migrated_marker_path",
+                    return_value=Path(tmp, ".migrated"),
+                ),
+            ):
+                self.assertEqual(settings_paths.resolve_settings_file(), str(primary))
+
 
 class TestLegacyLocation(unittest.TestCase):
     """#105: only a file next to the app is migrated, never one in the working folder."""

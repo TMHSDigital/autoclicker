@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -104,6 +105,19 @@ def _hotkey_clash(key: str, bindings: Any) -> str | None:
     return None
 
 
+def _stored_int(value: Any, default: int) -> int:
+    """A numeric setting as read from the file, or ``default`` if it is not a finite number.
+
+    The file may hold anything a person typed (``"fast"``, ``1e400``); startup
+    must not fail on it (#146). The form's validation reports bad values later.
+    """
+    try:
+        number = float(value)
+        return int(number) if math.isfinite(number) else default
+    except (TypeError, ValueError):
+        return default
+
+
 class AutoclickerController:
     """Owns settings, click engine, and presets."""
 
@@ -116,7 +130,7 @@ class AutoclickerController:
         """Apply persisted safety settings to the click engine."""
         self.click_engine.configure_safety(
             failsafe=bool(self.settings.get("enable_failsafe", True)),
-            max_cps=int(self.settings.get("max_cps_ceiling", 50)),
+            max_cps=_stored_int(self.settings.get("max_cps_ceiling"), 50),
             pause_when_unfocused=bool(self.settings.get("pause_when_unfocused", False)),
         )
 

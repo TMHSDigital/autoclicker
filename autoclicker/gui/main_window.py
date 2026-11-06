@@ -134,6 +134,10 @@ class AutoclickerApp(
         self.click_engine = self.controller.click_engine
         self.coordinate_picker = CoordinatePicker(self.root)
         self.preset_manager = self.controller.preset_manager
+        # A failed settings write shows in the status line instead of only the log (#151).
+        self.settings.on_save_error = lambda message: self._ui(
+            self._set_status_message, message, "error"
+        )
         self.controller.apply_safety_from_settings()
 
         self.setup_window()
@@ -463,10 +467,13 @@ class AutoclickerApp(
         return None
 
     def _save_hotkeys(self, bindings: dict[str, str]) -> None:
-        self.settings.set("hotkeys", bindings)
+        saved = self.settings.set("hotkeys", bindings)
         self._hotkeys.set_bindings(bindings)
         self._refresh_hotkey_labels()
-        self._set_status_message("Hotkeys saved")
+        if saved:
+            self._set_status_message("Hotkeys saved")
+        else:
+            self._set_status_message("Hotkeys changed for this session only", "alert")
 
     def toggle_clicking(self) -> None:
         """Toggle hotkey: stop if running (or counting down), otherwise start."""

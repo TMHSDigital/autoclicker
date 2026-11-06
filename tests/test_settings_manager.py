@@ -441,6 +441,83 @@ class TestUnreadableSettingsFile(unittest.TestCase):
         manager = SettingsManager(self.path)
         self.assertEqual(manager.get("presets"), {"ok": {"x": 5, "y": 6}})
 
+    def test_non_utf8_file_is_preserved_and_reported(self):
+        """#146: an ANSI-encoded file used to be replaced by defaults at the next save."""
+        original = '{"click_interval": 250, "presets": {"Café": {"x": 1, "y": 2}}}'.encode("cp1252")
+        with open(self.path, "wb") as fh:
+            fh.write(original)
+        manager = SettingsManager(self.path)
+        backups = self._backups()
+        self.assertEqual(len(backups), 1)
+        with open(os.path.join(self._dir.name, backups[0]), "rb") as fh:
+            self.assertEqual(fh.read(), original)
+        self.assertIn("not UTF-8", manager.load_warning)
+        manager.set("click_interval", 100)
+        self.assertEqual(len(self._backups()), 1)
+
+    def test_file_that_cannot_be_opened_is_never_saved_over(self):
+        """#146: a locked file loads defaults, warns, and this session does not save."""
+        self._write('{"presets": {"Home": {"x": 1, "y": 2}}}')
+        real_open = open
+
+        def locked(path, *args, **kwargs):
+            if os.fspath(path) == self.path:
+                raise PermissionError(13, "Permission denied")
+            return real_open(path, *args, **kwargs)
+
+        with patch("builtins.open", locked):
+            manager = SettingsManager(self.path)
+        self.assertIn("Could not read", manager.load_warning)
+        errors = []
+        manager.on_save_error = errors.append
+        self.assertFalse(manager.set("theme", "dark"))
+        self.assertFalse(manager.set("theme", "light"))
+        self.assertEqual(len(errors), 1)  # reported once, not on every save
+        with open(self.path, encoding="utf-8") as fh:
+            self.assertIn("Home", fh.read())
+
+
+class TestSaveFailures(unittest.TestCase):
+    """#151: a failed write is reported instead of only logged."""
+
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._dir.cleanup)
+        self.manager = SettingsManager(os.path.join(self._dir.name, "settings.json"))
+        self.errors: list[str] = []
+        self.manager.on_save_error = self.errors.append
+
+    def test_failed_write_returns_false_and_reports_once(self):
+        with patch(
+            "autoclicker.core.settings_manager.atomic_write_json",
+            side_effect=OSError(28, "No space left on device"),
+        ):
+            self.assertFalse(self.manager.set("theme", "dark"))
+            self.assertFalse(self.manager.update({"theme": "light"}))
+        self.assertEqual(self.errors, ["Settings not saved: No space left on device"])
+        self.assertEqual(self.manager.save_error, self.errors[0])
+
+    def test_a_working_save_clears_the_error(self):
+        with patch(
+            "autoclicker.core.settings_manager.atomic_write_json", side_effect=OSError("disk")
+        ):
+            self.manager.set("theme", "dark")
+        self.assertTrue(self.manager.set("theme", "dark"))
+        self.assertIsNone(self.manager.save_error)
+        with patch(
+            "autoclicker.core.settings_manager.atomic_write_json", side_effect=OSError("disk")
+        ):
+            self.manager.set("theme", "light")
+        self.assertEqual(len(self.errors), 2)
+
+    def test_a_raising_callback_is_contained(self):
+        self.manager.on_save_error = lambda message: 1 / 0
+        with (
+            patch("autoclicker.core.settings_manager.atomic_write_json", side_effect=OSError("x")),
+            self.assertLogs("autoclicker.core.settings_manager", "ERROR"),
+        ):
+            self.assertFalse(self.manager.set("theme", "dark"))
+
 
 class TestModeRules(unittest.TestCase):
     """#102: one definition of which actions and fields each target mode uses."""

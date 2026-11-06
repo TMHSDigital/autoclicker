@@ -41,7 +41,8 @@ def legacy_migrated_marker_path() -> Path:
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
-    with contextlib.suppress(OSError, json.JSONDecodeError):
+    # ValueError covers invalid JSON and text that is not UTF-8 (#146).
+    with contextlib.suppress(OSError, ValueError):
         if path.is_file():
             with path.open(encoding="utf-8") as fh:
                 data = json.load(fh)

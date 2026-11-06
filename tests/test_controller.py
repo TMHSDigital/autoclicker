@@ -236,3 +236,26 @@ class TestCursorModeStart(unittest.TestCase):
         self.assertIsNone(kwargs["x"])
         self.assertIsNone(kwargs["y"])
         self.assertEqual(log.call_args.kwargs["target"], "cursor")
+
+
+class TestStoredSafetySettings(unittest.TestCase):
+    """#146: a hand-edited ceiling must not stop the app from starting."""
+
+    def test_bad_or_huge_ceiling_falls_back_to_the_default(self):
+        for stored in ("fast", float("inf"), float("nan"), None, [1]):
+            with self.subTest(stored=stored):
+                controller = AutoclickerController.__new__(AutoclickerController)
+                controller.settings = MagicMock()
+                controller.settings.get.side_effect = lambda key, default=None, v=stored: (
+                    v if key == "max_cps_ceiling" else default
+                )
+                controller.click_engine = MagicMock()
+                controller.apply_safety_from_settings()
+                kwargs = controller.click_engine.configure_safety.call_args.kwargs
+                self.assertEqual(kwargs["max_cps"], 50)
+
+    def test_numeric_strings_still_work(self):
+        from autoclicker.app.controller import _stored_int
+
+        self.assertEqual(_stored_int("20", 50), 20)
+        self.assertEqual(_stored_int(12.7, 50), 12)
