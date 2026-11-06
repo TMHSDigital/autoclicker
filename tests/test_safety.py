@@ -42,6 +42,17 @@ class TestRunawayGuard(unittest.TestCase):
                 engine._recent_click_ts.append(1.0 + i * 0.1)
             self.assertFalse(engine._check_runaway_cps())
 
+    def test_low_ceiling_trips_at_the_first_press_over_it(self):
+        """#149: a limit of 2 trips at the 3rd press in a second, not the 8th."""
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.max_cps_ceiling = 2
+        engine.start_time = 1.0
+        with patch("autoclicker.core.click_engine.time.monotonic", return_value=2.0):
+            engine._recent_click_ts.extend([1.5, 1.6])
+            self.assertFalse(engine._check_runaway_cps())
+            engine._recent_click_ts.append(1.7)
+            self.assertTrue(engine._check_runaway_cps())
+
 
 class TestForegroundPause(unittest.TestCase):
     @patch("autoclicker.core.click_engine.is_foreground_window", return_value=False)

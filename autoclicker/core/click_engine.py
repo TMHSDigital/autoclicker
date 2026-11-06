@@ -156,6 +156,9 @@ class ClickEngine:
         self.click_thread: threading.Thread | None = None
         self.click_count = 0
         self.start_time = 0.0
+        # When the last run's loop ended (0 while running), so idle readouts
+        # keep that run's runtime and rate instead of counting on (#148).
+        self.end_time = 0.0
         self._stop_event = threading.Event()
 
         # Performance monitoring; reset at every start so the numbers are per run.
@@ -337,6 +340,7 @@ class ClickEngine:
         self.click_count = 0
         self.stats = ClickStats()
         self.start_time = time.monotonic()
+        self.end_time = 0.0
         self._stop_event.clear()
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
@@ -384,7 +388,7 @@ class ClickEngine:
         stats = self.stats
         clicks_per_second = 0.0
         if self.start_time > 0 and self.click_count > 0:
-            runtime = time.monotonic() - self.start_time
+            runtime = self.run_seconds()
             clicks_per_second = self.click_count / runtime if runtime > 0 else 0.0
         return {
             "click_success_count": stats.successes,
@@ -526,6 +530,7 @@ class ClickEngine:
                 message = f"Step {self.current_step}: {message}"
             self._set_stop_reason(STOP_ERROR, message)
         finally:
+            self.end_time = time.monotonic()
             self.is_paused = False
             self._request_stop()
             self._set_stop_reason(STOP_COMPLETED, "Finished")
@@ -686,8 +691,9 @@ class ClickEngine:
         cutoff = now - 1.0
         while ts and ts[0] < cutoff:
             ts.popleft()
-        # Need a minimum sample to avoid flapping at startup
-        if len(ts) < 8:
+        # Need a minimum sample to avoid flapping at startup, but never more
+        # than the ceiling allows: a limit of 2 must trip at the 3rd press (#149).
+        if len(ts) < min(8, self.max_cps_ceiling + 1):
             return False
         return len(ts) > self.max_cps_ceiling
 
@@ -924,9 +930,15 @@ class ClickEngine:
         if wait_time > 0:
             self._stop_event.wait(timeout=wait_time)
 
+    def run_seconds(self) -> float:
+        """Length of the current run, or of the last one once it has ended."""
+        if self.start_time <= 0:
+            return 0.0
+        return max(0.0, (self.end_time or time.monotonic()) - self.start_time)
+
     def get_status(self) -> dict[str, Any]:
         """Get current clicking status"""
-        elapsed = int(time.monotonic() - self.start_time) if self.start_time > 0 else 0
+        elapsed = int(self.run_seconds())
         hours = elapsed // 3600
         minutes = (elapsed % 3600) // 60
         seconds = elapsed % 60

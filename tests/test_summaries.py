@@ -117,8 +117,13 @@ class TestTimingSummary(unittest.TestCase):
     def test_burst_delay_and_schedule(self):
         self.assertEqual(
             self.summary(burst_clicks="3", burst_pause="50", start_at="09:30"),
-            "burst of 3, 50 ms apart · 3 s delay · at 09:30",
+            "burst of 3, 50 ms apart · at 09:30",
         )
+
+    def test_start_at_replaces_the_delay(self):
+        """Start counts down to the time, not the delay, so only one is shown (#148)."""
+        self.assertEqual(self.summary(start_delay="3"), "3 s delay")
+        self.assertEqual(self.summary(start_delay="3", start_at="09:30"), "at 09:30")
 
     def test_garbage_counts_as_unset(self):
         self.assertEqual(self.summary(burst_clicks="x", start_delay=""), "no delay · no burst")

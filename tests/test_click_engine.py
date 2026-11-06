@@ -40,6 +40,16 @@ class TestClickEngineLifecycle(unittest.TestCase):
         self.assertFalse(engine.is_running)
         self.assertIsNone(engine.click_thread)
 
+    def test_idle_status_keeps_the_last_runs_runtime(self):
+        """#148: Runtime and Rate stop counting once the run has ended."""
+        engine = ClickEngine(enable_performance_monitoring=True)
+        engine.start_time, engine.end_time, engine.click_count = 100.0, 110.0, 50
+        with patch("autoclicker.core.click_engine.time.monotonic", return_value=500.0):
+            self.assertEqual(engine.get_status()["runtime"], "00:00:10")
+            self.assertAlmostEqual(engine.get_performance_metrics()["clicks_per_second"], 5.0)
+            engine.end_time = 0.0  # still running
+            self.assertEqual(engine.get_status()["runtime"], "00:06:40")
+
     def test_timed_out_join_keeps_the_click_thread(self):
         """A thread still alive after the join stays tracked, so Start stays busy (#145)."""
         engine = ClickEngine(enable_performance_monitoring=False)

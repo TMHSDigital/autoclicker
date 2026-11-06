@@ -85,7 +85,8 @@ def timing_summary(*, burst_clicks: str, burst_pause: str, start_delay: str, sta
     if burst > 1:
         parts.append(f"burst of {burst}, {_plain(_num(burst_pause))} ms apart")
     delay = _num(start_delay)
-    if delay > 0:
+    # Start at replaces the delay: Start counts down to that time instead (#148).
+    if delay > 0 and not start_at.strip():
         parts.append(f"{_plain(delay)} s delay")
     if start_at.strip():
         parts.append(f"at {start_at.strip()}")

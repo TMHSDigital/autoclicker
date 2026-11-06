@@ -197,8 +197,11 @@ class TestImageProfiles(ProfileTestCase):
 
         gif = io.BytesIO()
         Image.new("RGB", (4, 4)).save(gif, format="GIF")
+        bmp = io.BytesIO()
+        Image.new("RGB", (4, 4)).save(bmp, format="BMP")
         for bad in ("not base64!", base64.b64encode(b"hello").decode(), 42,
-                    base64.b64encode(gif.getvalue()).decode()):  # fmt: skip
+                    base64.b64encode(gif.getvalue()).decode(),
+                    base64.b64encode(bmp.getvalue()).decode()):  # fmt: skip
             with self.subTest(bad=str(bad)[:20]):
                 raw = {"x": 1, "y": 1, "target_mode": "image", "image_png": bad}
                 result = self.manager.import_profiles({"Bad": raw}, replace_existing=True)

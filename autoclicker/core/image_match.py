@@ -35,6 +35,10 @@ _MAX_TOLERANT_CHECKS = 2000
 # Largest base64 image accepted from an imported profile (characters).
 MAX_EMBEDDED_IMAGE_CHARS = 24 * 1024 * 1024
 
+# The app only ever writes PNG templates (captures and imports), so only the PNG
+# decoder runs on template files and shared profile images (#157).
+TEMPLATE_FORMATS = ("PNG",)
+
 
 def images_dir() -> Path:
     """Folder that holds captured and imported images."""
@@ -44,7 +48,7 @@ def images_dir() -> Path:
 def open_template(source: str | Path | IO[bytes]) -> Image.Image:
     """Load a template image as RGB. Raises ValueError for anything unusable."""
     try:
-        with Image.open(source) as image:
+        with Image.open(source, formats=TEMPLATE_FORMATS) as image:
             width, height = image.size
             if width * height > MAX_TEMPLATE_PIXELS:
                 raise ValueError("The image is too large")
@@ -74,13 +78,10 @@ def store_embedded_image(data: Any) -> str:
     except (binascii.Error, ValueError) as e:
         raise ValueError("The embedded image is not valid base64") from e
     try:
-        with Image.open(io.BytesIO(raw)) as probe:
-            if probe.format != "PNG":
-                raise ValueError("The embedded image is not a PNG")
-    except ValueError:
-        raise
-    except Exception as e:
-        raise ValueError(f"Unreadable image: {e}") from e
+        with Image.open(io.BytesIO(raw), formats=TEMPLATE_FORMATS):
+            pass
+    except Exception as e:  # UnidentifiedImageError for anything but a PNG
+        raise ValueError("The embedded image is not a PNG") from e
     template = open_template(io.BytesIO(raw))
     folder = images_dir()
     folder.mkdir(parents=True, exist_ok=True)

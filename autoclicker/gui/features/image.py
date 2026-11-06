@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from ...core.image_match import grab, images_dir
+from ...core.image_match import TEMPLATE_FORMATS, grab, images_dir
 from ...core.screen import ScreenBounds
 from .base import AppBase
 
@@ -114,7 +114,7 @@ class ImageMixin(AppBase):
             try:
                 from PIL import ImageTk
 
-                with Image.open(self.image_path) as image:
+                with Image.open(self.image_path, formats=TEMPLATE_FORMATS) as image:
                     thumb = image.convert("RGB")
                 thumb.thumbnail(_PREVIEW_SIZE)
                 photo = ImageTk.PhotoImage(thumb, master=self.root)

@@ -394,3 +394,23 @@ class TestTolerance(unittest.TestCase):
         from autoclicker.utils.profiles import PROFILE_KEYS
 
         self.assertIn("image_tolerance", PROFILE_KEYS)
+
+
+class TestTemplateFormats(unittest.TestCase):
+    """#157: only the PNG decoder runs on template files."""
+
+    def test_png_opens_and_other_formats_are_refused(self):
+        import io
+
+        from autoclicker.core.image_match import open_template
+
+        png = io.BytesIO()
+        Image.new("RGB", (3, 2), "red").save(png, format="PNG")
+        png.seek(0)
+        self.assertEqual(open_template(png).size, (3, 2))
+        for fmt in ("BMP", "GIF", "JPEG"):
+            data = io.BytesIO()
+            Image.new("RGB", (3, 2)).save(data, format=fmt)
+            data.seek(0)
+            with self.subTest(fmt=fmt), self.assertRaises(ValueError):
+                open_template(data)

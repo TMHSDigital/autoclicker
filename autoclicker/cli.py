@@ -298,6 +298,9 @@ def run_headless(args: argparse.Namespace) -> int:
     if launcher is not None:
         # Pause when unfocused must not adopt the terminal as the target window.
         controller.click_engine.launcher_windows = frozenset({launcher})
+    # The stop keys are claimed before the first click, not after it (#150).
+    hotkeys.start(bindings)
+    hotkeys.set_running(True)
     started = controller.validate_and_start_clicking(
         raw,
         failsafe=bool(result["sanitized_settings"].get("enable_failsafe", True)),
@@ -306,12 +309,11 @@ def run_headless(args: argparse.Namespace) -> int:
         persist=False,
     )
     if not started.success:
+        hotkeys.unregister()
         for field, message in (started.validation_errors or {}).items():
             _emit(f"autoclicker: {field_label(field)}: {message}", error=True)
         return EXIT_USAGE
 
-    hotkeys.start(bindings)
-    hotkeys.set_running(True)
     stop_keys = ", ".join(k for k in (bindings.get("stop"), bindings.get("emergency")) if k)
     _emit(f"Clicking. Press {stop_keys} (or Ctrl+C) to stop.")
     try:

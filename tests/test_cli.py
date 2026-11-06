@@ -5,7 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pyautogui
 
@@ -140,6 +140,28 @@ class TestHeadless(HeadlessCase):
         self.assertEqual(self.run_cli("--at", "99999,1", "--delay", "0"), EXIT_USAGE)
         self.assertEqual(self.run_cli("--interval", "nope"), EXIT_USAGE)
         self.pyautogui.click.assert_not_called()
+
+    def test_stop_keys_are_claimed_before_the_first_click(self):
+        """#150: Stop and Emergency exist from the first click on."""
+        hotkeys = self.HotkeyManager.return_value
+        claimed_at_first_click = []
+        self.pyautogui.click.side_effect = lambda **_kw: claimed_at_first_click.append(
+            hotkeys.set_running.call_args
+        )
+        self.run_cli("--at", "10,10", "--interval", "0ms", "--clicks", "1", "--delay", "0")
+        self.assertEqual(claimed_at_first_click, [call(True)])
+
+    def test_failed_start_releases_the_hotkeys(self):
+        from autoclicker.app.controller import AutoclickerController, StartClickResult
+
+        hotkeys = self.HotkeyManager.return_value
+        refused = StartClickResult(success=False, validation_errors={"x_coord": "bad"})
+        with patch.object(
+            AutoclickerController, "validate_and_start_clicking", return_value=refused
+        ):
+            self.assertEqual(self.run_cli("--at", "10,10", "--delay", "0"), EXIT_USAGE)
+        hotkeys.set_running.assert_called_once_with(True)
+        hotkeys.unregister.assert_called_once()
 
     def test_already_running(self):
         self.acquire.return_value = False
