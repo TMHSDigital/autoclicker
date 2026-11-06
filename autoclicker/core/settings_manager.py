@@ -43,6 +43,7 @@ _INT_FIELDS = frozenset(
         "condition_tolerance",
         "image_margin",
         "image_tolerance",
+        "image_missing_stop_seconds",
         "click_spread",
     }
 )
@@ -92,6 +93,7 @@ FIELD_LABELS: dict[str, str] = {
     "image_region": "Image search area",
     "image_margin": "Search margin",
     "image_tolerance": "Image tolerance",
+    "image_missing_stop_seconds": "Stop if the image is not seen for",
     "click_spread": "Spread",
 }
 
@@ -101,6 +103,8 @@ _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 MAX_IMAGE_MARGIN = 2000
 # Highest per-channel color difference allowed when matching an image.
 MAX_IMAGE_TOLERANCE = 64
+# Longest an image run may go without seeing its image before it stops (#174).
+MAX_IMAGE_MISSING_SECONDS = 86_400
 # Farthest a click may land from its target with click spread on, in pixels.
 MAX_CLICK_SPREAD = 50
 
@@ -232,6 +236,8 @@ class SettingsManager:
         "image_region": [],
         "image_margin": 150,
         "image_tolerance": 0,
+        # 0 = wait for the image as long as it takes (#174).
+        "image_missing_stop_seconds": 0,
         "click_spread": 0,
         "pause_when_unfocused": False,
         "theme": "light",
@@ -749,6 +755,11 @@ class SettingsManager:
         image_tolerance = parsed.get("image_tolerance")
         if image_tolerance is not None and not 0 <= image_tolerance <= MAX_IMAGE_TOLERANCE:
             errors["image_tolerance"] = f"Must be between 0 and {MAX_IMAGE_TOLERANCE} (0 = exact)"
+        missing = parsed.get("image_missing_stop_seconds")
+        if missing is not None and not 0 <= missing <= MAX_IMAGE_MISSING_SECONDS:
+            errors["image_missing_stop_seconds"] = (
+                f"Must be between 0 and {MAX_IMAGE_MISSING_SECONDS:,} seconds (0 = keep waiting)"
+            )
         spread = parsed.get("click_spread")
         if spread is not None and not 0 <= spread <= MAX_CLICK_SPREAD:
             errors["click_spread"] = (

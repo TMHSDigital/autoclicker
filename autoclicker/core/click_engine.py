@@ -157,6 +157,8 @@ class ClickEngine:
         self.start_time = 0.0
         # Stop at a time of day: (monotonic deadline, "HH:MM"), or None (#177).
         self._stop_at: tuple[float, str] | None = None
+        # When the image target was first missed in a row (0 = seen or not yet searched).
+        self._image_missing_since = 0.0
         # When the last run's loop ended (0 while running), so idle readouts
         # keep that run's runtime and rate instead of counting on (#148).
         self.end_time = 0.0
@@ -346,6 +348,7 @@ class ClickEngine:
         self.start_time = time.monotonic()
         self.end_time = 0.0
         self._stop_at = stop_at
+        self._image_missing_since = 0.0
         self._stop_event.clear()
         self._recent_click_ts.clear()
         self._screen_bounds = virtual_screen_bounds(pyautogui.size)
@@ -492,10 +495,15 @@ class ClickEngine:
                 if self._image is not None:
                     found, searched_at = self._image_match
                     if found is None:
+                        gone = self._image_gone_message()
+                        if gone:
+                            self._set_stop_reason(STOP_COMPLETED, gone)
+                            break
                         self.is_paused = True
                         self.pause_reason = PAUSE_IMAGE
                         self._stop_event.wait(timeout=_CONDITION_WAIT_SECONDS)
                         continue
+                    self._image_missing_since = 0.0
                     self.is_paused = False
                     if searched_at < self._image_clicked_at + _IMAGE_SETTLE_SECONDS:
                         # Seen before the last click took effect: it may be gone now.
@@ -706,6 +714,23 @@ class ClickEngine:
         self._safety_fired = True
         self._set_stop_reason(STOP_SAFETY, message)
         self._request_stop()
+
+    def _image_gone_message(self) -> str | None:
+        """The stop message once the image has been missing too long, else None (#174).
+
+        The clock starts at the first search that misses it and resets
+        whenever it is found again.
+        """
+        limit = getattr(self._image, "missing_stop_seconds", 0)
+        if not isinstance(limit, (int, float)) or limit <= 0:
+            return None
+        now = time.monotonic()
+        if not self._image_missing_since:
+            self._image_missing_since = now
+        if now - self._image_missing_since < limit:
+            return None
+        seconds = f"{limit:g}"
+        return f"Stopped: image not seen for {seconds} s"
 
     def _limit_reached(self, max_clicks: int, auto_stop_minutes: int) -> str | None:
         """Return a completion message if a click or time limit was reached."""

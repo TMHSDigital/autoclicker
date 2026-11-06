@@ -81,7 +81,13 @@ def _load_image_target(
         margin = int(sanitized.get("image_margin", DEFAULT_MARGIN))
         region = search_region(region, margin, desktop)
     tolerance = int(sanitized.get("image_tolerance", 0))
-    target = ImageTarget(template=template, region=region, tolerance=tolerance, prepared=prepared)
+    target = ImageTarget(
+        template=template,
+        region=region,
+        tolerance=tolerance,
+        prepared=prepared,
+        missing_stop_seconds=float(sanitized.get("image_missing_stop_seconds", 0) or 0),
+    )
     return target, None
 
 
@@ -227,6 +233,7 @@ class AutoclickerController:
             "image_region": ui_fields.get("image_region", []),
             "image_margin": ui_fields.get("image_margin", 150),
             "image_tolerance": ui_fields.get("image_tolerance", 0),
+            "image_missing_stop_seconds": ui_fields.get("image_missing_stop_seconds", 0),
             "click_spread": ui_fields.get("click_spread", 0),
         }
 

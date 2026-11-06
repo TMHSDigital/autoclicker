@@ -96,6 +96,7 @@ class AppBase:
     image_info_var: tk.StringVar
     image_margin_entry: ttk.Entry
     image_tolerance_entry: ttk.Entry
+    image_missing_entry: ttk.Entry
     image_preview: ttk.Label
     image_clear_btn: ttk.Button
     # Keeps the thumbnail's PhotoImage alive while Tk shows it.

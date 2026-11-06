@@ -112,6 +112,14 @@ def _build_image_panel(app, body: ttk.Frame, settings) -> None:
     app.image_tolerance_entry.pack(side=tk.LEFT, padx=(5, 5))
     app.image_tolerance_entry.insert(0, str(settings.get("image_tolerance", "0")))
     ttk.Label(tolerance_row, text="0 = exact, up to 64", style=MUTED).pack(side=tk.LEFT)
+    # Stop when the image stays away this long (#174); 0 waits as long as it takes.
+    missing_row = ttk.Frame(app.image_frame)
+    missing_row.pack(fill=tk.X, pady=(6, 0))
+    ttk.Label(missing_row, text="Stop if not seen for").pack(side=tk.LEFT)
+    app.image_missing_entry = ttk.Entry(missing_row, width=5)
+    app.image_missing_entry.pack(side=tk.LEFT, padx=(5, 5))
+    app.image_missing_entry.insert(0, str(settings.get("image_missing_stop_seconds", "0")))
+    ttk.Label(missing_row, text="s (0 = keep waiting)", style=MUTED).pack(side=tk.LEFT)
     app._refresh_image_label()
 
 

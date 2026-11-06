@@ -85,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--profile", metavar="NAME", help="load a saved profile first")
     parser.add_argument(
+        "--image-timeout",
+        metavar="SECONDS",
+        help="with --image: stop once the image has not been seen for SECONDS (0 = keep waiting)",
+    )
+    parser.add_argument(
         "--list-profiles", action="store_true", help="print the saved profiles and exit"
     )
     parser.add_argument(
@@ -136,7 +141,7 @@ def has_overrides(args: argparse.Namespace) -> bool:
     keys = (
         "at", "cursor", "sequence", "image", "profile", "interval", "variation", "spread", "button", "double",
         "single", "burst", "clicks", "minutes", "repeat", "delay", "start_at", "stop_at", "hold",
-        "key",
+        "key", "image_timeout",
     )  # fmt: skip
     return any(getattr(args, key) for key in keys)
 
@@ -190,6 +195,7 @@ def build_overrides(
         "delay": "start_delay_seconds",
         "start_at": "start_at",
         "stop_at": "stop_at",
+        "image_timeout": "image_missing_stop_seconds",
     }
     for flag, key in simple.items():
         value = getattr(args, flag)

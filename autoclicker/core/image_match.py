@@ -393,6 +393,8 @@ class ImageTarget:
     tolerance: int = 0
     # Worked out from ``template`` unless the caller already has it (#162).
     prepared: PreparedTemplate | None = field(default=None, repr=False, compare=False)
+    # End the run once the image has not been seen for this long; 0 = keep waiting (#174).
+    missing_stop_seconds: float = 0.0
 
     def __post_init__(self) -> None:
         if self.prepared is None:

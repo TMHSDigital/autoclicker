@@ -44,6 +44,7 @@ PROFILE_KEYS = (
     "image_region",
     "image_margin",
     "image_tolerance",
+    "image_missing_stop_seconds",
     "click_spread",
 )
 

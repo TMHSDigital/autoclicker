@@ -189,6 +189,8 @@ Choose **Image** under Target to click a button wherever it shows up, even after
 
 A small preview of the captured image sits next to **Capture...**, and **Clear** forgets it. Matching is exact by default. If the button's colors shift a little (HDR, Night light, a translucent theme), raise **Tolerance**: each color channel of each pixel may then differ by that much, 0 to 64. Keep it as low as works, since a high tolerance can match something else of the same shape. Recapture if the button really changes look (hover states, a different theme or scaling). Searching a small area keeps it fast without extra dependencies. Each click waits for a fresh search that started after the previous click, so a click that closes the image is never repeated on whatever is underneath; image mode therefore clicks at most about 10 times a second. Every stop path, limit and the runaway guard work as usual.
 
+While the image isn't on screen the run waits for it. To give up instead, set **Stop if not seen for** to a number of seconds (or pass `--image-timeout 30`): the run then ends with *Stopped: image not seen for 30 s* once the image has been missing that long in a row. 0, the default, keeps waiting. Useful for scheduled `--headless` runs that should end when the button is gone for good.
+
 ## Command line
 
 Flags override your saved settings for one launch: they fill in the window, and `--start` presses Start for you (with the usual countdown). Handy for desktop shortcuts, Task Scheduler or a macro pad.
@@ -203,6 +205,7 @@ autoclicker --cursor --interval 50ms --clicks 200 --headless
 | :-- | :-- |
 | `--at X,Y`, `--cursor`, `--sequence`, `--image` | Target: a point, wherever the cursor is, the saved sequence, or wherever the captured image appears (the saved capture, or the one in `--profile`) |
 | `--profile NAME` | Load a saved profile first (other flags apply on top) |
+| `--image-timeout SECONDS` | With `--image`: stop once the image has not been seen for that long (0 = keep waiting) |
 | `--list-profiles` | Print the saved profiles, one per line with a summary, and exit |
 | `--interval 100ms` / `2s`, `--variation MS` | Timing |
 | `--spread PX` | Land each click up to PX pixels from the target (0 to 50) |
