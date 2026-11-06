@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.image_match import encode_image, is_app_image, store_embedded_image
+from ..core.settings_manager import setting_key
 
 _log = logging.getLogger(__name__)
 
@@ -220,7 +221,7 @@ class PresetManager:
             # A file never names a local image path: only the embedded image is used (#98).
             if key not in raw or key == "image_path":
                 continue
-            setting = {"x": "x_coord", "y": "y_coord"}.get(key, key)
+            setting = setting_key(key)
             value, error = self.settings.parse_input(setting, raw[key])
             if error is not None:
                 return None

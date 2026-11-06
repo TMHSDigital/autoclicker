@@ -113,6 +113,25 @@ MAX_CLICK_SPREAD = 50
 # Longest mouse-button hold, in milliseconds.
 MAX_HOLD_MS = 60_000
 
+# Ranges the validators enforce, named once (#169).
+MAX_INTERVAL_MS = 60_000
+MIN_INTERVAL_SECONDS = 0.001
+MAX_INTERVAL_SECONDS = 60
+MAX_CLICKS = 1_000_000
+MAX_AUTO_STOP_MINUTES = 1440
+MAX_BURST_CLICKS = 100
+MAX_BURST_PAUSE_MS = 60_000
+
+# Profiles and command-line overrides call the target point x/y; settings
+# call it x_coord/y_coord. setting_key() translates (#169).
+POINT_KEYS = {"x": "x_coord", "y": "y_coord"}
+
+
+def setting_key(key: str) -> str:
+    """The settings key for a profile-shaped key (``x`` -> ``x_coord``)."""
+    return POINT_KEYS.get(key, key)
+
+
 # Longest countdown before a Start-button run begins, in seconds.
 MAX_START_DELAY_SECONDS = 60
 
@@ -412,14 +431,15 @@ class SettingsManager:
                 )
 
             if unit == "ms":
-                if not (0 <= interval <= 60000):
+                if not (0 <= interval <= MAX_INTERVAL_MS):
                     raise ValidationError(
                         "interval",
                         interval,
-                        "Interval in milliseconds must be between 0 and 60000 (0 = no delay between bursts)",
+                        f"Interval in milliseconds must be between 0 and {MAX_INTERVAL_MS}"
+                        " (0 = no delay between bursts)",
                     )
             elif unit == "seconds":
-                if not (0.001 <= interval <= 60):
+                if not (MIN_INTERVAL_SECONDS <= interval <= MAX_INTERVAL_SECONDS):
                     raise ValidationError(
                         "interval",
                         interval,
@@ -445,11 +465,11 @@ class SettingsManager:
             clicks = self._parse_int(clicks, "max_clicks")
             if clicks < 0:
                 raise ValidationError("max_clicks", clicks, "Click count cannot be negative")
-            if clicks > 1000000:  # Reasonable upper limit to prevent system overload
+            if clicks > MAX_CLICKS:
                 raise ValidationError(
                     "max_clicks",
                     clicks,
-                    "Click count cannot exceed 1,000,000 to prevent system overload",
+                    f"Click count cannot exceed {MAX_CLICKS:,} to prevent system overload",
                 )
             return True, ""
         except ValidationError as e:
@@ -461,11 +481,11 @@ class SettingsManager:
             minutes = self._parse_int(minutes, "auto_stop_minutes")
             if minutes < 0:
                 raise ValidationError("auto_stop_minutes", minutes, "Minutes cannot be negative")
-            if minutes > 1440:  # 24 hours max
+            if minutes > MAX_AUTO_STOP_MINUTES:
                 raise ValidationError(
                     "auto_stop_minutes",
                     minutes,
-                    "Auto-stop time cannot exceed 24 hours (1440 minutes)",
+                    f"Auto-stop time cannot exceed 24 hours ({MAX_AUTO_STOP_MINUTES} minutes)",
                 )
             return True, ""
         except ValidationError as e:
@@ -507,22 +527,22 @@ class SettingsManager:
                 raise ValidationError(
                     "burst_clicks", burst_clicks, "Burst clicks must be a positive integer"
                 )
-            if burst_clicks > 100:
+            if burst_clicks > MAX_BURST_CLICKS:
                 raise ValidationError(
                     "burst_clicks",
                     burst_clicks,
-                    "Burst clicks cannot exceed 100 to prevent system overload",
+                    f"Burst clicks cannot exceed {MAX_BURST_CLICKS} to prevent system overload",
                 )
 
             if burst_pause < 0:
                 raise ValidationError(
                     "burst_pause", burst_pause, "Burst pause must be a non-negative number"
                 )
-            if burst_pause > 60000:  # 1 minute max
+            if burst_pause > MAX_BURST_PAUSE_MS:
                 raise ValidationError(
                     "burst_pause",
                     burst_pause,
-                    "Burst pause cannot exceed 60,000 milliseconds (1 minute)",
+                    f"Burst pause cannot exceed {MAX_BURST_PAUSE_MS:,} milliseconds (1 minute)",
                 )
 
             return True, ""

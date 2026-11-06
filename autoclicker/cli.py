@@ -241,9 +241,11 @@ def profile_listing() -> str:
 
 def _to_raw(saved: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     """Saved settings overlaid with profile-shaped overrides, as raw settings keys."""
+    from .core.settings_manager import setting_key
+
     raw = dict(saved)
     for key, value in overrides.items():
-        raw[{"x": "x_coord", "y": "y_coord"}.get(key, key)] = value
+        raw[setting_key(key)] = value
     return raw
 
 

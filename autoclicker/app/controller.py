@@ -46,6 +46,18 @@ _ERROR_FIELDS: dict[str, tuple[str, ...]] = {
 }
 
 
+# The settings a Start reads from the form, in one place (#169).
+_RUN_FIELDS = (
+    "target_mode", "x_coord", "y_coord", "interval", "interval_unit", "variation",
+    "mouse_button", "click_type", "burst_clicks", "burst_pause", "max_clicks",
+    "auto_stop_minutes", "enable_failsafe", "pause_when_unfocused", "max_cps_ceiling",
+    "start_delay_seconds", "start_at", "stop_at", "sequence", "sequence_repeat", "action",
+    "hold_ms", "key", "condition", "condition_x", "condition_y", "condition_color",
+    "condition_tolerance", "image_path", "image_region", "image_margin", "image_tolerance",
+    "image_missing_stop_seconds", "click_spread",
+)  # fmt: skip
+
+
 @dataclass
 class StartClickResult:
     """Outcome of validate-and-start."""
@@ -203,43 +215,13 @@ class AutoclickerController:
 
     @staticmethod
     def collect_raw_settings(ui_fields: dict[str, Any]) -> dict[str, Any]:
-        """Build a raw settings dict from UI field values passed in."""
-        return {
-            "target_mode": ui_fields.get("target_mode", "fixed"),
-            "x_coord": ui_fields["x_coord"],
-            "y_coord": ui_fields["y_coord"],
-            "interval": ui_fields["interval"],
-            "interval_unit": ui_fields["interval_unit"],
-            "variation": ui_fields["variation"],
-            "mouse_button": ui_fields["mouse_button"],
-            "click_type": ui_fields["click_type"],
-            "burst_clicks": ui_fields["burst_clicks"],
-            "burst_pause": ui_fields["burst_pause"],
-            "max_clicks": ui_fields["max_clicks"],
-            "auto_stop_minutes": ui_fields["auto_stop_minutes"],
-            "enable_failsafe": ui_fields["enable_failsafe"],
-            "pause_when_unfocused": ui_fields["pause_when_unfocused"],
-            "max_cps_ceiling": ui_fields.get("max_cps_ceiling", DEFAULT_MAX_CPS),
-            "start_delay_seconds": ui_fields.get("start_delay_seconds", 0),
-            "start_at": ui_fields.get("start_at", ""),
-            "stop_at": ui_fields.get("stop_at", ""),
-            "sequence": ui_fields.get("sequence", []),
-            "sequence_repeat": ui_fields.get("sequence_repeat", 0),
-            "action": ui_fields.get("action", "click"),
-            "hold_ms": ui_fields.get("hold_ms", 500),
-            "key": ui_fields.get("key", ""),
-            "condition": ui_fields.get("condition", "none"),
-            "condition_x": ui_fields.get("condition_x", 0),
-            "condition_y": ui_fields.get("condition_y", 0),
-            "condition_color": ui_fields.get("condition_color", "#000000"),
-            "condition_tolerance": ui_fields.get("condition_tolerance", 16),
-            "image_path": ui_fields.get("image_path", ""),
-            "image_region": ui_fields.get("image_region", []),
-            "image_margin": ui_fields.get("image_margin", DEFAULT_MARGIN),
-            "image_tolerance": ui_fields.get("image_tolerance", 0),
-            "image_missing_stop_seconds": ui_fields.get("image_missing_stop_seconds", 0),
-            "click_spread": ui_fields.get("click_spread", 0),
-        }
+        """Build a raw settings dict from UI field values passed in.
+
+        A field the caller leaves out gets its saved-settings default, so the
+        defaults are stated once, in SettingsManager.DEFAULT_SETTINGS (#169).
+        """
+        defaults = SettingsManager.DEFAULT_SETTINGS
+        return {key: ui_fields.get(key, defaults[key]) for key in _RUN_FIELDS}
 
     def validate(
         self, raw_settings: dict[str, Any], screen_bounds: ScreenBounds | None = None
