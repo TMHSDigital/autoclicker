@@ -21,7 +21,7 @@ goto usage
 
 :install
 if not exist "%VENV%\Scripts\python.exe" python -m venv "%VENV%"
-"%PY%" -m pip install -r requirements-lock.txt -r requirements-dev-lock.txt
+"%PY%" -m pip install --require-hashes -r requirements-lock.txt -r requirements-dev-lock.txt
 if errorlevel 1 exit /b 1
 "%PY%" -m pip install -e . --no-deps
 exit /b %ERRORLEVEL%

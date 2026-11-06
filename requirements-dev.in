@@ -10,3 +10,5 @@ pip-audit>=2.7
 pyinstaller>=5.0.0
 setuptools>=84.1
 wheel>=0.37.0
+build>=1.6
+twine>=7.0

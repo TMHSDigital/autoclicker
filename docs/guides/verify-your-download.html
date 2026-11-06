@@ -38,6 +38,7 @@
     <h2>2. The build provenance</h2>
     <p>With the <a href="https://cli.github.com/">GitHub CLI</a> (version 2.60 or newer):</p>
     <pre><code>gh attestation verify WindowsAutoclicker.exe --repo TMHSDigital/autoclicker</code></pre>
+    <p>For the portable version, verify the zip the same way: <code>gh attestation verify WindowsAutoclicker-portable.zip --repo TMHSDigital/autoclicker</code>.</p>
     <p>This proves the file was built by this repository's workflow from a specific commit, so it can't have been swapped after the build.</p>
     <h2>3. Optional: other scanners</h2>
     <p>Search the hash on <a href="https://www.virustotal.com/">VirusTotal</a> to see what other antivirus engines say. A few may flag it anyway; see <a href="smartscreen-and-antivirus.html">SmartScreen and antivirus warnings</a>.</p>

@@ -11,7 +11,8 @@ Regenerate the lock files.
   CI and pre-commit always run the same tool versions.
 
 Existing pins are kept unless the inputs need a change; pass --upgrade to move
-every pin to the newest allowed version.
+every pin to the newest allowed version. Both locks carry hashes, and installs
+use --require-hashes, so a build only gets the exact files that were locked (#156).
 
 Usage (uv on PATH; any Python):
   python tools/refresh_lock.py            # both
@@ -49,6 +50,7 @@ def runtime_lock_command(uv: str, *, upgrade: bool = False) -> list[str]:
         "windows",
         "--no-header",
         "--no-annotate",
+        "--generate-hashes",
         "--quiet",
         "-o",
         str(LOCK_FILE),
@@ -66,6 +68,7 @@ def dev_lock_command(uv: str, *, upgrade: bool = False) -> list[str]:
         "--python-version",
         MIN_PYTHON,
         "--no-header",
+        "--generate-hashes",
         "--quiet",
         "-o",
         str(DEV_LOCK_FILE),

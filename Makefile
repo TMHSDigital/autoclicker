@@ -11,7 +11,7 @@ endif
 
 install:
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
-	$(VENV_PYTHON) -m pip install -r requirements-lock.txt -r requirements-dev-lock.txt
+	$(VENV_PYTHON) -m pip install --require-hashes -r requirements-lock.txt -r requirements-dev-lock.txt
 	$(VENV_PYTHON) -m pip install -e . --no-deps
 
 test:

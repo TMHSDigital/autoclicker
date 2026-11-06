@@ -64,6 +64,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Security
 
+- Release builds install from lock files with hashes (`--require-hashes`), only the tag-only signing job can request an OIDC token, `build` and `twine` come from the locked dev tools, and the portable zip gets a build provenance attestation like the exe, so `gh attestation verify` works on both (#156).
 - Pillow 13.0.0 closes nine advisories in its image decoders (GHSA-8g5g-8vmr-9782, GHSA-pchr-8j38-3x4p, GHSA-c6hw-5grf-ff96, GHSA-58r4-6rv3-gfh8, GHSA-65qm-jvmh-6pqg, GHSA-q45j-58j2-45rg, GHSA-p4wg-p73j-c528, GHSA-462x-pgg6-55fp and GHSA-vx6w-vv9f-6gvg). certifi 2026.10.19 drops the emSign root CAs (GHSA-6q48-6c7w-9gw2) used by the dev tools.
 
 ### Documentation

@@ -8,7 +8,7 @@ Pushing a `vX.Y.Z` tag runs the CI workflow on GitHub Actions:
 
 1. Lint, type check, dependency audit and tests on Python 3.11 to 3.14.
 2. PyInstaller builds `WindowsAutoclicker.exe` from `WindowsAutoclicker.spec` (no UPX, with a Windows version resource), launches it once as a smoke test, and writes `WindowsAutoclicker.exe.sha256`. It then launches the exe once more from a folder with `portable.txt`, checks that it wrote its log to `data\` and nothing to `%APPDATA%`, and packs `WindowsAutoclicker-portable.zip` (exe plus marker) with its own checksum.
-3. The release job checks that the tag matches `autoclicker/__init__.py`, takes the release notes from that version's section of `CHANGELOG.md` (`scripts/release_notes.py`), records a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for the exe, and publishes the exe and its checksum.
+3. The release job checks that the tag matches `autoclicker/__init__.py`, takes the release notes from that version's section of `CHANGELOG.md` (`scripts/release_notes.py`), records a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for the exe and the portable zip, and publishes both with their checksums and `THIRD_PARTY_NOTICES.txt`. Builds install from hashed lock files (`--require-hashes`), so they only get the exact package files that were locked.
 
 Maintainer steps are in [CONTRIBUTING.md](../CONTRIBUTING.md#releases).
 
@@ -26,6 +26,7 @@ Provenance (needs GitHub CLI 2.60 or newer; older versions fail with an "unsuppo
 
 ```bash
 gh attestation verify WindowsAutoclicker.exe --repo TMHSDigital/autoclicker
+gh attestation verify WindowsAutoclicker-portable.zip --repo TMHSDigital/autoclicker
 ```
 
 ## Code signing
@@ -44,12 +45,12 @@ Decision: deferred. Revisit if download volume grows or users report blocked ins
 
 ### Turning signing on
 
-The release build already contains the signing steps; they run on `v*` tags once these **repository variables** (Settings, Secrets and variables, Actions, Variables) exist. No secrets are needed: the workflow logs in to Azure with OpenID Connect.
+The `sign` job in CI already contains the signing steps; it runs only on `v*` tags (the only job with an OIDC token) and signs once these **repository variables** (Settings, Secrets and variables, Actions, Variables) exist. No secrets are needed: the workflow logs in to Azure with OpenID Connect.
 
 1. In Azure, create an Artifact Signing (Trusted Signing) account, complete identity validation, and create a public-trust certificate profile.
 2. Create an app registration (or user-assigned managed identity), give it the *Artifact Signing Certificate Profile Signer* role on the account, and add a federated credential for this repository with subject `repo:TMHSDigital/autoclicker:ref:refs/tags/*`.
 3. Set the variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `SIGNING_ENDPOINT` (for example `https://eus.codesigning.azure.net/`), `SIGNING_ACCOUNT_NAME` and `SIGNING_CERTIFICATE_PROFILE`.
-4. Push the next tag. The build signs `WindowsAutoclicker.exe` before the checksum is computed and fails if `Get-AuthenticodeSignature` doesn't report a valid signature.
+4. Push the next tag. The `sign` job signs the `WindowsAutoclicker.exe` the build job made and smoke-tested, fails if `Get-AuthenticodeSignature` doesn't report a valid signature, and then rewrites the exe's checksum and the portable zip around the signed exe. Without the variables it passes the unsigned build through.
 
 After the first signed release, drop the SmartScreen note from the README and the website FAQ.
 
