@@ -1,15 +1,21 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Header: status-colored brand dot, wordmark, update button, hotkeys and the menu."""
 
+from __future__ import annotations
+
 import contextlib
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from ..styles import BG_CHECK, BG_FRAME, BG_LABEL
 from ..theme import FONT_TITLE, STATUS_COLORS
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
 
-def build_header_section(app, parent) -> ttk.Frame:
+
+def build_header_section(app: AutoclickerApp, parent) -> ttk.Frame:
     """Create the header row (and the first-run hint strip under it)."""
     header = ttk.Frame(parent, style=BG_FRAME, padding=(16, 12, 16, 4))
     header.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E))
@@ -61,7 +67,7 @@ def _post_menu(menu, button) -> None:
             menu.grab_release()
 
 
-def _build_first_run_hint(app, header) -> None:
+def _build_first_run_hint(app: AutoclickerApp, header) -> None:
     # One-time hint with the ways out of a run (#124); "Got it" hides it for good.
     app.first_run_hint_var = tk.StringVar(value=app._first_run_hint_text())
     app.first_run_hint = ttk.Frame(header, style=BG_FRAME)

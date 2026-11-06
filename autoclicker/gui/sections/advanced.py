@@ -1,14 +1,20 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Timing and Safety: collapsible panels that summarise themselves while closed."""
 
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from ...core.safety import DEFAULT_MAX_CPS
 from ..widgets.panel import CollapsiblePanel, labeled_row
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
 
-def build_timing_panel(app, parent) -> CollapsiblePanel:
+
+def build_timing_panel(app: AutoclickerApp, parent) -> CollapsiblePanel:
     """Burst, start delay, start-at and stop-at times."""
     panel = CollapsiblePanel(parent, "Timing")
     _build_timing(app, panel.body, app.controller.settings)
@@ -23,7 +29,7 @@ def build_timing_panel(app, parent) -> CollapsiblePanel:
     return panel
 
 
-def build_safety_panel(app, parent) -> CollapsiblePanel:
+def build_safety_panel(app: AutoclickerApp, parent) -> CollapsiblePanel:
     """Limits, speed limit, pixel condition, failsafe and focus pause."""
     panel = CollapsiblePanel(parent, "Safety")
     _build_safety(app, panel.body, app.controller.settings)
@@ -38,7 +44,7 @@ def _refresh_on_edit(app, entry: ttk.Entry) -> None:
         entry.bind(sequence, lambda _e: app._refresh_panel_summaries(), add="+")
 
 
-def _build_timing(app, body: ttk.Frame, settings) -> None:
+def _build_timing(app: AutoclickerApp, body: ttk.Frame, settings) -> None:
     # Reads as "Burst: [3] clicks, [100] ms apart"; the main Interval is the wait between bursts.
     burst = labeled_row(body, 0, "Burst")
     app.burst_clicks_entry = ttk.Entry(burst, width=4)
@@ -78,7 +84,7 @@ def _build_timing(app, body: ttk.Frame, settings) -> None:
     )
 
 
-def _build_safety(app, body: ttk.Frame, settings) -> None:
+def _build_safety(app: AutoclickerApp, body: ttk.Frame, settings) -> None:
     limits = labeled_row(body, 0, "Limits")
     saved_max_clicks = str(settings.get("max_clicks", "0"))
     try:

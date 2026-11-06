@@ -1,13 +1,19 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Footer: app toggles (tray, updates), the disclaimer and the Info button."""
 
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from ..styles import BG_CHECK, BG_FRAME, BG_MUTED
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
 
-def build_footer_section(app, parent) -> ttk.Frame:
+
+def build_footer_section(app: AutoclickerApp, parent) -> ttk.Frame:
     """Create the footer row."""
     footer = ttk.Frame(parent, style=BG_FRAME, padding=(16, 6, 16, 10))
     footer.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E))

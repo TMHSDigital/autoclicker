@@ -1,16 +1,22 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Hero: the Start/Stop button, the live readouts and the status line."""
 
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from ..styles import BG_FRAME, BG_LABEL, BG_MUTED, DANGER
 from ..theme import FONT_BOLD, STATUS_COLORS
 from ..widgets.run_button import RunButton
 from ..widgets.stat_tile import StatTile
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
 
-def build_hero_section(app, parent) -> ttk.Frame:
+
+def build_hero_section(app: AutoclickerApp, parent) -> ttk.Frame:
     """Create the hero row. Built after the panels: the status line reads the form."""
     hero = ttk.Frame(parent, style=BG_FRAME, padding=(16, 8, 16, 10))
     hero.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E))

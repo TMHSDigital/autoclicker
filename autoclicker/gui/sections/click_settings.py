@@ -1,14 +1,20 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Click panel: button, click type, interval, action and spread."""
 
+from __future__ import annotations
+
 import tkinter as tk
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 from ..styles import MUTED, SEGMENT
 from ..widgets.panel import Panel, labeled_row
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
 
-def build_click_panel(app, parent) -> Panel:
+
+def build_click_panel(app: AutoclickerApp, parent) -> Panel:
     """Create the Click panel; the caller grids it."""
     panel = Panel(parent, "Click")
     body = panel.body

@@ -1,17 +1,25 @@
 # SPDX-License-Identifier: CC-BY-NC-4.0
 """Target panel: where the clicks go, plus profiles."""
 
+from __future__ import annotations
+
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
+from typing import TYPE_CHECKING, Any
 
 from ...core.image_match import DEFAULT_MARGIN
 from ..styles import MUTED, SEGMENT
 from ..widgets.panel import Panel
 
+if TYPE_CHECKING:
+    from ..main_window import AutoclickerApp
+
+
 _MODES = (("Fixed", "fixed"), ("Cursor", "cursor"), ("Sequence", "sequence"), ("Image", "image"))
 
 
-def build_target_panel(app, parent) -> Panel:
+def build_target_panel(app: AutoclickerApp, parent) -> Panel:
     """Create the Target panel; the caller grids it."""
     panel = Panel(parent, "Target")
     body = panel.body
@@ -79,7 +87,7 @@ def build_target_panel(app, parent) -> Panel:
     return panel
 
 
-def _build_image_panel(app, body: ttk.Frame, settings) -> None:
+def _build_image_panel(app: AutoclickerApp, body: ttk.Frame, settings) -> None:
     """Image mode: capture a button image; clicks go wherever it appears nearby."""
     app.image_path = str(settings.get("image_path", "") or "")
     region = settings.get("image_region", [])
@@ -124,7 +132,7 @@ def _build_image_panel(app, body: ttk.Frame, settings) -> None:
     app._refresh_image_label()
 
 
-def _build_sequence_panel(app, body: ttk.Frame, settings) -> None:
+def _build_sequence_panel(app: AutoclickerApp, body: ttk.Frame, settings) -> None:
     """Step list for sequence mode; shown only while Sequence is selected."""
     saved, error = settings.parse_input("sequence", settings.get("sequence", []))
     app.sequence_steps = saved if error is None else []
@@ -146,7 +154,7 @@ def _build_sequence_panel(app, body: ttk.Frame, settings) -> None:
         ("<Alt-Down>", "down"),
         ("<Control-z>", "undo"),
     ):
-        app.sequence_list.bind(sequence, lambda _e, a=action: app._on_sequence_key(a))
+        app.sequence_list.bind(sequence, _key_handler(app, action))
 
     buttons = (
         ("Record", app.toggle_sequence_recording),
@@ -171,3 +179,8 @@ def _build_sequence_panel(app, body: ttk.Frame, settings) -> None:
     ttk.Label(repeat_frame, text="times (0 = until stopped)", style=MUTED).pack(side=tk.LEFT)
 
     app._refresh_sequence_list()
+
+
+def _key_handler(app: AutoclickerApp, action: str) -> Callable[[Any], str]:
+    """A list key binding for one action (#175)."""
+    return lambda _event: app._on_sequence_key(action)

@@ -54,6 +54,12 @@ class AppBase:
     spread_entry: ttk.Entry
     start_at_entry: ttk.Entry
     stop_at_entry: ttk.Entry
+    # Hero readouts and profile buttons (#170: builders are type-checked).
+    clicks_tile: Any
+    runtime_tile: Any
+    rate_tile: Any
+    save_preset_btn: ttk.Button
+    delete_preset_btn: ttk.Button
     key_entry: ttk.Entry
     condition_var: tk.StringVar
     condition_label_var: tk.StringVar
