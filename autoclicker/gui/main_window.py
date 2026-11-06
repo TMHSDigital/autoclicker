@@ -196,8 +196,10 @@ class AutoclickerApp(
 
         self.center_window()
 
-        apply_theme(self.root)
+        # The default font first: apply_theme then blanks it for labels, and
+        # the newest matching option wins.
         self.root.option_add("*Font", FONT)
+        apply_theme(self.root)
 
     def _fit_to_content(self) -> None:
         """Size the window to its content (panels collapsed) so nothing starts cut off.

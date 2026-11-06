@@ -25,7 +25,7 @@ class SequenceMixin(AppBase):
         last = len(self.sequence_steps)
         for number, step in enumerate(self.sequence_steps, start=1):
             delay = step.get("delay_ms", 0)
-            after = "then the Interval" if number == last else f"then wait {delay:g} ms"
+            after = "then the Interval" if number == last else f"wait {delay:g} ms"
             listbox.insert(
                 tk.END,
                 f"{number}. ({step['x']}, {step['y']})  {step['button']} {step['click_type']}, {after}",

@@ -1,7 +1,7 @@
 """Dark control-panel theme tokens: contrast and application."""
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from autoclicker.gui import theme
 from autoclicker.gui.styles import ERROR, MUTED, PANEL, SEGMENT
@@ -76,6 +76,41 @@ class TestApply(unittest.TestCase):
         root.option_add.assert_any_call("*TLabel.foreground", "")
         root.option_add.assert_any_call("*TLabel.font", "")  # *Font would hide Stat fonts
 
+    def test_label_blanks_come_after_the_theme_change(self):
+        """tk_setPalette runs from <<ThemeChanged>>, and the newest equal option
+        wins, so the blanks must be added after it has run (seen in snapshots:
+        labels drew the panel gray on the page and the stats lost their font)."""
+        root = MagicMock()
+        with patch("autoclicker.gui.theme.sv_ttk"):
+            theme.apply_theme(root, style=MagicMock())
+        names = [c[0] for c in root.mock_calls]
+        first_blank = next(
+            i
+            for i, c in enumerate(root.mock_calls)
+            if c == call.option_add("*TLabel.background", "")
+        )
+        self.assertIn("update_idletasks", names[:first_blank])
+
+    def test_disabled_segments_get_a_flat_element(self):
+        """sv_ttk fills a disabled Toolbutton; segments use their own element without it."""
+        style = MagicMock()
+        style.tk.eval.side_effect = lambda script: script.split("(")[1].rstrip(")")
+        style.element_names.return_value = ()
+        with patch("autoclicker.gui.theme.sv_ttk"):
+            theme.apply_theme(MagicMock(), style=style)
+        args = style.element_create.call_args.args
+        self.assertEqual(args[:3], ("Segment.button", "image", "empty"))
+        self.assertIn(("disabled", "empty"), args)
+        self.assertEqual(style.layout.call_args.args[0], SEGMENT)
+        self.assertEqual(style.layout.call_args.args[1][0][0], "Segment.button")
+
+    def test_segment_restyle_is_skipped_without_sv_ttk_images(self):
+        style = MagicMock()
+        style.tk.eval.side_effect = RuntimeError("no such variable")
+        with patch("autoclicker.gui.theme.sv_ttk"):
+            theme.apply_theme(MagicMock(), style=style)  # does not raise
+        style.element_create.assert_not_called()
+
     def test_surface_matches_the_sv_ttk_card(self):
         """Card.TFrame is an image sv_ttk draws in its own gray; panel bodies must match."""
         self.assertEqual(theme.PALETTE["surface"], "#1c1c1c")
@@ -98,6 +133,24 @@ class TestApply(unittest.TestCase):
         style = MagicMock()
         style.configure.side_effect = RuntimeError("no Tk")
         theme.set_dimmed(True, style=style)  # does not raise
+
+
+class TestWindowFontOrder(unittest.TestCase):
+    def test_default_font_goes_in_before_the_theme_blanks_it_for_labels(self):
+        from autoclicker.gui.main_window import AutoclickerApp
+
+        app = AutoclickerApp.__new__(AutoclickerApp)
+        app.root = MagicMock()
+        order = []
+        app.root.option_add.side_effect = lambda *a: order.append(("option_add", a))
+        with patch(
+            "autoclicker.gui.main_window.apply_theme",
+            side_effect=lambda root: order.append(("apply_theme",)),
+        ):
+            app.setup_window()
+        self.assertLess(
+            order.index(("option_add", ("*Font", theme.FONT))), order.index(("apply_theme",))
+        )
 
 
 if __name__ == "__main__":

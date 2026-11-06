@@ -38,6 +38,10 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Fixed
 
+- The numbers above the Start button show in their large type again, and the labels in the header and status line no longer sit on gray boxes: the theme's own colors and fonts were being overridden at startup.
+- High Contrast: buttons, fields and the Timing and Safety headers take the system colors too, instead of light gray (the headers were white on gray and hard to read) (#181).
+- Hold and Key are shown dimmed where a mode does not allow them (as in Sequence mode), instead of looking like raised buttons.
+- The sequence step list is wider and its lines shorter ("wait 500 ms"), so a step's button, click type and wait are no longer cut off.
 - If a hotkey could not be registered at startup (say F6 is taken by another program), every hotkey stopped working for the session, Stop and Emergency stop included, and the "Hotkey unavailable" message was lost. Now only the taken key is missing and the message shows once the window is up (#144).
 - A settings file that is not UTF-8 (say, saved as ANSI from Notepad) is now moved aside as a `.corrupt-` copy with a warning, like invalid JSON, instead of being replaced by defaults at the next save or stopping the app from starting. A settings file that can't be opened (locked by another program) loads defaults with a warning and is not saved over during that session. A hand-edited `max_cps_ceiling` that isn't a number no longer stops the app from starting (#146).
 - A settings change that can't be written (full disk, read-only folder, antivirus lock) now shows "Settings not saved" in the status line instead of only in the log, and the Hotkeys dialog says the new keys apply to this session only (#151).

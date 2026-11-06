@@ -79,6 +79,24 @@ class TestApplyTheme(unittest.TestCase):
         self.assertEqual(theme.PALETTE["text"], "#ffff00")  # widgets reading PALETTE follow
         self.assertEqual(theme.STATUS_COLORS["error"], "#00ffff")
 
+    def test_clam_controls_take_the_system_colors(self):
+        """clam's light-gray defaults ignored the scheme and hid the white panel
+        headers (seen in snapshots); buttons and fields get the palette."""
+        system = {key: "#000000" for key in theme.PALETTE}
+        system.update(surface="#101010", text="#ffffff", bg="#000001")
+        style = MagicMock()
+        with (
+            patch("autoclicker.gui.theme.system_palette", return_value=system),
+            patch("autoclicker.gui.theme.sv_ttk"),
+        ):
+            theme.apply_theme(MagicMock(), style=style)
+        configured = {c.args[0]: c.kwargs for c in style.configure.call_args_list if c.args}
+        for name in ("TButton", "Toolbutton"):
+            self.assertEqual(configured[name]["background"], "#101010")
+            self.assertEqual(configured[name]["foreground"], "#ffffff")
+        self.assertEqual(configured["TEntry"]["fieldbackground"], "#000001")
+        style.element_create.assert_not_called()  # the sv_ttk segment element is not used
+
     def test_default_look_is_unchanged(self):
         before = dict(theme.PALETTE)
         with patch("autoclicker.gui.theme.sv_ttk") as sv:

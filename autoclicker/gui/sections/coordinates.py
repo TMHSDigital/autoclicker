@@ -142,7 +142,7 @@ def _build_sequence_panel(app: AutoclickerApp, body: ttk.Frame, settings) -> Non
     app.sequence_frame.grid_columnconfigure(0, weight=1)
 
     app.sequence_list = tk.Listbox(
-        app.sequence_frame, height=6, width=18, activestyle="none", exportselection=False
+        app.sequence_frame, height=6, width=34, activestyle="none", exportselection=False
     )
     app.sequence_list.grid(row=0, column=0, rowspan=7, sticky=(tk.W, tk.E, tk.N, tk.S))
     # Edit a step in place and keyboard shortcuts on the list (#175).

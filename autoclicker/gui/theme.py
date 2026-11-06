@@ -120,6 +120,9 @@ def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
         style = style if style is not None else ttk.Style(root)
         if system is not None:
             style.theme_use("clam")  # plain shapes that take any colors
+            _configure_clam(style, colors)
+        else:
+            _flat_disabled_segments(style)
         _configure_styles(style, colors)
         root.configure(background=colors["bg"])
         # sv_ttk's tk_setPalette writes *background and *foreground into the option
@@ -127,6 +130,11 @@ def apply_theme(root: Any, *, style: Any = None) -> dict[str, str]:
         # labels so Bg.*, Stat.* and the dimming styles show; classic widgets
         # (Listbox, Menu) keep the dark palette. The same goes for *Font, which
         # the app sets as the default and which would hide the Stat fonts.
+        # tk_setPalette runs from a <<ThemeChanged>> binding, so let it run
+        # first: the option database lets the newest of equal entries win, and
+        # blanks added before it were overridden (labels drew the panel color
+        # on the page and the stats lost their font).
+        root.update_idletasks()
         for option in ("background", "foreground", "font"):
             root.option_add(f"*TLabel.{option}", "")
     except Exception:
@@ -174,8 +182,102 @@ def _configure_styles(style: Any, c: dict[str, str]) -> None:
     style.map(
         SEGMENT,
         background=[("selected", c["accent_soft"])],
-        foreground=[("selected", c["accent_strong"])],
+        foreground=[("disabled", c["idle"]), ("selected", c["accent_strong"])],
     )
     style.configure(STAT, background=bg, foreground=c["text"], font=FONT_STAT)
     style.configure(STAT_CAPTION, background=bg, foreground=c["muted"], font=FONT_STAT_CAPTION)
     style.configure(DANGER, foreground=c["error"], background=bg)
+
+
+_SV_IMAGES = "ttk::theme::sv_dark::I"
+
+
+def _flat_disabled_segments(style: Any) -> None:
+    """Draw a disabled segment flat, like an unselected one, only dimmed.
+
+    sv_ttk gives every disabled Toolbutton a filled box, so the actions a mode
+    does not allow (Hold and Key in Sequence mode) looked more like buttons than
+    the ones that work. Segments get their own button element without it.
+    """
+    try:
+        image = {
+            name: style.tk.eval(f"set {_SV_IMAGES}({name})")
+            for name in ("empty", "button-pressed", "button-hover", "button-focus-hover")
+        }
+        if "Segment.button" not in style.element_names():
+            style.element_create(
+                "Segment.button",
+                "image",
+                image["empty"],
+                ("disabled", image["empty"]),
+                ("pressed", image["button-pressed"]),
+                ("active focus", image["button-focus-hover"]),
+                ("active", image["button-hover"]),
+                border=4,
+                sticky="nsew",
+            )
+        style.layout(
+            SEGMENT,
+            [
+                (
+                    "Segment.button",
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            (
+                                "Toolbutton.padding",
+                                {
+                                    "sticky": "nsew",
+                                    "children": [
+                                        ("Toolbutton.label", {"side": "left", "expand": 1})
+                                    ],
+                                },
+                            )
+                        ],
+                    },
+                )
+            ],
+        )
+    except Exception:  # sv_ttk missing or changed: keep its look
+        _log.debug("Could not restyle the segments", exc_info=True)
+
+
+def _configure_clam(style: Any, c: dict[str, str]) -> None:
+    """Give clam's controls the High Contrast colors (#181).
+
+    clam's own defaults are light gray, which ignores the user's scheme and
+    left white panel headers unreadable on a gray bar.
+    """
+    surface, text, line = c["surface"], c["text"], c["line"]
+    edges = {"bordercolor": line, "lightcolor": surface, "darkcolor": surface}
+    for name in ("TButton", "Toolbutton", "TCheckbutton", "TRadiobutton"):
+        style.configure(name, background=surface, foreground=text, **edges)
+        style.map(
+            name,
+            background=[("active", c["accent"]), ("pressed", c["accent"])],
+            foreground=[
+                ("disabled", c["idle"]),
+                ("active", c["on_accent"]),
+                ("pressed", c["on_accent"]),
+            ],
+        )
+    for name in ("TCheckbutton", "TRadiobutton"):
+        style.configure(name, indicatorbackground=c["bg"], indicatorforeground=text)
+    for name in ("TEntry", "TCombobox", "TSpinbox"):
+        style.configure(
+            name,
+            fieldbackground=c["bg"],
+            foreground=text,
+            insertcolor=text,
+            arrowcolor=text,
+            background=surface,
+            selectbackground=c["accent"],
+            selectforeground=c["on_accent"],
+            **edges,
+        )
+        style.map(
+            name,
+            fieldbackground=[("readonly", c["bg"]), ("disabled", c["bg"])],
+            foreground=[("disabled", c["idle"])],
+        )
+    style.configure("TScrollbar", background=surface, troughcolor=c["bg"], arrowcolor=text, **edges)
