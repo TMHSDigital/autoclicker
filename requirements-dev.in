@@ -8,5 +8,5 @@ mypy>=1.0.0
 pre-commit>=3.2.0
 pip-audit>=2.7
 pyinstaller>=5.0.0
-setuptools>=77
+setuptools>=84.1
 wheel>=0.37.0

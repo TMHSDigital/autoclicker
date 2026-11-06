@@ -5,30 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # Direct runtime dependencies, the transitive packages pinned in
-    # requirements-lock.txt (they ship inside the exe), and the dev tools.
+    # Every pin in both locks, direct and transitive: runtime transitives ship
+    # inside the exe, and a CVE in a dev-only transitive pin fails the audit
+    # step, so all of them need bump PRs (#152).
     allow:
-      - dependency-name: "pyautogui"
-      - dependency-name: "pywin32"
-      - dependency-name: "Pillow"
-      - dependency-name: "pystray"
-      - dependency-name: "sv-ttk"
-      - dependency-name: "mouseinfo"
-      - dependency-name: "pygetwindow"
-      - dependency-name: "pymsgbox"
-      - dependency-name: "pyperclip"
-      - dependency-name: "pyrect"
-      - dependency-name: "pyscreeze"
-      - dependency-name: "pytweening"
-      - dependency-name: "six"
-      - dependency-name: "pytest*"
-      - dependency-name: "pytest-cov"
-      - dependency-name: "ruff"
-      - dependency-name: "mypy"
-      - dependency-name: "coverage"
-      - dependency-name: "pre-commit"
-      - dependency-name: "pip-audit"
-      - dependency-name: "pyinstaller"
+      - dependency-type: "all"
     groups:
       runtime-transitive:
         patterns:
