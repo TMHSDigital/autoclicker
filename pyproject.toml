@@ -89,7 +89,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["."]
+source = ["autoclicker"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -111,7 +111,8 @@ exclude_lines = [
     "if 0:",
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod"
+    "@(abc\\.)?abstractmethod",
+    "if TYPE_CHECKING:"
 ]
 
 [tool.ruff]
@@ -155,3 +156,4 @@ module = [
     "sv_ttk.*"
 ]
 ignore_missing_imports = true
+
