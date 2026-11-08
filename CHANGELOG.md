@@ -38,6 +38,7 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 ### Fixed
 
+- Typing `inf` or `nan` into a number field, or passing it on the command line (`--minutes inf`), no longer crashes the panel summaries or startup; the value counts as unset (#147).
 - The numbers above the Start button show in their large type again, and the labels in the header and status line no longer sit on gray boxes: the theme's own colors and fonts were being overridden at startup.
 - High Contrast: buttons, fields and the Timing and Safety headers take the system colors too, instead of light gray (the headers were white on gray and hard to read) (#181).
 - Hold and Key are shown dimmed where a mode does not allow them (as in Sequence mode), instead of looking like raised buttons.
