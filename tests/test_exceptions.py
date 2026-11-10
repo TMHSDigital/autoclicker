@@ -97,59 +97,70 @@ class TestCustomExceptions(unittest.TestCase):
 
     def test_create_user_friendly_error_validation_error(self):
         """Test user-friendly error messages for ValidationError"""
-        error = ValidationError("interval", 0, "Must be positive")
+        error = ValidationError("max_clicks", -1, "Click count cannot be negative")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Please check your input for interval: Must be positive")
+        self.assertEqual(message, "Couldn't start. Max clicks: Click count cannot be negative")
 
     def test_create_user_friendly_error_coordinate_error(self):
         """Test user-friendly error messages for CoordinateError"""
         error = CoordinateError(100, 200, "Out of screen bounds")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Please select valid coordinates: Out of screen bounds")
+        self.assertEqual(message, "Couldn't start. Target point: Out of screen bounds")
 
     def test_create_user_friendly_error_safety_error(self):
         """Test user-friendly error messages for SafetyError"""
         error = SafetyError("click_limit", 1001, 1000)
         message = create_user_friendly_error(error)
         self.assertEqual(
-            message, "Safety limit reached: Safety limit exceeded for click_limit: 1001 > 1000"
+            message, "Couldn't start: Safety limit exceeded for click_limit: 1001 > 1000"
         )
 
     def test_create_user_friendly_error_dependency_error(self):
         """Test user-friendly error messages for DependencyError"""
         error = DependencyError("keyboard", "Not installed")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Missing or incompatible dependency: Not installed")
+        self.assertEqual(
+            message, "Couldn't start. keyboard is missing or the wrong version: Not installed"
+        )
 
     def test_create_user_friendly_error_value_error(self):
         """Test user-friendly error messages for ValueError"""
         error = ValueError("Invalid input format")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Invalid input format. Please check your entries.")
+        self.assertEqual(
+            message,
+            "Couldn't start: a setting has a value the app can't read (Invalid input format).",
+        )
 
     def test_create_user_friendly_error_type_error(self):
         """Test user-friendly error messages for TypeError"""
         error = TypeError("Expected string, got int")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Invalid input format. Please check your entries.")
+        self.assertIn("(Expected string, got int)", message)
+        self.assertTrue(message.startswith("Couldn't start: a setting"))
 
     def test_create_user_friendly_error_permission_error(self):
         """Test user-friendly error messages for PermissionError"""
         error = PermissionError("Access denied")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "Permission denied. Please run with appropriate permissions.")
+        self.assertEqual(message, "Couldn't start: Windows denied access (Access denied).")
 
     def test_create_user_friendly_error_os_error(self):
         """Test user-friendly error messages for OSError"""
         error = OSError("System error")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "System error occurred. Please check your system configuration.")
+        self.assertEqual(message, "Couldn't start: Windows reported an error (System error).")
 
     def test_create_user_friendly_error_unknown(self):
         """Test user-friendly error messages for unknown exceptions"""
         error = RuntimeError("Something went wrong")
         message = create_user_friendly_error(error)
-        self.assertEqual(message, "An unexpected error occurred: Something went wrong")
+        self.assertEqual(message, "Couldn't start: Something went wrong")
+
+    def test_create_user_friendly_error_empty_message_names_the_type(self):
+        """An exception with no text still says what it was"""
+        message = create_user_friendly_error(RuntimeError())
+        self.assertEqual(message, "Couldn't start: RuntimeError")
 
     def test_handle_autoclicker_error_with_logger(self):
         """Test error handling with logger"""

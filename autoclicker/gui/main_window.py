@@ -813,10 +813,10 @@ class AutoclickerApp(
 
         except AutoclickerError as e:
             user_message = create_user_friendly_error(e)
-            dialogs.messagebox.showerror("Autoclicker Error", user_message)
+            dialogs.messagebox.showerror("Couldn't start", user_message)
         except Exception as e:
             user_message = create_user_friendly_error(e)
-            dialogs.messagebox.showerror("Unexpected Error", user_message)
+            dialogs.messagebox.showerror("Couldn't start", user_message)
 
     def stop_clicking(self) -> None:
         """Stop the autoclicking process (or cancel a countdown, or finish recording)."""

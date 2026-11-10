@@ -134,19 +134,21 @@ def handle_autoclicker_error(error: AutoclickerError, logger=None) -> str:
 
 
 def create_user_friendly_error(error: Exception) -> str:
-    """Convert technical errors to user-friendly messages"""
+    """Say why a run couldn't start, in words a user can act on."""
     if isinstance(error, ValidationError):
-        return f"Please check your input for {error.field}: {error.reason}"
+        field = error.field.replace("_", " ").capitalize()
+        return f"Couldn't start. {field}: {error.reason}"
     if isinstance(error, CoordinateError):
-        return f"Please select valid coordinates: {error.reason}"
+        return f"Couldn't start. Target point: {error.reason}"
     if isinstance(error, SafetyError):
-        return f"Safety limit reached: {error.reason}"
+        return f"Couldn't start: {error.reason}"
     if isinstance(error, DependencyError):
-        return f"Missing or incompatible dependency: {error.reason}"
+        return f"Couldn't start. {error.dependency} is missing or the wrong version: {error.reason}"
+    detail = str(error) or type(error).__name__
     if isinstance(error, (ValueError, TypeError)):
-        return "Invalid input format. Please check your entries."
+        return f"Couldn't start: a setting has a value the app can't read ({detail})."
     if isinstance(error, PermissionError):
-        return "Permission denied. Please run with appropriate permissions."
+        return f"Couldn't start: Windows denied access ({detail})."
     if isinstance(error, OSError):
-        return "System error occurred. Please check your system configuration."
-    return f"An unexpected error occurred: {error!s}"
+        return f"Couldn't start: Windows reported an error ({detail})."
+    return f"Couldn't start: {detail}"

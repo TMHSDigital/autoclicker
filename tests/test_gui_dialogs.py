@@ -86,7 +86,7 @@ class TestStartErrorDialogs(unittest.TestCase):
         app.controller.validate_and_start_clicking.side_effect = AutoclickerError("bad start")
         app._try_start()
         mb.showerror.assert_called_once()
-        self.assertEqual(mb.showerror.call_args.args[0], "Autoclicker Error")
+        self.assertEqual(mb.showerror.call_args.args[0], "Couldn't start")
         self._assert_not_running(app)
 
     @patch("autoclicker.gui.dialogs.messagebox")
@@ -95,7 +95,7 @@ class TestStartErrorDialogs(unittest.TestCase):
         app.controller.validate_and_start_clicking.side_effect = RuntimeError("boom")
         app._try_start()
         mb.showerror.assert_called_once()
-        self.assertEqual(mb.showerror.call_args.args[0], "Unexpected Error")
+        self.assertEqual(mb.showerror.call_args.args[0], "Couldn't start")
         self._assert_not_running(app)
 
     @patch("autoclicker.gui.dialogs.messagebox")
@@ -106,7 +106,7 @@ class TestStartErrorDialogs(unittest.TestCase):
         app._confirm_guard_off = MagicMock(return_value=True)
         app.controller.validate_and_start_clicking.side_effect = AutoclickerError("bad start")
         app.start_clicking()
-        self.assertEqual(mb.showerror.call_args.args[0], "Autoclicker Error")
+        self.assertEqual(mb.showerror.call_args.args[0], "Couldn't start")
         self._assert_not_running(app)
 
 
