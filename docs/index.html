@@ -106,10 +106,10 @@
         <h2>Everything a clicker should do</h2>
         <p class="sub">From one spot clicked every second to a multi-step routine run from a shortcut.</p>
         <div class="grid">
-          <div class="card"><h3>Pick and click</h3><p>Type X and Y, or Pick Location with a live readout on any monitor. Or click wherever the cursor is.</p></div>
+          <div class="card"><h3>Pick and click</h3><p>Type X and Y, or press Pick for a live readout on any monitor. Or click wherever the cursor is, and spread clicks up to 50 px around the spot.</p></div>
           <div class="card"><h3>Record a routine</h3><p>Press Record and click through it once. Every click becomes a step with its own wait, ready to replay as often as you like.</p></div>
-          <div class="card"><h3>Click a button wherever it appears</h3><p>Capture a button once. Each click goes wherever that image is on screen, and the run waits while it isn't there.</p></div>
-          <div class="card"><h3>Precise timing</h3><p>Intervals from 0 ms to 60 s, random variation, and bursts of quick clicks between waits.</p></div>
+          <div class="card"><h3>Click a button wherever it appears</h3><p>Capture a button once. Each click goes wherever that image is on screen. The run waits while it isn't there, or stops once it has been gone for as long as you choose.</p></div>
+          <div class="card"><h3>Precise timing</h3><p>Intervals from 0 ms to 60 s, random variation, and bursts of quick clicks between waits. Start or stop at a time of day.</p></div>
           <div class="card"><h3>Hold and key actions</h3><p>Hold a mouse button for a set time, or press a key such as F5 or Ctrl+R instead of clicking.</p></div>
           <div class="card"><h3>Profiles and command line</h3><p>Save everything by name and share it as a file. Start a profile from a shortcut or Task Scheduler, or run headless.</p></div>
         </div>
@@ -124,7 +124,7 @@
           <div class="card"><h3>Corner failsafe</h3><p>Slam the mouse into a corner of any monitor to abort. Corners between screens are ignored.</p></div>
           <div class="card"><h3>Emergency stop</h3><p><kbd>Esc</kbd> halts immediately from anywhere. Every hotkey can be rebound.</p></div>
           <div class="card"><h3>Limits and speed guard</h3><p>Stop after N clicks or N minutes, and stop automatically if clicks run faster than your speed limit.</p></div>
-          <div class="card"><h3>Pause when unfocused</h3><p>Clicking pauses whenever the target window isn't in front, and resumes when it is.</p></div>
+          <div class="card"><h3>Pause when the window isn't in front</h3><p>Clicking pauses whenever the target window isn't in front, and resumes when it is.</p></div>
           <div class="card"><h3>Only while a pixel matches</h3><p>Sample a color, and clicking waits or stops as soon as that spot on screen changes.</p></div>
           <div class="card"><h3>Start countdown</h3><p>The Start button waits 3 seconds so you can let go of the mouse. Any stop key cancels it.</p></div>
         </div>
@@ -138,15 +138,17 @@
         <ol class="steps">
           <li><strong>Download</strong><br />the single <code>WindowsAutoclicker.exe</code>.</li>
           <li><strong>Run it.</strong><br />Choose More info, Run anyway if SmartScreen asks.</li>
-          <li><strong>Pick a target</strong><br />with Pick Location, or use the cursor.</li>
+          <li><strong>Pick a target</strong><br />with Pick, or use the cursor.</li>
           <li><strong>Press <kbd>F6</kbd>.</strong><br /><kbd>F7</kbd> or <kbd>Esc</kbd> stops it.</li>
         </ol>
         <p class="sub">Prefer a package manager? With <a href="https://scoop.sh/">Scoop</a>:</p>
         <pre><code>scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker
 scoop install tmhs/windows-autoclicker</code></pre>
+        <p class="sub">Want it on a USB stick? The <a href="https://github.com/TMHSDigital/autoclicker/releases/latest/download/WindowsAutoclicker-portable.zip">portable zip</a> keeps settings and logs in a <code>data</code> folder next to the exe.</p>
         <p class="sub">From a shortcut or a script:</p>
         <pre><code>WindowsAutoclicker.exe --profile Work --start --minimized
-WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code></pre>
+WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start
+WindowsAutoclicker.exe --profile Work --start-at 09:30 --stop-at 17:00 --start</code></pre>
       </div>
     </section>
 
@@ -156,7 +158,7 @@ WindowsAutoclicker.exe --at 800,600 --interval 250ms --clicks 100 --start</code>
         <p class="sub">Anyone tired of clicking the same thing over and over.</p>
         <div class="grid">
           <div class="card"><h3>Easing repetitive strain</h3><p>If clicking hurts, press one key instead of clicking hundreds of times. Long holds and key repeat help too. It doesn't replace accessibility software or medical advice.</p></div>
-          <div class="card"><h3>Testing and QA</h3><p>Repeat a click path to reproduce a bug or soak-test a button. Headless runs exit with a code that says how they ended.</p></div>
+          <div class="card"><h3>Testing and QA</h3><p>Repeat a click path to reproduce a bug or soak-test a button. Headless runs exit with a code that says how they ended, or print it as JSON.</p></div>
           <div class="card"><h3>Repetitive work and games</h3><p>Click through the same form or dialog step after step, or play idle games where the rules allow it.</p></div>
         </div>
       </div>
