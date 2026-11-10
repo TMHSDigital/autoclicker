@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Click a button wherever it appears on screen, saved in profiles and runnable from the command line. Safer edges: no run can start with its stop keys released, a paused run still ends on time, and image clicks never land where the image used to be. Settings lock while clicking, and the screen is searched about three times faster.
+## [1.7.0] - 2026-11-09
+
+A new dark control-panel window. Click a button wherever it appears on screen, saved in profiles and runnable from the command line, and start or stop at a time of day. Safer edges: no run can start with its stop keys released, a paused run still ends on time, and image clicks never land where the image used to be. Settings lock while clicking, and the screen is searched about three times faster.
 
 ### Added
 
@@ -246,7 +248,8 @@ Click a button wherever it appears on screen, saved in profiles and runnable fro
 
 Baseline release prior to the structured audit and refactor pass.
 
-[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/TMHSDigital/autoclicker/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.7.0
 [1.6.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.6.0
 [1.5.0]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.5.0
 [1.4.1]: https://github.com/TMHSDigital/autoclicker/releases/tag/v1.4.1
