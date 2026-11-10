@@ -1,10 +1,10 @@
 {
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "A fast, careful autoclicker for Windows: fixed points, sequences, hold and key actions, profiles and a command line, with safety stops on by default.",
     "homepage": "https://tmhsdigital.github.io/autoclicker/",
     "license": "CC-BY-NC-4.0",
-    "url": "https://github.com/TMHSDigital/autoclicker/releases/download/v1.6.0/WindowsAutoclicker.exe",
-    "hash": "672696985638d71403efcd547d4723b42c2e307cfbebeaeaeef59e2da8798792",
+    "url": "https://github.com/TMHSDigital/autoclicker/releases/download/v1.7.0/WindowsAutoclicker.exe",
+    "hash": "2aab3c1f0fc8ba83d204daa784ff33d2c9f899d132d53a6a6d83fe3a898fe9da",
     "bin": [
         [
             "WindowsAutoclicker.exe",
