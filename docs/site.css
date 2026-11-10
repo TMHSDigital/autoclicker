@@ -118,6 +118,8 @@ kbd {
   background: var(--surface);
 }
 code, pre { font-family: "Cascadia Mono", Consolas, monospace; }
+
+.guide :not(pre) > code { white-space: nowrap; }
 pre {
   background: var(--surface);
   border: 1px solid var(--line);
