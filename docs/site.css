@@ -8,8 +8,16 @@
   --accent: #0067d6;
   --accent-strong: #0050a8;
   --accent-text: #ffffff;
-  --hero-a: #3b8cff;
-  --hero-b: #0058c9;
+  /* Hero and guide topbar: one flat blue, no gradient. */
+  --hero-bg: #0b5cc4;
+  --hero-text: #ffffff;
+  --hero-soft: #dce9ff;
+  --hero-muted: #cfe0ff;
+  --hero-edge: rgba(255, 255, 255, 0.55);
+  --hero-raise: rgba(255, 255, 255, 0.12);
+  --hero-button: #ffffff;
+  --hero-button-hover: #e8f1ff;
+  --hero-on-button: #0050a8;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -21,8 +29,8 @@
     --accent: #4aa3ff;
     --accent-strong: #7bbcff;
     --accent-text: #08111c;
-    --hero-a: #1d4f9a;
-    --hero-b: #0b2d62;
+    --hero-bg: #133f7d;
+    --hero-on-button: #0b3f86;
   }
 }
 * { box-sizing: border-box; }
@@ -36,8 +44,8 @@ body {
 a { color: var(--accent); }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
 header.hero {
-  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
-  color: #fff;
+  background: var(--hero-bg);
+  color: var(--hero-text);
   padding: 56px 0 64px;
 }
 .hero-grid {
@@ -49,7 +57,7 @@ header.hero {
 .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; opacity: 0.95; }
 .brand img { width: 40px; height: 40px; }
 h1 { font-size: clamp(2.2rem, 4.2vw, 3rem); line-height: 1.1; margin: 20px 0 14px; }
-.lede { font-size: 1.2rem; color: #dce9ff; margin: 0 0 28px; max-width: 34ch; }
+.lede { font-size: 1.2rem; color: var(--hero-soft); margin: 0 0 28px; max-width: 34ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .button {
   display: inline-block;
@@ -58,11 +66,16 @@ h1 { font-size: clamp(2.2rem, 4.2vw, 3rem); line-height: 1.1; margin: 20px 0 14p
   font-weight: 600;
   text-decoration: none;
 }
-.button.primary { background: #fff; color: #0050a8; }
-.button.primary:hover { background: #e8f1ff; }
-.button.ghost { color: #fff; border: 1px solid rgba(255, 255, 255, 0.55); }
-.button.ghost:hover { background: rgba(255, 255, 255, 0.12); }
-.fine { font-size: 0.9rem; color: #cfe0ff; margin-top: 14px; }
+.button.primary { background: var(--hero-button); color: var(--hero-on-button); }
+.button.primary:hover { background: var(--hero-button-hover); }
+.button.ghost { color: var(--hero-text); border: 1px solid var(--hero-edge); }
+.button.ghost:hover { background: var(--hero-raise); }
+.button:focus-visible, .topbar a:focus-visible {
+  outline: 2px solid var(--hero-text);
+  outline-offset: 3px;
+}
+.fine { font-size: 0.9rem; color: var(--hero-muted); margin-top: 14px; }
+.hero code { color: var(--hero-text); }
 .shot { width: 100%; max-width: 600px; justify-self: center; }
 .shot img {
   width: 100%;
@@ -135,9 +148,10 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: s
 }
 
 /* Guides (docs/guides/) */
-.topbar { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: #fff; padding: 14px 0; }
+.topbar { background: var(--hero-bg); color: var(--hero-text); padding: 14px 0; }
 .topbar .wrap { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; }
-.topbar a { color: #fff; text-decoration: none; }
+.topbar a { color: var(--hero-text); text-decoration: none; }
+.topbar a:hover { text-decoration: underline; }
 .topbar .brand img { width: 28px; height: 28px; }
 .topbar nav { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.95rem; }
 .guide { max-width: 760px; margin: 0 auto; padding: 40px 20px 56px; }
