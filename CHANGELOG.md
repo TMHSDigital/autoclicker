@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- The website and README show the current control-panel window, the website hero and social card use one flat blue instead of a gradient, and the home page covers what 1.7.0 added (Spread, Start and Stop at, the portable zip, `--json`). Missing pages get a 404 page with links back, and the developer notes in `docs/` are no longer published as bare web pages.
+
 ## [1.7.0] - 2026-11-09
 
 A new dark control-panel window. Click a button wherever it appears on screen, saved in profiles and runnable from the command line, and start or stop at a time of day. Safer edges: no run can start with its stop keys released, a paused run still ends on time, and image clicks never land where the image used to be. Settings lock while clicking, and the screen is searched about three times faster.
