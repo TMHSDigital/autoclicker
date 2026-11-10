@@ -119,6 +119,12 @@ def _high_contrast(app: Any) -> None:
     _panels(app)
 
 
+def _website(app: Any) -> None:
+    """The window from the second launch on, for docs/images/screenshot-dark.png."""
+    app.dismiss_first_run_hint()
+    app.apply_form_values({"target_mode": "fixed", "x": 640, "y": 360, "interval": 250})
+
+
 SCENARIOS: dict[str, tuple[str, Callable[[Any], None]]] = {
     "default": ("Fixed point, panels closed", _default),
     "panels": ("Timing and Safety open, Start at and Stop at set", _panels),
@@ -126,6 +132,7 @@ SCENARIOS: dict[str, tuple[str, Callable[[Any], None]]] = {
     "sequence": ("Sequence mode, three steps, one selected", _sequence),
     "running": ("A run with a click limit and time left", _running),
     "high-contrast": ("Panels open under a High Contrast palette", _high_contrast),
+    "website": ("Fixed point, first-run hint dismissed (website screenshot)", _website),
 }
 
 

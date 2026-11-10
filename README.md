@@ -29,7 +29,7 @@ built around safety stops that are on by default.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.png" />
-  <img src="docs/images/screenshot-dark.png" alt="Windows Autoclicker main window: a large Start button with Clicks, Runtime and Rate readouts, the Target and Click panels side by side, and the collapsed Timing and Safety panels" width="440" />
+  <img src="docs/images/screenshot-dark.png" alt="Windows Autoclicker main window: a large Start button with Clicks, Runtime and Rate readouts, the Target and Click panels side by side, and the collapsed Timing and Safety panels" width="600" />
 </picture>
 
 <br />
