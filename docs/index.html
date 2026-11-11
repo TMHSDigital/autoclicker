@@ -120,14 +120,14 @@
       <div class="wrap">
         <h2>Stops when you need it to</h2>
         <p class="sub">An autoclicker that won't stop is worse than none, so every run has several ways out.</p>
-        <div class="grid">
-          <div class="card"><h3>Corner failsafe</h3><p>Slam the mouse into a corner of any monitor to abort. Corners between screens are ignored.</p></div>
-          <div class="card"><h3>Emergency stop</h3><p><kbd>Esc</kbd> halts immediately from anywhere. Every hotkey can be rebound.</p></div>
-          <div class="card"><h3>Limits and speed guard</h3><p>Stop after N clicks or N minutes, and stop automatically if clicks run faster than your speed limit.</p></div>
-          <div class="card"><h3>Pause when the window isn't in front</h3><p>Clicking pauses whenever the target window isn't in front, and resumes when it is.</p></div>
-          <div class="card"><h3>Only while a pixel matches</h3><p>Sample a color, and clicking waits or stops as soon as that spot on screen changes.</p></div>
-          <div class="card"><h3>Start countdown</h3><p>The Start button waits 3 seconds so you can let go of the mouse. Any stop key cancels it.</p></div>
-        </div>
+        <dl class="stops">
+          <dt>Corner failsafe</dt><dd>Slam the mouse into a corner of any monitor to abort. Corners between screens are ignored.</dd>
+          <dt>Emergency stop</dt><dd><kbd>Esc</kbd> halts immediately from anywhere. Every hotkey can be rebound.</dd>
+          <dt>Limits and speed guard</dt><dd>Stop after N clicks or N minutes, and stop automatically if clicks run faster than your speed limit.</dd>
+          <dt>Pause when the window isn't in front</dt><dd>Clicking pauses whenever the target window isn't in front, and resumes when it is.</dd>
+          <dt>Only while a pixel matches</dt><dd>Sample a color, and clicking waits or stops as soon as that spot on screen changes.</dd>
+          <dt>Start countdown</dt><dd>The Start button waits 3 seconds so you can let go of the mouse. Any stop key cancels it.</dd>
+        </dl>
       </div>
     </section>
 
@@ -136,10 +136,10 @@
         <h2>Up and running in a minute</h2>
         <p class="sub">No setup, nothing to install.</p>
         <ol class="steps">
-          <li><strong>Download</strong><br />the single <code>WindowsAutoclicker.exe</code>.</li>
-          <li><strong>Run it.</strong><br />Choose More info, Run anyway if SmartScreen asks.</li>
-          <li><strong>Pick a target</strong><br />with Pick, or use the cursor.</li>
-          <li><strong>Press <kbd>F6</kbd>.</strong><br /><kbd>F7</kbd> or <kbd>Esc</kbd> stops it.</li>
+          <li><strong>Download</strong> the single <code>WindowsAutoclicker.exe</code>.</li>
+          <li><strong>Run it.</strong> Choose More info, Run anyway if SmartScreen asks.</li>
+          <li><strong>Pick a target</strong> with Pick, or use the cursor.</li>
+          <li><strong>Press <kbd>F6</kbd>.</strong> <kbd>F7</kbd> or <kbd>Esc</kbd> stops it.</li>
         </ol>
         <p class="sub">Prefer a package manager? With <a href="https://scoop.sh/">Scoop</a>:</p>
         <pre><code>scoop bucket add tmhs https://github.com/TMHSDigital/autoclicker
@@ -156,10 +156,10 @@ WindowsAutoclicker.exe --profile Work --start-at 09:30 --stop-at 17:00 --start</
       <div class="wrap">
         <h2>Who it's for</h2>
         <p class="sub">Anyone tired of clicking the same thing over and over.</p>
-        <div class="grid">
-          <div class="card"><h3>Easing repetitive strain</h3><p>If clicking hurts, press one key instead of clicking hundreds of times. Long holds and key repeat help too. It doesn't replace accessibility software or medical advice.</p></div>
-          <div class="card"><h3>Testing and QA</h3><p>Repeat a click path to reproduce a bug or soak-test a button. Headless runs exit with a code that says how they ended, or print it as JSON.</p></div>
-          <div class="card"><h3>Repetitive work and games</h3><p>Click through the same form or dialog step after step, or play idle games where the rules allow it.</p></div>
+        <div class="audience">
+          <p><strong>If clicking hurts,</strong> press one key instead of clicking hundreds of times. Long holds and key repeat help too. It doesn't replace accessibility software or medical advice.</p>
+          <p><strong>For testing and QA,</strong> repeat a click path to reproduce a bug or soak-test a button. Headless runs exit with a code that says how they ended, or print it as JSON.</p>
+          <p><strong>For repetitive work and games,</strong> click through the same form or dialog step after step, or play idle games where the rules allow it.</p>
         </div>
       </div>
     </section>

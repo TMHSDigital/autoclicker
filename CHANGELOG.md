@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- The website and README show the current control-panel window, the website hero and social card use one flat blue instead of a gradient, and the home page covers what 1.7.0 added (Spread, Start and Stop at, the portable zip, `--json`). Missing pages get a 404 page with links back, and the developer notes in `docs/` are no longer published as bare web pages.
+- The website and README show the current control-panel window, the website hero and social card use one flat blue instead of a gradient, and the home page covers what 1.7.0 added (Spread, Start and Stop at, the portable zip, `--json`). Missing pages get a 404 page with links back, and the developer notes in `docs/` are no longer published as bare web pages. On the home page, the safety stops, install steps and "Who it's for" are plain lists and paragraphs instead of rows of cards.
 
 ## [1.7.0] - 2026-11-09
 

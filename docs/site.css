@@ -95,20 +95,17 @@ h2 { font-size: 1.8rem; margin: 0 0 8px; }
 }
 .card h3 { margin: 0 0 6px; font-size: 1.05rem; }
 .card p { margin: 0; color: var(--muted); }
-.steps { counter-reset: step; list-style: none; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-.steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
-.steps li::before {
-  counter-increment: step;
-  content: counter(step);
-  display: grid;
-  place-items: center;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--accent-text);
-  font-weight: 700;
-  margin-bottom: 8px;
-}
+/* Safety: term on the left, what it does on the right, one rule per row. */
+.stops { display: grid; grid-template-columns: 16rem 1fr; margin: 0; border-top: 1px solid var(--line); }
+.stops dt, .stops dd { padding: 14px 0; border-bottom: 1px solid var(--line); margin: 0; }
+.stops dt { font-weight: 600; padding-right: 24px; }
+.stops dd { color: var(--muted); }
+.steps { padding-left: 1.4em; margin: 0 0 32px; max-width: 46rem; }
+.steps li { padding: 4px 0 4px 6px; }
+.steps li::marker { color: var(--accent); font-weight: 700; }
+.audience { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+.audience p { margin: 0; color: var(--muted); }
+.audience strong { color: var(--text); }
 kbd {
   font: 600 0.85em "Cascadia Mono", Consolas, monospace;
   border: 1px solid var(--line);
@@ -140,10 +137,14 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: s
 @media (max-width: 860px) {
   .hero-grid { grid-template-columns: 1fr; }
   .grid { grid-template-columns: 1fr 1fr; }
-  .steps { grid-template-columns: 1fr 1fr; }
+  .audience { grid-template-columns: 1fr; gap: 16px; }
+  .stops { grid-template-columns: 12rem 1fr; }
 }
 @media (max-width: 560px) {
-  .grid, .steps { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr; }
+  .stops { grid-template-columns: 1fr; }
+  .stops dt { border-bottom: 0; padding-bottom: 2px; }
+  .stops dd { padding-top: 0; }
   header.hero { padding: 40px 0 48px; }
 }
 
