@@ -39,7 +39,7 @@ autoclicker/
     safety.py               # Failsafe + fail-closed foreground window helpers
     session_log.py          # Session events, rotated at 1 MB
     single_instance.py      # Named mutex + show event: one running instance
-    app_data.py             # %APPDATA%/WindowsAutoclicker (never CWD-relative)
+    app_data.py             # %APPDATA%/WindowsAutoclicker, or data\ beside the exe in portable mode
     dpi.py                  # Per-monitor DPI awareness, set before PyAutoGUI loads
     screen.py               # Virtual-desktop bounds, monitor corners, cursor position
     schedule.py             # Start at: parse a time of day and count down to it
@@ -63,10 +63,11 @@ autoclicker/
 | Tray thread | `app.tray` | Daemon thread running `pystray` icon |
 | Status timer | Tk `root.after(1000, ...)` | Periodic status label updates |
 | Pixel watcher | `PixelWatch` daemon thread | Polls the watched pixel during a run with a pixel condition |
-| Image watcher | `ImageWatch` daemon thread | Searches for the captured image every 100 ms during an image-target run |
+| Image watcher | `ImageWatch` daemon thread | Searches for the captured image during an image-target run (every 100 ms, longer after a slow search) |
 | Recorder hook | `ClickRecorder` daemon thread | Owns the `WH_MOUSE_LL` hook and its message loop, only while recording |
 | Update check | `UpdateCheck` daemon thread | One GET of the latest-release API, at most daily, when enabled |
 | Single instance | `SingleInstanceWatch` daemon thread | Waits for a second launch's "show yourself" event |
+| Imports | `Imports` daemon thread (`gui/main_window.py`) | Loads PyAutoGUI in the background shortly after startup, so the first Start does not wait for the import |
 
 All worker threads are daemon threads so process exit does not block on them.
 
@@ -88,7 +89,7 @@ In sequence mode (`RunConfig(steps=(ClickStep, ...), repeat=N)`) each round call
 
 With a pixel condition, a `PixelWatch` daemon thread (tagged with the run id, so a stale one exits) keeps `_condition_state` current; before each burst and each sequence step `_check_condition` returns go, wait (shown as Paused with `pause_reason`) or stop. No reading yet counts as wait.
 
-With an image target, an `ImageWatch` daemon thread (also tagged with the run id) stores `(position or None, time the search began)` in `_image_match`. The click loop waits (Paused, `PAUSE_IMAGE`) while nothing is found, and clicks a match only if its search began at least `_IMAGE_SETTLE_SECONDS` after the previous click, so a click that closes the image is never repeated on whatever is underneath. `image_region` stores where the image was captured; the controller grows it by `image_margin` (clipped to the desktop) when the run starts. Twenty failed grabs in a row end the run with `error`; a search that simply finds nothing is not a failure.
+With an image target, an `ImageWatch` daemon thread (also tagged with the run id) stores `(position or None, time the search began)` in `_image_match`. The click loop waits (Paused, `PAUSE_IMAGE`) while nothing is found, and clicks a match only if its search began at least `_IMAGE_SETTLE_SECONDS` after the previous click, so a click that closes the image is never repeated on whatever is underneath. `image_region` stores where the image was captured; the controller grows it by `image_margin` (clipped to the desktop) when the run starts. Twenty failed grabs in a row end the run with `error`; a search that simply finds nothing is not a failure. With `image_missing_stop_seconds` set, an image missing that long in a row ends the run with `completed` (`_image_gone_message`). After each search the watcher waits 100 ms, or as long as the search took if that was longer, so a slow search never keeps a core busy.
 
 Recording (`gui/features/recording.py`, `core/recorder.py`) is not a run: no click thread exists. The hook thread posts each press through `_ui` to the Tk thread, which drops clicks on the app's own windows. The Stop and Emergency keys are claimed while recording and finish it, and Start is refused until it ends.
 
@@ -102,7 +103,7 @@ Clicks are only ever issued from the click thread, so once a stop call returns (
 
 ## Data flow
 
-1. **Settings:** `SettingsManager` atomically writes `%APPDATA%/WindowsAutoclicker/autoclicker_settings.json` (a legacy file next to the app, not the working folder, is migrated once).
+1. **Settings:** `SettingsManager` atomically writes `autoclicker_settings.json` in the data folder from `core/app_data.py`: `%APPDATA%/WindowsAutoclicker`, or `data\` next to the exe when a `portable.txt` sits beside it (a legacy file next to the app, not the working folder, is migrated once). Logs and captured images live in the same folder, never relative to the working directory.
 2. **GUI:** Sections bind Tk widgets; `AutoclickerController` validates and starts/stops clicking.
 3. **Click engine:** Coordinates, interval, burst, safety limits; `pyautogui` with `PAUSE=0`. Waits use `_stop_event.wait`.
 4. **Session log:** Start/stop/safety events appended under AppData.
