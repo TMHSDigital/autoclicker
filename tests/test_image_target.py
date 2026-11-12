@@ -354,6 +354,32 @@ class TestImageRobustness(unittest.TestCase):
         self.assertIn("Could not read the screen", outcomes[0].message)
         m.click.assert_not_called()
 
+    def test_watcher_waits_at_least_as_long_as_a_slow_search_took(self):
+        """#195: a search slower than the poll interval must not keep a core busy."""
+        from autoclicker.core import click_engine
+
+        engine = ClickEngine(enable_performance_monitoring=False)
+        engine.is_running = True
+        engine._run_id = 1
+        clock = iter([10.0, 10.5, 20.0, 20.01])  # one 500 ms search, then a 10 ms one
+        waits: list[float] = []
+
+        def wait(timeout):
+            waits.append(timeout)
+            if len(waits) == 2:
+                engine._run_id = 2  # end the loop
+            return False
+
+        engine._stop_event = MagicMock()
+        engine._stop_event.is_set.return_value = False
+        engine._stop_event.wait.side_effect = wait
+        target = MagicMock(spec=ImageTarget)
+        target.locate.return_value = None
+        with patch.object(click_engine.time, "monotonic", side_effect=lambda: next(clock)):
+            engine._watch_image(target, 1)
+        self.assertAlmostEqual(waits[0], 0.5)
+        self.assertAlmostEqual(waits[1], click_engine._IMAGE_POLL_SECONDS)
+
     def test_area_overlay_keeps_its_hint_and_shows_the_size(self):
         from autoclicker.gui.picker import _AREA_HINT, CoordinatePicker
 

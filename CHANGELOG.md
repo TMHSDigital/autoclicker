@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When a run can't start, the error dialog is titled "Couldn't start" and gives the actual reason (for example "Windows denied access (...)") instead of generic advice such as "Please check your system configuration."
 
+### Fixed
+
+- Image mode with a wide search area and a tolerance no longer keeps a CPU core busy: after a search that takes longer than 100 ms, the next one waits at least as long, as the performance notes already said (#195).
+
 ### Documentation
 
 - The website and README show the current control-panel window, the website hero and social card use one flat blue instead of a gradient, and the home page covers what 1.7.0 added (Spread, Start and Stop at, the portable zip, `--json`). Missing pages get a 404 page with links back, and the developer notes in `docs/` are no longer published as bare web pages. On the home page, the safety stops, install steps and "Who it's for" are plain lists and paragraphs instead of rows of cards.

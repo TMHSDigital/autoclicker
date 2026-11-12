@@ -687,7 +687,10 @@ class ClickEngine:
             if run_id != self._run_id:
                 return
             self._image_match = (found, searched_at)
-            self._stop_event.wait(timeout=_IMAGE_POLL_SECONDS)
+            # A slow search (wide margin with tolerance) waits as long as it took,
+            # so the watcher never keeps a core busy (#161, #195).
+            took = time.monotonic() - searched_at
+            self._stop_event.wait(timeout=max(_IMAGE_POLL_SECONDS, took))
 
     def _watch_condition(self, condition: PixelCondition, run_id: int) -> None:
         """(PixelWatch thread) keep _condition_state current until this run ends."""
