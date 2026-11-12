@@ -30,7 +30,7 @@ This is an input-automation tool. Reports of unsafe defaults, privilege issues, 
 
 ## Automated checks
 
-Every push and pull request runs `pip-audit` against the locked dependencies and CodeQL (Python and the GitHub Actions workflows); CodeQL also runs weekly. Dependabot tracks dependency and action updates, and actions are pinned to commit SHAs.
+Every push and pull request runs `pip-audit` against the locked dependencies and CodeQL (Python and the GitHub Actions workflows); CodeQL also runs weekly. Dependencies are locked with hashes and updated by hand, and actions are pinned to commit SHAs.
 
 ## Network use
 
