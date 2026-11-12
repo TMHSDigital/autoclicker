@@ -21,7 +21,7 @@ PyAutoGUI and `urllib.request` are not imported at startup (#163). `core/lazy_py
 .venv\Scripts\python.exe scripts\profile_click_engine.py --seconds 5 --interval-ms 10
 ```
 
-The script prints `cProfile` top functions before/after for comparison.
+The script runs the engine once and writes the top 25 functions by cumulative time to `audit/perf/after.txt` (change it with `--out`; `--label` sets the header line). To compare, run it before and after a change with different `--out` paths and diff the two files.
 
 ## Experiments not shipped
 
