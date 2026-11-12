@@ -315,6 +315,7 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. **Open data folder** in
 | `image_path`, `image_region` | `""`, `[]` | Image mode: the captured PNG (saved under `%APPDATA%\WindowsAutoclicker\images\`) and the `[left, top, width, height]` rectangle where it was captured. Replacing a capture deletes the old file unless a profile uses it |
 | `image_margin` | `150` | Pixels around the capture to search, 0 to 2 000; applied when a run starts, so changing it needs no recapture |
 | `image_tolerance` | `0` | How far each color channel may differ when matching the image, 0 to 64; `0` = exact |
+| `image_missing_stop_seconds` | `0` | **Stop if not seen for** (`--image-timeout`): end the run once the image has been missing this many seconds in a row, up to 86 400; `0` = keep waiting |
 | `sequence` | `[]` | Steps for sequence mode: `[{"x": 800, "y": 600, "button": "left", "click_type": "single", "delay_ms": 500}, ...]`; `delay_ms` is the wait before the next step |
 | `sequence_repeat` | `0` | Rounds to run in sequence mode; `0` = until stopped |
 | `x_coord`, `y_coord` | `100` | Target position in desktop pixels; negative on monitors left of or above the primary |
@@ -338,13 +339,13 @@ Everything lives in **`%APPDATA%\WindowsAutoclicker\`**. **Open data folder** in
 | `start_delay_seconds` | `3` | Countdown before a Start-button or tray start, 0 to 60; `0` = start at once. Hotkey starts are immediate |
 | `start_at` | `""` | A 24-hour time such as `09:30`: Start waits until then instead of the delay; blank = off |
 | `max_cps_ceiling` | `50` | Runaway guard (Safety, Speed limit): most button presses allowed in one second, up to 10 000; `0` = off |
-| `theme` | `"light"` | Ignored: the window is dark only. Kept so older settings files still load |
+| `stop_at` | `""` | A 24-hour time such as `17:30`: the run ends the next time the clock shows it, or earlier if another limit is reached; blank = off |
 | `minimize_to_tray` | `true` | Minimizing hides the window to the tray icon |
 | `check_for_updates` | `null` | Chosen with the checkbox in the first-launch hint (off unless ticked); `true` checks GitHub for a newer release at most once a day (the **Daily update check** toggle at the bottom of the window) |
 | `last_update_check` | `0` | When the last successful update check ran (Unix time) |
 | `first_run_hint_dismissed` | `false` | Set when you press **Got it** on the first-launch hint that lists the ways to stop a run |
 | `hotkeys` | `{"start": "F6", "stop": "F7", "emergency": "Esc", "toggle": ""}` | Key per action, e.g. `"Ctrl+Shift+F6"`; `""` leaves it unbound |
-| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, `click_spread`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin` and `image_tolerance`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
+| `presets` | `{}` | Named profiles: `{"Name": {"x": 800, "y": 600, "interval": 100, "mouse_button": "right", ...}}`. Besides the point, a profile may hold `target_mode`, `interval`, `interval_unit`, `variation`, `mouse_button`, `click_type`, `burst_clicks`, `burst_pause`, `max_clicks`, `auto_stop_minutes`, `sequence`, `sequence_repeat`, `action`, `hold_ms`, `key`, `click_spread`, the `condition_*` settings and, for image profiles, `image_path`, `image_region`, `image_margin`, `image_tolerance` and `image_missing_stop_seconds`. Exported files carry an image profile's picture inside the file (`image_png`), never a path; importing saves it under `images\`. Older point-only presets still load |
 
 **Network:** the app makes no network requests unless you allow the update check (a checkbox in the first-launch hint, off unless you tick it, changeable with the **Daily update check** toggle at the bottom of the window). Then, at most once a day, it reads `api.github.com/repos/TMHSDigital/autoclicker/releases/latest` and shows an **Update** button if a newer version exists. Nothing is downloaded or installed automatically.
 
