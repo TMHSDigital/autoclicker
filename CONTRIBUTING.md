@@ -118,8 +118,8 @@ need a manual look in the running app.
 
 Releases are created when a version tag is pushed, not on every merge to `main`.
 
-1. Set the version in both `pyproject.toml` and `autoclicker/__init__.py`.
-2. Move the `[Unreleased]` notes into a new version section in `CHANGELOG.md`.
+1. Set the version in `pyproject.toml`, `autoclicker/__init__.py` and `docs/index.html` (the JSON-LD `softwareVersion` and the `<span data-version>` text next to Download, plus the size if it changed). `tests/test_project_metadata.py` fails if they disagree.
+2. Move the `[Unreleased]` notes into a new version section in `CHANGELOG.md`, starting with a sentence or two of highlights before the first `###` heading.
 3. Commit as `chore(release): X.Y.Z`, then tag and push:
 
 ```bash
