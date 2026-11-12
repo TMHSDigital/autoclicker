@@ -9,7 +9,7 @@ echo.
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.10+ from https://python.org
+    echo Please install Python 3.11 or newer from https://python.org
     echo.
     echo Press any key to open download page...
     pause >nul
@@ -19,6 +19,17 @@ if %errorlevel% neq 0 (
 
 for /f "tokens=2" %%i in ('python --version 2^>nul') do set PYTHON_VERSION=%%i
 echo Found Python: %PYTHON_VERSION%
+
+python -c "import sys; sys.exit(sys.version_info < (3, 11))"
+if %errorlevel% neq 0 (
+    echo ERROR: Windows Autoclicker needs Python 3.11 or newer
+    echo Please install it from https://python.org
+    echo.
+    echo Press any key to open download page...
+    pause >nul
+    start https://python.org/downloads/
+    exit /b 1
+)
 
 set "VENV=.venv"
 set "PY=%VENV%\Scripts\python.exe"

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Image mode with a wide search area and a tolerance no longer keeps a CPU core busy: after a search that takes longer than 100 ms, the next one waits at least as long, as the performance notes already said (#195).
+- `run_autoclicker.bat` checks for Python 3.11 or newer and says so, instead of advertising 3.10 and failing during the install; the antivirus guide names the right versions too (#193).
 
 ### Documentation
 

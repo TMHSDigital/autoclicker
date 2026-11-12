@@ -1,6 +1,6 @@
 """Facts kept in more than one file stay in step (#111).
 
-Parsed with regular expressions: tomllib is Python 3.11+ and CI covers 3.10.
+Parsed with regular expressions, which keeps these checks free of a TOML parser.
 """
 
 import json
