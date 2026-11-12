@@ -56,7 +56,7 @@ images. Include:
 ## Checklist
 
 ### Code Quality
-- [ ] Code follows PEP 8 style guidelines
+- [ ] `make check` passes (ruff lint and format, mypy, pytest)
 - [ ] Docstrings added/updated for all functions and classes
 - [ ] Comments added for complex logic
 - [ ] No hardcoded values (use constants or configuration)
@@ -64,6 +64,7 @@ images. Include:
 - [ ] Logging added where appropriate
 
 ### Documentation
+- [ ] `CHANGELOG.md` `[Unreleased]` updated for user-facing changes
 - [ ] README updated (if applicable)
 - [ ] Docstrings updated
 - [ ] Inline comments added
