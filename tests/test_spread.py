@@ -114,6 +114,9 @@ class TestSpreadForm(unittest.TestCase):
         app.target_mode_var, app.action_var = MagicMock(), MagicMock()
         app.x_entry, app.y_entry, app.pick_btn = MagicMock(), MagicMock(), MagicMock()
         app.spread_entry = MagicMock()
+        app.action_radios = {}
+        app.sequence_frame, app.image_frame = MagicMock(), MagicMock()
+        app._refresh_target_summary = MagicMock()
         for mode, action, state in (
             ("fixed", "click", "normal"),
             ("image", "hold", "normal"),

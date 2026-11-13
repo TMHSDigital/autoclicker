@@ -97,5 +97,4 @@ def build_click_panel(app: AutoclickerApp, parent) -> Panel:
 
     for entry in (app.interval_entry, app.variation_entry, app.hold_entry):
         entry.bind("<KeyRelease>", lambda _e: app._refresh_click_summary(), add="+")
-    app._apply_action_state()
     return panel

@@ -433,7 +433,26 @@ class TestRunMode(unittest.TestCase):
         app.status_var.set.assert_called_with("Not started")
         app._hotkeys.set_running.assert_called_with(False)
 
-    def test_click_summary_tolerates_a_half_built_window(self):
-        app = _bare_app()
-        app._refresh_click_summary()  # no click_summary_var yet: nothing to do
-        app._refresh_panel_summaries()  # no panels yet
+    def test_every_builder_attribute_is_declared_on_app_base(self):
+        """Builders attach widgets to the app; AppBase must declare each one so
+        mypy checks the methods that use them (#170)."""
+        import ast
+        from pathlib import Path
+
+        from autoclicker.gui.features.base import AppBase
+
+        declared = set(AppBase.__annotations__) | set(vars(AppBase))
+        sections = Path(__file__).resolve().parents[1] / "autoclicker" / "gui" / "sections"
+        missing = []
+        for path in sorted(sections.glob("*.py")):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                targets = node.targets if isinstance(node, ast.Assign) else []
+                for target in targets:
+                    if (
+                        isinstance(target, ast.Attribute)
+                        and isinstance(target.value, ast.Name)
+                        and target.value.id == "app"
+                        and target.attr not in declared
+                    ):
+                        missing.append(f"{path.name}: app.{target.attr}")
+        self.assertEqual(missing, [])

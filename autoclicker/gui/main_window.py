@@ -269,6 +269,15 @@ class AutoclickerApp(
         build_hero_section(self, self.root)
         build_footer_section(self, self.root)
         self._pinned_frames = (self.header_frame, self.hero_frame, self.footer_frame)
+        self._wire()
+
+    def _wire(self) -> None:
+        """Set the initial widget states and summaries once every builder has run.
+
+        Builders only create widgets; anything that reads widgets from another
+        panel happens here, so those methods need no build-order guards (#170).
+        """
+        self._apply_action_state()
         self._refresh_panel_summaries()
 
     def toggle_from_button(self) -> None:
@@ -315,10 +324,7 @@ class AutoclickerApp(
 
     def _refresh_click_summary(self) -> None:
         """The hero's one-line description of the Click panel."""
-        var = getattr(self, "click_summary_var", None)
-        if var is None or getattr(self, "spread_entry", None) is None:
-            return  # the Click panel is not built yet
-        var.set(
+        self.click_summary_var.set(
             click_summary(
                 mouse_button=self.button_var.get(),
                 click_type=self.click_type_var.get(),
@@ -334,30 +340,26 @@ class AutoclickerApp(
     def _refresh_panel_summaries(self) -> None:
         """What the collapsed Timing and Safety panels say, and the hero line."""
         self._refresh_click_summary()
-        timing = getattr(self, "timing_panel", None)
-        if timing is not None and getattr(self, "start_at_entry", None) is not None:
-            timing.set_summary(
-                timing_summary(
-                    burst_clicks=self.burst_clicks_entry.get(),
-                    burst_pause=self.burst_pause_entry.get(),
-                    start_delay=self.start_delay_entry.get(),
-                    start_at=self.start_at_entry.get(),
-                    stop_at=self.stop_at_entry.get(),
-                )
+        self.timing_panel.set_summary(
+            timing_summary(
+                burst_clicks=self.burst_clicks_entry.get(),
+                burst_pause=self.burst_pause_entry.get(),
+                start_delay=self.start_delay_entry.get(),
+                start_at=self.start_at_entry.get(),
+                stop_at=self.stop_at_entry.get(),
             )
-        safety = getattr(self, "safety_panel", None)
-        if safety is not None and getattr(self, "pause_unfocused_var", None) is not None:
-            safety.set_summary(
-                safety_summary(
-                    limit_clicks=bool(self.limit_clicks_var.get()),
-                    max_clicks=self.max_clicks_entry.get(),
-                    auto_stop_minutes=self.auto_stop_entry.get(),
-                    max_cps=self.max_cps_entry.get(),
-                    condition=self.condition_var.get(),
-                    failsafe=bool(self.failsafe_var.get()),
-                    pause_unfocused=bool(self.pause_unfocused_var.get()),
-                )
+        )
+        self.safety_panel.set_summary(
+            safety_summary(
+                limit_clicks=bool(self.limit_clicks_var.get()),
+                max_clicks=self.max_clicks_entry.get(),
+                auto_stop_minutes=self.auto_stop_entry.get(),
+                max_cps=self.max_cps_entry.get(),
+                condition=self.condition_var.get(),
+                failsafe=bool(self.failsafe_var.get()),
+                pause_unfocused=bool(self.pause_unfocused_var.get()),
             )
+        )
 
     def _on_mousewheel(self, event) -> None:
         """Scroll the canvas with the mouse wheel when content overflows.
@@ -587,38 +589,33 @@ class AutoclickerApp(
         the mode can run, and the steps or image panel for those modes.
         """
         mode = self.target_mode_var.get()
-        action_var = getattr(self, "action_var", None)
         allowed = allowed_actions(mode)
-        for value, radio in getattr(self, "action_radios", {}).items():
+        for value, radio in self.action_radios.items():
             radio.configure(state=tk.NORMAL if value in allowed else tk.DISABLED)
-        action = action_var.get() if action_var is not None else "click"
+        action = self.action_var.get()
         state = tk.NORMAL if uses_point(mode, action) else tk.DISABLED
         for widget in (self.x_entry, self.y_entry, self.pick_btn):
             widget.configure(state=state)
-        spread = getattr(self, "spread_entry", None)
-        if spread is not None:  # the cursor is never moved; keys have no point
-            spread.configure(
-                state=tk.DISABLED if mode == "cursor" or action == "key" else tk.NORMAL
-            )
+        # The cursor is never moved, and keys have no point to spread around.
+        self.spread_entry.configure(
+            state=tk.DISABLED if mode == "cursor" or action == "key" else tk.NORMAL
+        )
         for frame, shown in (
-            (getattr(self, "sequence_frame", None), mode == "sequence"),
-            (getattr(self, "image_frame", None), mode == "image"),
+            (self.sequence_frame, mode == "sequence"),
+            (self.image_frame, mode == "image"),
         ):
-            if frame is not None:
-                if shown:
-                    frame.grid()
-                else:
-                    frame.grid_remove()
-        if hasattr(self, "sequence_frame"):
-            self._refresh_target_summary()
+            if shown:
+                frame.grid()
+            else:
+                frame.grid_remove()
+        self._refresh_target_summary()
 
     def _target_summary(self) -> str:
         """Status-bar description of what the form currently targets."""
         mode = self.target_mode_var.get()
-        if mode != "sequence" and getattr(self, "action_var", None) is not None:
-            if self.action_var.get() == "key":
-                key = self.key_entry.get().strip() or "?"
-                return f"Target: the focused window (press {key})"
+        if mode != "sequence" and self.action_var.get() == "key":
+            key = self.key_entry.get().strip() or "?"
+            return f"Target: the focused window (press {key})"
         if mode == "cursor":
             return "Target: current cursor position"
         if mode == "image":
@@ -629,16 +626,13 @@ class AutoclickerApp(
         return f"Target: ({self.x_entry.get().strip()}, {self.y_entry.get().strip()})"
 
     def _refresh_target_summary(self) -> None:
-        if hasattr(self, "coord_var"):
-            self.coord_var.set(self._target_summary())
+        self.coord_var.set(self._target_summary())
         self._refresh_click_summary()
 
     def _apply_action_state(self) -> None:
         """Enable the hold time only for Hold and the key only for Key."""
         self._apply_entry_states()
-        if hasattr(self, "target_mode_var"):
-            self._apply_target_mode_state()  # Key has no point to click
-        self._refresh_target_summary()
+        self._apply_target_mode_state()  # Key has no point to click; refreshes the summary
 
     def _apply_entry_states(self) -> None:
         action = self.action_var.get()

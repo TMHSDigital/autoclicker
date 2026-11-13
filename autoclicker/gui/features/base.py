@@ -36,7 +36,7 @@ class AppBase:
     _recorded: list[RecordedClick]
 
     # Widgets and variables the section builders in gui/sections attach.
-    # Widgets and variables the section builders in gui/sections attach.
+    # AutoclickerApp._wire runs after all of them, so methods may assume they exist.
     x_entry: ttk.Entry
     y_entry: ttk.Entry
     pick_btn: ttk.Button

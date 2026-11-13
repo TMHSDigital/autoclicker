@@ -82,8 +82,6 @@ def build_target_panel(app: AutoclickerApp, parent) -> Panel:
 
     _build_sequence_panel(app, body, settings)
     _build_image_panel(app, body, settings)
-
-    app._apply_target_mode_state()
     return panel
 
 
