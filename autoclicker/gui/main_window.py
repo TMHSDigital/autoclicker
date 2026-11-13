@@ -809,6 +809,8 @@ class AutoclickerApp(
             user_message = create_user_friendly_error(e)
             dialogs.messagebox.showerror("Couldn't start", user_message)
         except Exception as e:
+            # Not an expected start error: keep the traceback for bug reports (#200).
+            _log.exception("Start failed")
             user_message = create_user_friendly_error(e)
             dialogs.messagebox.showerror("Couldn't start", user_message)
 

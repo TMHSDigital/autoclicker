@@ -433,6 +433,39 @@ class TestRunMode(unittest.TestCase):
         app.status_var.set.assert_called_with("Not started")
         app._hotkeys.set_running.assert_called_with(False)
 
+    def test_unexpected_start_error_is_logged_with_its_traceback(self):
+        """The dialog alone left nothing to diagnose from (#200)."""
+        app = _bare_app()
+        app._collect_ui_settings = MagicMock(return_value={})
+        app.failsafe_var = MagicMock()
+        app.pause_unfocused_var = MagicMock()
+        app.controller.validate_and_start_clicking.side_effect = AttributeError("boom")
+        with (
+            patch("autoclicker.gui.main_window.dialogs") as dialogs,
+            self.assertLogs("autoclicker", level="ERROR") as logs,
+        ):
+            app._try_start()
+        dialogs.messagebox.showerror.assert_called_once()
+        self.assertEqual(dialogs.messagebox.showerror.call_args[0][0], "Couldn't start")
+        self.assertIn("Traceback", logs.output[0])
+        self.assertIn("boom", logs.output[0])
+
+    def test_expected_start_error_is_not_logged_as_a_crash(self):
+        from autoclicker.core.exceptions import AutoclickerError
+
+        app = _bare_app()
+        app._collect_ui_settings = MagicMock(return_value={})
+        app.failsafe_var = MagicMock()
+        app.pause_unfocused_var = MagicMock()
+        app.controller.validate_and_start_clicking.side_effect = AutoclickerError("denied")
+        with (
+            patch("autoclicker.gui.main_window.dialogs") as dialogs,
+            patch("autoclicker.gui.main_window._log") as log,
+        ):
+            app._try_start()
+        dialogs.messagebox.showerror.assert_called_once()
+        log.exception.assert_not_called()
+
     def test_every_builder_attribute_is_declared_on_app_base(self):
         """Builders attach widgets to the app; AppBase must declare each one so
         mypy checks the methods that use them (#170)."""
