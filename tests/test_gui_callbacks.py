@@ -374,8 +374,12 @@ class TestRunMode(unittest.TestCase):
         app.failsafe_var = MagicMock()
         app.pause_unfocused_var = MagicMock()
         app.controller.validate_and_start_clicking.return_value = StartClickResult(success=True)
+        app._refresh_target_summary = MagicMock()
         app.start_clicking()
         app.run_button.set_mode.assert_called_with("running", detail="")
+        # The whole success path ran: no error was swallowed into a dialog.
+        app._refresh_target_summary.assert_called_once()
+        app.root.after.assert_called_with(1000, app._update_status_loop)
 
     def test_button_click_starts_when_idle(self):
         app = _bare_app()

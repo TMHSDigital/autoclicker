@@ -37,6 +37,33 @@ def _no_legacy_settings(request, monkeypatch, tmp_path_factory):
     monkeypatch.setattr("autoclicker.core.settings_paths.legacy_app_dir", lambda: empty)
 
 
+class _NoRealDialog:
+    """Stands in for a tkinter dialog module: any call fails the test.
+
+    A real dialog pops up on the developer's desktop and blocks the run until
+    someone clicks it; the error dialog in ``_try_start`` once did both, from a
+    test whose assertions still passed.
+    """
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def __getattr__(self, attr: str):
+        def refuse(*args, **_kwargs):
+            raise AssertionError(f"a test opened a real dialog: {self._name}.{attr}{args!r}")
+
+        return refuse
+
+
+@pytest.fixture(autouse=True)
+def _no_real_dialogs(monkeypatch):
+    """Tests patch ``dialogs`` where they expect one; anything else fails loudly."""
+    from autoclicker.gui import dialogs
+
+    for name in ("messagebox", "filedialog", "simpledialog"):
+        monkeypatch.setattr(dialogs, name, _NoRealDialog(name))
+
+
 @pytest.fixture(autouse=True)
 def _no_high_contrast(monkeypatch):
     """The host may have High Contrast on; tests that need it patch system_palette (#181)."""
