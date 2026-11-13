@@ -11,6 +11,7 @@ import threading
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
+from typing import Any
 
 from ..app.controller import AutoclickerController
 from ..app.hotkeys import HotkeyManager, callbacks_for, saved_bindings
@@ -690,46 +691,65 @@ class AutoclickerApp(
         self._apply_target_mode_state()
         self._set_status_message("Coordinate selection cancelled", "alert")
 
+    def _form_inputs(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        """The plain form inputs by setting key: text entries, and variables (#169).
+
+        _collect_ui_settings reads every one and apply_form_values fills any a
+        profile or flag names. The target mode, click limit, pixel condition,
+        sequence and image need more than a get/set and are handled in both.
+        The safety switches are left out on purpose: a profile or flag never
+        turns off a stop.
+        """
+        entries = {
+            "x_coord": self.x_entry,
+            "y_coord": self.y_entry,
+            "interval": self.interval_entry,
+            "variation": self.variation_entry,
+            "burst_clicks": self.burst_clicks_entry,
+            "burst_pause": self.burst_pause_entry,
+            "auto_stop_minutes": self.auto_stop_entry,
+            "start_delay_seconds": self.start_delay_entry,
+            "start_at": self.start_at_entry,
+            "stop_at": self.stop_at_entry,
+            "sequence_repeat": self.sequence_repeat_entry,
+            "hold_ms": self.hold_entry,
+            "key": self.key_entry,
+            "click_spread": self.spread_entry,
+            "condition_tolerance": self.condition_tolerance_entry,
+            "image_margin": self.image_margin_entry,
+            "image_tolerance": self.image_tolerance_entry,
+            "image_missing_stop_seconds": self.image_missing_entry,
+        }
+        variables = {
+            "interval_unit": self.interval_unit_var,
+            "mouse_button": self.button_var,
+            "click_type": self.click_type_var,
+            "action": self.action_var,
+        }
+        return entries, variables
+
     def _collect_ui_settings(self) -> dict:
         """Collect current values from UI fields."""
-        return AutoclickerController.collect_raw_settings(
+        entries, variables = self._form_inputs()
+        values: dict[str, Any] = {key: entry.get() for key, entry in entries.items()}
+        values.update({key: var.get() for key, var in variables.items()})
+        values.update(
             {
                 "target_mode": self.target_mode_var.get(),
-                "x_coord": self.x_entry.get(),
-                "y_coord": self.y_entry.get(),
-                "interval": self.interval_entry.get(),
-                "interval_unit": self.interval_unit_var.get(),
-                "variation": self.variation_entry.get(),
-                "mouse_button": self.button_var.get(),
-                "click_type": self.click_type_var.get(),
-                "burst_clicks": self.burst_clicks_entry.get(),
-                "burst_pause": self.burst_pause_entry.get(),
                 "max_clicks": (self.max_clicks_entry.get() if self.limit_clicks_var.get() else "0"),
-                "auto_stop_minutes": self.auto_stop_entry.get(),
                 "enable_failsafe": self.failsafe_var.get(),
                 "pause_when_unfocused": self.pause_unfocused_var.get(),
                 "max_cps_ceiling": self.max_cps_entry.get(),
-                "start_delay_seconds": self.start_delay_entry.get(),
-                "start_at": self.start_at_entry.get(),
-                "stop_at": self.stop_at_entry.get(),
                 "sequence": [dict(step) for step in self.sequence_steps],
-                "sequence_repeat": self.sequence_repeat_entry.get(),
                 "image_path": self.image_path,
                 "image_region": list(self.image_region),
-                "image_margin": self.image_margin_entry.get(),
-                "image_tolerance": self.image_tolerance_entry.get(),
-                "image_missing_stop_seconds": self.image_missing_entry.get(),
-                "click_spread": self.spread_entry.get(),
-                "action": self.action_var.get(),
-                "hold_ms": self.hold_entry.get(),
-                "key": self.key_entry.get(),
                 "condition": self.condition_var.get(),
                 "condition_x": self.condition_point[0],
                 "condition_y": self.condition_point[1],
                 "condition_color": self.condition_point[2],
-                "condition_tolerance": self.condition_tolerance_entry.get(),
             }
         )
+        return AutoclickerController.collect_raw_settings(values)
 
     def _confirm_guard_off(self) -> bool:
         """Ask before the first run with the runaway guard turned off."""

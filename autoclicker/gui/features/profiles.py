@@ -6,6 +6,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from ...core.settings_manager import POINT_KEYS, setting_key
 from ...utils.profiles import PROFILE_KEYS, describe_profile
 from .. import dialogs
 from .base import AppBase
@@ -21,7 +22,7 @@ class ProfilesMixin(AppBase):
         sanitized = result["sanitized_settings"]
         profile = {k: sanitized[k] for k in PROFILE_KEYS if k in sanitized}
         # Cursor-mode profiles still keep a point, so switching them to Fixed works.
-        for axis, key in (("x", "x_coord"), ("y", "y_coord")):
+        for axis, key in POINT_KEYS.items():
             value = sanitized.get(key, self.settings.get(key, 100))
             try:
                 profile[axis] = int(value)
@@ -88,34 +89,13 @@ class ProfilesMixin(AppBase):
             entry.insert(0, str(value))
             entry.configure(state=state)
 
-        entries = {
-            "x": self.x_entry,
-            "y": self.y_entry,
-            "interval": self.interval_entry,
-            "variation": self.variation_entry,
-            "burst_clicks": self.burst_clicks_entry,
-            "burst_pause": self.burst_pause_entry,
-            "auto_stop_minutes": self.auto_stop_entry,
-            "sequence_repeat": self.sequence_repeat_entry,
-            "start_delay_seconds": self.start_delay_entry,
-            "start_at": self.start_at_entry,
-            "stop_at": self.stop_at_entry,
-            "hold_ms": self.hold_entry,
-            "click_spread": self.spread_entry,
-            "key": self.key_entry,
-        }
-        for key, entry in entries.items():
-            if key in values:
-                put(entry, values[key])
-        variables = {
-            "interval_unit": self.interval_unit_var,
-            "mouse_button": self.button_var,
-            "click_type": self.click_type_var,
-            "action": self.action_var,
-        }
-        for key, var in variables.items():
-            if key in values:
-                var.set(values[key])
+        entries, variables = self._form_inputs()
+        for key, value in values.items():
+            key = setting_key(key)  # profiles and flags call the point x/y
+            if key in entries:
+                put(entries[key], value)
+            elif key in variables:
+                variables[key].set(value)
         self._apply_action_state()
         if "max_clicks" in values:
             try:
@@ -126,8 +106,6 @@ class ProfilesMixin(AppBase):
             if limited:
                 put(self.max_clicks_entry, values["max_clicks"])
             self.max_clicks_entry.configure(state=tk.NORMAL if limited else tk.DISABLED)
-        if "condition_tolerance" in values:
-            put(self.condition_tolerance_entry, values["condition_tolerance"])
         if all(k in values for k in ("condition_x", "condition_y", "condition_color")):
             self.condition_point = (
                 values["condition_x"],
@@ -140,12 +118,6 @@ class ProfilesMixin(AppBase):
         if isinstance(values.get("sequence"), list):
             self.sequence_steps = [dict(step) for step in values["sequence"]]
             self._refresh_sequence_list()
-        if "image_margin" in values:
-            put(self.image_margin_entry, values["image_margin"])
-        if "image_tolerance" in values:
-            put(self.image_tolerance_entry, values["image_tolerance"])
-        if "image_missing_stop_seconds" in values:
-            put(self.image_missing_entry, values["image_missing_stop_seconds"])
         if values.get("target_mode") == "image" or "image_path" in values:
             # An image profile brings its own image; one without it must not
             # silently click the image captured last (#98).

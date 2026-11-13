@@ -224,6 +224,65 @@ class TestSummaries(GuiHarness):
         self.assertTrue(app.click_summary_var.get().startswith("Middle click"))
 
 
+class TestFormRoundTrip(GuiHarness):
+    """apply_form_values and _collect_ui_settings share one table of inputs (#169)."""
+
+    def test_every_profile_key_survives_apply_then_collect(self):
+        from autoclicker.utils.profiles import PROFILE_KEYS
+
+        step = {"x": 1, "y": 2, "button": "left", "click_type": "single", "delay_ms": 100}
+        profile = {
+            "x": "640",
+            "y": "480",
+            "target_mode": "fixed",
+            "interval": "250",
+            "interval_unit": "seconds",
+            "variation": "7",
+            "mouse_button": "right",
+            "click_type": "double",
+            "burst_clicks": "3",
+            "burst_pause": "40",
+            "max_clicks": "500",
+            "auto_stop_minutes": "9",
+            "sequence": [step],
+            "sequence_repeat": "4",
+            "action": "hold",
+            "hold_ms": "321",
+            "key": "f5",
+            "condition": "wait",
+            "condition_x": 11,
+            "condition_y": 12,
+            "condition_color": "#123456",
+            "condition_tolerance": "20",
+            "image_path": "",
+            "image_region": [],
+            "image_margin": "77",
+            "image_tolerance": "5",
+            "image_missing_stop_seconds": "30",
+            "click_spread": "6",
+        }
+        self.assertEqual(set(profile) - {"x", "y"}, set(PROFILE_KEYS))
+        self.app.apply_form_values(profile)
+        collected = self.app._collect_ui_settings()
+        for key, value in profile.items():
+            setting = {"x": "x_coord", "y": "y_coord"}.get(key, key)
+            with self.subTest(key=key):
+                if isinstance(value, list):
+                    self.assertEqual(collected[setting], value)
+                else:
+                    self.assertEqual(str(collected[setting]), str(value))
+
+    def test_a_profile_cannot_switch_off_a_safety_stop(self):
+        app = self.app
+        before = app.max_cps_entry.get()
+        app.apply_form_values(
+            {"enable_failsafe": False, "pause_when_unfocused": True, "max_cps_ceiling": "0"}
+        )
+        self.assertTrue(app.failsafe_var.get())
+        self.assertFalse(app.pause_unfocused_var.get())
+        self.assertEqual(app.max_cps_entry.get(), before)
+
+
 class TestFirstRunHint(GuiHarness):
     """#124: a one-time hint names the ways out of a run, with the user's keys."""
 
