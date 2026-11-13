@@ -14,40 +14,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ..core import fields
 from ..core.image_match import encode_image, is_app_image, store_embedded_image
 from ..core.settings_manager import setting_key
 
 _log = logging.getLogger(__name__)
 
-# Click settings a profile restores, in addition to the target point.
-PROFILE_KEYS = (
-    "target_mode",
-    "interval",
-    "interval_unit",
-    "variation",
-    "mouse_button",
-    "click_type",
-    "burst_clicks",
-    "burst_pause",
-    "max_clicks",
-    "auto_stop_minutes",
-    "sequence",
-    "sequence_repeat",
-    "action",
-    "hold_ms",
-    "key",
-    "condition",
-    "condition_x",
-    "condition_y",
-    "condition_color",
-    "condition_tolerance",
-    "image_path",
-    "image_region",
-    "image_margin",
-    "image_tolerance",
-    "image_missing_stop_seconds",
-    "click_spread",
-)
+# Click settings a profile restores, in addition to the target point: the
+# fields marked in_profile in core/fields.py (#169).
+PROFILE_KEYS = fields.PROFILE_KEYS
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
 EXPORT_VERSION = 1

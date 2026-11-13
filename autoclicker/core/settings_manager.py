@@ -15,9 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from . import fields
 from .exceptions import ValidationError
-from .image_match import DEFAULT_MARGIN
-from .safety import DEFAULT_MAX_CPS
 from .schedule import parse_start_at
 from .screen import ScreenBounds
 from .settings_paths import LEGACY_FILENAME, atomic_write_json, resolve_settings_file
@@ -29,74 +28,18 @@ MAX_CPS_CEILING = 10_000
 
 # Fields parsed from free-text UI entries. Values are parsed, never clamped or
 # defaulted: a value that does not parse, or is out of range, is an error.
-_INT_FIELDS = frozenset(
-    {
-        "x_coord",
-        "y_coord",
-        "variation",
-        "burst_clicks",
-        "max_clicks",
-        "auto_stop_minutes",
-        "max_cps_ceiling",
-        "start_delay_seconds",
-        "sequence_repeat",
-        "condition_x",
-        "condition_y",
-        "condition_tolerance",
-        "image_margin",
-        "image_tolerance",
-        "image_missing_stop_seconds",
-        "click_spread",
-    }
-)
-_FLOAT_FIELDS = frozenset({"interval", "burst_pause", "hold_ms"})
-_CHOICE_FIELDS: dict[str, tuple[str, ...]] = {
-    "mouse_button": ("left", "right", "middle"),
-    "click_type": ("single", "double"),
-    "interval_unit": ("ms", "seconds"),
-    "target_mode": ("fixed", "cursor", "sequence", "image"),
-    "action": ("click", "hold", "key"),
-    "condition": ("none", "wait", "stop"),
-}
+# Declared once in core/fields.py (#169).
+_INT_FIELDS = fields.keys_of("int")
+_FLOAT_FIELDS = fields.keys_of("float")
+_CHOICE_FIELDS: dict[str, tuple[str, ...]] = fields.CHOICES
 
-# Human-readable names for validation error keys, used in error dialogs.
+# Human-readable names for validation error keys, used in error dialogs: the
+# fields' own labels plus keys that only errors use.
 FIELD_LABELS: dict[str, str] = {
-    "x_coord": "X",
-    "y_coord": "Y",
+    **fields.LABELS,
     "coordinates": "Coordinates",
-    "target_mode": "Target",
-    "interval": "Interval",
-    "interval_unit": "Interval unit",
-    "variation": "Variation",
-    "mouse_button": "Mouse button",
-    "click_type": "Click type",
     "burst": "Burst",
-    "burst_clicks": "Burst clicks",
-    "burst_pause": "Burst pause",
-    "max_clicks": "Limit clicks",
     "auto_stop": "Auto-stop",
-    "auto_stop_minutes": "Auto-stop",
-    "max_cps_ceiling": "Max clicks per second",
-    "pause_when_unfocused": "Pause when unfocused",
-    "start_delay_seconds": "Start delay",
-    "start_at": "Start at",
-    "stop_at": "Stop at",
-    "sequence": "Sequence",
-    "sequence_repeat": "Repeat",
-    "action": "Action",
-    "hold_ms": "Hold",
-    "key": "Key",
-    "condition": "Only when",
-    "condition_x": "Watched pixel X",
-    "condition_y": "Watched pixel Y",
-    "condition_color": "Watched color",
-    "condition_tolerance": "Color tolerance",
-    "image_path": "Image",
-    "image_region": "Image search area",
-    "image_margin": "Search margin",
-    "image_tolerance": "Image tolerance",
-    "image_missing_stop_seconds": "Stop if the image is not seen for",
-    "click_spread": "Spread",
 }
 
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -154,12 +97,10 @@ _STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click typ
 # Settings whose stored value must be of a given JSON type; anything else falls
 # back to the default for that key on load. Numeric fields also accept strings
 # because the UI stores what was typed, and validation reports bad values.
-_BOOL_KEYS = frozenset({"enable_failsafe", "pause_when_unfocused", "minimize_to_tray"})
+_BOOL_KEYS = fields.keys_of("bool") | {"minimize_to_tray"}
 _DICT_KEYS = frozenset({"hotkeys", "presets"})
-_LIST_KEYS = frozenset({"sequence", "image_region"})
-_STR_KEYS = frozenset(
-    {*_CHOICE_FIELDS, "key", "condition_color", "image_path", "start_at", "stop_at"}
-)
+_LIST_KEYS = fields.keys_of("list")
+_STR_KEYS = fields.keys_of("str") | frozenset(_CHOICE_FIELDS)
 _NUMERIC_KEYS = _INT_FIELDS | _FLOAT_FIELDS
 
 
@@ -226,41 +167,8 @@ class SettingsManager:
     """Manages application settings with validation and persistence"""
 
     DEFAULT_SETTINGS = {
-        "target_mode": "fixed",
-        "x_coord": 100,
-        "y_coord": 100,
-        "interval": 1000,
-        "interval_unit": "ms",
-        "variation": 0,
-        "mouse_button": "left",
-        "click_type": "single",
-        "burst_clicks": 1,
-        "burst_pause": 1000,
-        "max_clicks": 0,
-        "auto_stop_minutes": 0,
-        "enable_failsafe": True,
-        "max_cps_ceiling": DEFAULT_MAX_CPS,
-        "start_delay_seconds": 3,
-        "start_at": "",
-        "stop_at": "",
-        "sequence": [],
-        "sequence_repeat": 0,
-        "action": "click",
-        "hold_ms": 500,
-        "key": "",
-        "condition": "none",
-        "condition_x": 0,
-        "condition_y": 0,
-        "condition_color": "#000000",
-        "condition_tolerance": 16,
-        "image_path": "",
-        "image_region": [],
-        "image_margin": DEFAULT_MARGIN,
-        "image_tolerance": 0,
-        # 0 = wait for the image as long as it takes (#174).
-        "image_missing_stop_seconds": 0,
-        "click_spread": 0,
-        "pause_when_unfocused": False,
+        # The run settings, from core/fields.py (#169), then the app's own.
+        **copy.deepcopy(fields.DEFAULTS),
         "minimize_to_tray": True,
         # None until the user has been asked once; then True or False.
         "check_for_updates": None,

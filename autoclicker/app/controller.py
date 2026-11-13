@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from ..core.click_engine import ClickEngine, ClickStep, PixelCondition, RunConfig, RunOutcome
+from ..core.fields import RUN_KEYS
 from ..core.image_match import (
     DEFAULT_MARGIN,
     ImageTarget,
@@ -46,16 +47,8 @@ _ERROR_FIELDS: dict[str, tuple[str, ...]] = {
 }
 
 
-# The settings a Start reads from the form, in one place (#169).
-_RUN_FIELDS = (
-    "target_mode", "x_coord", "y_coord", "interval", "interval_unit", "variation",
-    "mouse_button", "click_type", "burst_clicks", "burst_pause", "max_clicks",
-    "auto_stop_minutes", "enable_failsafe", "pause_when_unfocused", "max_cps_ceiling",
-    "start_delay_seconds", "start_at", "stop_at", "sequence", "sequence_repeat", "action",
-    "hold_ms", "key", "condition", "condition_x", "condition_y", "condition_color",
-    "condition_tolerance", "image_path", "image_region", "image_margin", "image_tolerance",
-    "image_missing_stop_seconds", "click_spread",
-)  # fmt: skip
+# The settings a Start reads from the form, declared in core/fields.py (#169).
+_RUN_FIELDS = RUN_KEYS
 
 
 @dataclass
