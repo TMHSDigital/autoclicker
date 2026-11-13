@@ -440,26 +440,20 @@ class AutoclickerApp(
     def dismiss_first_run_hint(self) -> None:
         """Got it: hide the hint for good, and record the update choice made there."""
         self.settings.set("first_run_hint_dismissed", True)
-        hint = getattr(self, "first_run_hint", None)
-        if hint is not None:
-            hint.grid_remove()
+        self.first_run_hint.grid_remove()
         if self.settings.get("check_for_updates") is None:
             choice = bool(self.hint_updates_var.get())
             self.settings.set("check_for_updates", choice)
-            if hasattr(self, "check_updates_var"):
-                self.check_updates_var.set(choice)
+            self.check_updates_var.set(choice)
             if choice:
                 self._maybe_check_for_updates()
 
     def _refresh_hotkey_labels(self) -> None:
-        if hasattr(self, "first_run_hint_var"):
-            self.first_run_hint_var.set(self._first_run_hint_text())
-        if self.run_button is not None:
-            self.run_button.set_hotkey(
-                self._hotkey_suffix("start").strip(" ()"), self._hotkey_suffix("stop").strip(" ()")
-            )
-        if hasattr(self, "emergency_btn"):
-            self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
+        self.first_run_hint_var.set(self._first_run_hint_text())
+        self.run_button.set_hotkey(
+            self._hotkey_suffix("start").strip(" ()"), self._hotkey_suffix("stop").strip(" ()")
+        )
+        self.emergency_btn.config(text="Emergency stop" + self._hotkey_suffix("emergency"))
         self._refresh_tray_menu()
 
     def open_hotkeys_dialog(self) -> None:
@@ -528,37 +522,32 @@ class AutoclickerApp(
             with contextlib.suppress(Exception):
                 theme.set_dimmed(False)
             return
-        frame = getattr(self, "main_frame", None)
-        if self._locked_widgets or frame is None:
+        if self._locked_widgets:
             return
-        self._locked_widgets = tuple(w for w in _descendants(frame) if _lock_widget(w))
+        self._locked_widgets = tuple(w for w in _descendants(self.main_frame) if _lock_widget(w))
         with contextlib.suppress(Exception):
             theme.set_dimmed(True)
 
     def _paint_stopped(self, message: str, state: str = "stopped") -> None:
         """Reset start/stop widgets after clicking ends."""
         self._set_settings_locked(False)
-        if hasattr(self, "_hotkeys"):
-            self._hotkeys.set_running(False)
+        self._hotkeys.set_running(False)
         self._paint_run_mode("idle")
         self._set_status_message(message, state)
         self._stop_status_timer()
         # Final refresh so the counters show the exact totals, not the last 1 s tick
-        if hasattr(self, "click_count_var"):
-            self._on_status_update()
+        self._on_status_update()
 
     def _set_status_message(self, message: str, state: str = "stopped") -> None:
         """Show a status line and color the dot for ``state``.
 
         ``state`` is one of ``running``, ``stopped``, ``alert`` or ``error``.
         """
-        if hasattr(self, "status_var"):
-            self.status_var.set(message)
+        self.status_var.set(message)
         self._set_tray_title(message)
         color = STATUS_COLORS.get(state, STATUS_COLORS["stopped"])
-        for dot in (getattr(self, "status_dot", None), getattr(self, "brand_dot", None)):
-            if dot is not None:
-                dot.configure(foreground=color)
+        for dot in (self.status_dot, self.brand_dot):
+            dot.configure(foreground=color)
 
     def _on_failsafe_toggle(self) -> None:
         if not self.failsafe_var.get():
@@ -576,8 +565,7 @@ class AutoclickerApp(
             failsafe=self.failsafe_var.get(),
             pause_when_unfocused=self.pause_unfocused_var.get(),
         )
-        if hasattr(self, "first_run_hint_var"):
-            self.first_run_hint_var.set(self._first_run_hint_text())  # corner on or off
+        self.first_run_hint_var.set(self._first_run_hint_text())  # corner on or off
         self._refresh_panel_summaries()
 
     def _apply_target_mode_state(self) -> None:
@@ -865,9 +853,9 @@ class AutoclickerApp(
         self.click_count_var.set(stats.clicks)
         self.runtime_var.set(stats.runtime)
         self.performance_var.set(stats.rate)
-        tile = getattr(self, "runtime_tile", None)
-        if tile is not None:
-            tile.set_caption(f"Runtime{SEP}{stats.time_left}" if stats.time_left else "Runtime")
+        self.runtime_tile.set_caption(
+            f"Runtime{SEP}{stats.time_left}" if stats.time_left else "Runtime"
+        )
         if status.get("is_running"):
             state = "paused" if status.get("is_paused") else "running"
             parts = [state, f"{stats.clicks} clicks"]
@@ -955,8 +943,6 @@ class AutoclickerApp(
 
     def _update_scrollbar_visibility(self) -> None:
         """Show the vertical scrollbar only when content overflows."""
-        if not hasattr(self, "v_scrollbar"):
-            return
         bbox = self.canvas.bbox("all")
         if bbox and bbox[3] > self.canvas.winfo_height():
             self.v_scrollbar.grid()
@@ -975,8 +961,7 @@ class AutoclickerApp(
             self._recorder = None
         self.stop_clicking()
         self.coordinate_picker.stop_picking(cancelled=False)
-        if hasattr(self, "_hotkeys") and self._hotkeys:
-            self._hotkeys.unregister()
+        self._hotkeys.unregister()
         self.controller.persist_settings_on_quit(
             self._collect_ui_settings(),
             settings_manager=self.settings,

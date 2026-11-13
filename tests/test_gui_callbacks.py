@@ -30,7 +30,25 @@ def _bare_app() -> AutoclickerApp:
     app.click_engine.is_running = False
     app.coordinate_picker = MagicMock()
     app.coordinate_picker.is_picking.return_value = False
-    app.status_var = MagicMock()
+    app.click_engine.get_status.return_value = {}
+    # The widgets the builders attach, which main_window uses without checking (#170).
+    for name in (
+        "status_var",
+        "status_dot",
+        "brand_dot",
+        "click_count_var",
+        "runtime_var",
+        "performance_var",
+        "runtime_tile",
+        "emergency_btn",
+        "first_run_hint",
+        "first_run_hint_var",
+        "check_updates_var",
+        "v_scrollbar",
+    ):
+        setattr(app, name, MagicMock())
+    app.main_frame = MagicMock()
+    app.main_frame.winfo_children.return_value = []
     app.pick_btn = MagicMock()
     app.run_button = MagicMock()
     app.preset_var = MagicMock()
