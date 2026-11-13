@@ -10,7 +10,7 @@ Pushing a `vX.Y.Z` tag runs the CI workflow on GitHub Actions:
 2. PyInstaller builds `WindowsAutoclicker.exe` from `WindowsAutoclicker.spec` (no UPX, with a Windows version resource), launches it once as a smoke test, and writes `WindowsAutoclicker.exe.sha256`. It then launches the exe once more from a folder with `portable.txt`, checks that it wrote its log to `data\` and nothing to `%APPDATA%`, and packs `WindowsAutoclicker-portable.zip` (exe plus marker) with its own checksum.
 3. The release job checks that the tag matches `autoclicker/__init__.py`, takes the release notes from that version's section of `CHANGELOG.md` (`scripts/release_notes.py`), records a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for the exe and the portable zip, and publishes both with their checksums and `THIRD_PARTY_NOTICES.txt`. Builds install from hashed lock files (`--require-hashes`), so they only get the exact package files that were locked.
 
-Maintainer steps are in [CONTRIBUTING.md](../CONTRIBUTING.md#releases).
+Maintainer steps are in [CONTRIBUTING.md](../.github/CONTRIBUTING.md#releases).
 
 **Policy:** when a fix labelled `safety` lands on `main`, cut a patch release promptly. The README download button always serves the latest release, so a safety fix only reaches most users once it is released.
 

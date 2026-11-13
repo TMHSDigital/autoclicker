@@ -4,7 +4,7 @@ Thank you for your interest in this project. This repository is public. Please d
 
 ## License
 
-This project is licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE).
+This project is licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](../LICENSE).
 
 - You may contribute non-commercial improvements aligned with the license.
 - Commercial use or commercial pull requests require prior coordination with the maintainers at info@tmhsdigital.com.
@@ -127,7 +127,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-CI tests the tag, builds and smoke-launches `WindowsAutoclicker.exe`, and publishes it with a SHA-256 checksum, a provenance attestation, and release notes taken from that version's CHANGELOG section. The release fails if the tag and `__version__` differ or the section is missing. Details: [docs/RELEASING.md](docs/RELEASING.md).
+CI tests the tag, builds and smoke-launches `WindowsAutoclicker.exe`, and publishes it with a SHA-256 checksum, a provenance attestation, and release notes taken from that version's CHANGELOG section. The release fails if the tag and `__version__` differ or the section is missing. Details: [docs/RELEASING.md](../docs/RELEASING.md).
 
 ## Security
 

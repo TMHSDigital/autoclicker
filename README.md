@@ -426,7 +426,7 @@ Another program may already own the key; the status line names any key that coul
 
 ## Contributing
 
-Bug reports, fixes and docs improvements are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [open issues](https://github.com/TMHSDigital/autoclicker/issues).
+Bug reports, fixes and docs improvements are welcome. Start with [CONTRIBUTING.md](.github/CONTRIBUTING.md) and the [open issues](https://github.com/TMHSDigital/autoclicker/issues).
 
 ```bash
 tasks.bat install   # .venv + pinned deps + dev tools   (make install in Git Bash)
@@ -457,6 +457,6 @@ Releases are cut by pushing a `vX.Y.Z` tag; CI tests on Python 3.11 to 3.14, bui
 **[CC BY-NC 4.0](LICENSE)**: free to use, share and adapt for non-commercial purposes with attribution.<br />
 For commercial licensing, contact [TM Hospitality Strategies](mailto:info@tmhsdigital.com).
 
-<sub>Built by <a href="https://github.com/TMHSDigital">TMHSDigital</a> · <a href="https://tmhsdigital.github.io/autoclicker/">Website</a> · <a href="https://tmhsdigital.github.io/autoclicker/guides/">Guides</a> · <a href="https://github.com/sponsors/TMHSDigital">Sponsor</a> · <a href="SECURITY.md">Security</a> · Provided as is, without warranty.</sub>
+<sub>Built by <a href="https://github.com/TMHSDigital">TMHSDigital</a> · <a href="https://tmhsdigital.github.io/autoclicker/">Website</a> · <a href="https://tmhsdigital.github.io/autoclicker/guides/">Guides</a> · <a href="https://github.com/sponsors/TMHSDigital">Sponsor</a> · <a href=".github/SECURITY.md">Security</a> · Provided as is, without warranty.</sub>
 
 </div>

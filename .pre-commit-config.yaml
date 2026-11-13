@@ -1,4 +1,4 @@
-# Opt-in: pre-commit install (see CONTRIBUTING.md)
+# Opt-in: pre-commit install (see .github/CONTRIBUTING.md)
 minimum_pre_commit_version: "3.2.0"  # pre-commit-hooks 5+ needs it
 default_language_version:
   python: python3
