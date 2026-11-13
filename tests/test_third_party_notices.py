@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parent.parent
 notices = runpy.run_path(str(ROOT / "tools" / "third_party_notices.py"))
-SPEC_TEXT = (ROOT / "WindowsAutoclicker.spec").read_text("utf-8")
+SPEC_TEXT = (ROOT / "packaging" / "WindowsAutoclicker.spec").read_text("utf-8")
 LOCK_TEXT = (ROOT / "requirements-lock.txt").read_text("utf-8")
 
 
@@ -27,7 +27,7 @@ class TestNotBundled(unittest.TestCase):
     def test_spec_bundles_the_notices_and_license(self):
         self.assertIn('_tools["write_notices"]()', SPEC_TEXT)
         self.assertIn('(str(_notices), ".")', SPEC_TEXT)
-        self.assertIn('("LICENSE", ".")', SPEC_TEXT)
+        self.assertIn('(str(ROOT / "LICENSE"), ".")', SPEC_TEXT)
 
 
 class TestLockedPackages(unittest.TestCase):

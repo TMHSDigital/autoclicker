@@ -126,7 +126,7 @@ jobs:
         run: tasks.bat install
 
       - name: Build executable
-        run: .venv\Scripts\pyinstaller.exe --clean --noconfirm WindowsAutoclicker.spec
+        run: .venv\Scripts\pyinstaller.exe --clean --noconfirm packaging/WindowsAutoclicker.spec
 
       - name: Excluded modules stay out of the exe (#153)
         shell: pwsh

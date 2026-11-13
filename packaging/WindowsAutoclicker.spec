@@ -1,5 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Frozen Windows build. Icons ship in autoclicker/assets (regenerate with tools/create_icon.py)."""
+"""Frozen Windows build. Icons ship in autoclicker/assets (regenerate with tools/create_icon.py).
+
+Build from the repo root: pyinstaller --clean --noconfirm packaging/WindowsAutoclicker.spec
+"""
 
 import re
 import runpy
@@ -15,9 +18,12 @@ from PyInstaller.utils.win32.versioninfo import (
     VSVersionInfo,
 )
 
+# Paths are relative to the repo root, one level up from this file.
+ROOT = Path(SPECPATH).resolve().parent  # noqa: F821 (set by PyInstaller)
+
 # Version resource so the exe's Properties > Details show the product and version.
 _version = re.search(
-    r'^__version__ = "([^"]+)"', Path("autoclicker/__init__.py").read_text("utf-8"), re.M
+    r'^__version__ = "([^"]+)"', (ROOT / "autoclicker" / "__init__.py").read_text("utf-8"), re.M
 ).group(1)
 _parts = tuple(int(p) for p in (_version.split(".") + ["0", "0", "0"])[:4])
 version_info = VSVersionInfo(
@@ -47,18 +53,18 @@ version_info = VSVersionInfo(
 # License texts of the bundled packages, generated from the installed runtime
 # lock on every build (#153). CI also attaches build/THIRD_PARTY_NOTICES.txt
 # to each release.
-_tools = runpy.run_path("tools/third_party_notices.py")
+_tools = runpy.run_path(str(ROOT / "tools" / "third_party_notices.py"))
 _notices = _tools["write_notices"]()
 
 a = Analysis(
-    ["autoclicker.py"],
+    [str(ROOT / "autoclicker.py")],
     pathex=[],
     binaries=[],
     datas=[
-        ("autoclicker/assets/autoclicker.ico", "autoclicker/assets"),
-        ("autoclicker/assets/autoclicker.png", "autoclicker/assets"),
+        (str(ROOT / "autoclicker" / "assets" / "autoclicker.ico"), "autoclicker/assets"),
+        (str(ROOT / "autoclicker" / "assets" / "autoclicker.png"), "autoclicker/assets"),
         (str(_notices), "."),
-        ("LICENSE", "."),
+        (str(ROOT / "LICENSE"), "."),
     ],
     # ImageTk: image thumbnail; pyautogui: loaded through importlib (#163). Both lazy.
     hiddenimports=["sv_ttk", "PIL.ImageTk", "pyautogui"],
@@ -92,6 +98,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="autoclicker/assets/autoclicker.ico",
+    icon=str(ROOT / "autoclicker" / "assets" / "autoclicker.ico"),
     version=version_info,
 )

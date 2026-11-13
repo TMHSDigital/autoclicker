@@ -5,7 +5,7 @@ Write THIRD_PARTY_NOTICES.txt: the license of every package bundled in the exe.
 The package list comes from requirements-lock.txt, minus the modules the
 PyInstaller spec excludes (NOT_BUNDLED). License texts are read from each
 installed package's .dist-info, so run this from a venv that has the runtime
-lock installed (make install / tasks.bat install). WindowsAutoclicker.spec
+lock installed (make install / tasks.bat install). packaging/WindowsAutoclicker.spec
 runs it on every build, so the notices always match what is bundled.
 
 Usage:
@@ -25,7 +25,7 @@ NOTICES_FILE = ROOT / "build" / "THIRD_PARTY_NOTICES.txt"
 
 # pyautogui imports these optionally and the app never uses them; the spec
 # excludes them (mouseinfo and pymsgbox are GPLv3+) (#153). Keep in sync with
-# WindowsAutoclicker.spec (tests/test_third_party_notices.py checks).
+# packaging/WindowsAutoclicker.spec (tests/test_third_party_notices.py checks).
 NOT_BUNDLED = frozenset({"mouseinfo", "pymsgbox", "pyperclip"})
 
 # Where the LGPL-licensed source can be obtained (LGPLv3 section 4).
