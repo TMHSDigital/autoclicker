@@ -164,9 +164,8 @@ class AutoclickerApp(
             can_switch_profile=self._can_switch_profile,
         )
         self._refresh_hotkey_labels()
-        warning = getattr(self.settings, "load_warning", None)
-        if warning:
-            self._set_status_message(warning, "alert")
+        if self.settings.load_warning:
+            self._set_status_message(self.settings.load_warning, "alert")
         self._tray_hint_shown = False
         self.root.bind("<Unmap>", self._on_unmap)
 
@@ -210,7 +209,7 @@ class AutoclickerApp(
             self.root.update_idletasks()
             width = int(self.main_frame.winfo_reqwidth())
             height = int(self.main_frame.winfo_reqheight())
-            for frame in getattr(self, "_pinned_frames", ()):
+            for frame in self._pinned_frames:
                 width = max(width, int(frame.winfo_reqwidth()))
                 height += int(frame.winfo_reqheight())
             width = max(640, width)
@@ -289,25 +288,23 @@ class AutoclickerApp(
 
     def _paint_run_mode(self, mode: str, detail: str = "") -> None:
         """Show ``idle``, ``countdown`` or ``running`` on the hero button."""
-        button = getattr(self, "run_button", None)
-        if button is not None:
-            button.set_mode(mode, detail=detail)
-        if mode != getattr(self, "_painted_mode", None):
+        if self.run_button is not None:
+            self.run_button.set_mode(mode, detail=detail)
+        if mode != self._painted_mode:
             self._painted_mode = mode
             self._refresh_tray_menu()  # tray profiles grey out while a run is on (#178)
 
     def _refresh_tray_menu(self) -> None:
-        tray = getattr(self, "tray_icon", None)
-        if tray is not None:
+        if self.tray_icon is not None:  # profiles load before the tray exists
             with contextlib.suppress(Exception):
-                tray.update_menu()
+                self.tray_icon.update_menu()
 
     def _can_switch_profile(self) -> bool:
         """(Any thread) True when loading a profile cannot affect a run (#178)."""
         return not (
             self.click_engine.is_running
-            or getattr(self, "_countdown_job", None) is not None
-            or getattr(self, "_recorder", None) is not None
+            or self._countdown_job is not None
+            or self._recorder is not None
         )
 
     def _load_profile_from_tray(self, name: str) -> None:
@@ -380,7 +377,7 @@ class AutoclickerApp(
         bbox = self.canvas.bbox("all")
         if not (bbox and bbox[3] > self.canvas.winfo_height()):
             return
-        self._wheel_delta = getattr(self, "_wheel_delta", 0) - event.delta
+        self._wheel_delta -= event.delta
         steps = int(self._wheel_delta / 120)
         if steps:
             self._wheel_delta -= steps * 120
@@ -456,7 +453,7 @@ class AutoclickerApp(
     def _refresh_hotkey_labels(self) -> None:
         if hasattr(self, "first_run_hint_var"):
             self.first_run_hint_var.set(self._first_run_hint_text())
-        if hasattr(self, "run_button"):
+        if self.run_button is not None:
             self.run_button.set_hotkey(
                 self._hotkey_suffix("start").strip(" ()"), self._hotkey_suffix("stop").strip(" ()")
             )
@@ -864,8 +861,9 @@ class AutoclickerApp(
 
     def _stop_status_timer(self) -> None:
         """Stop status update timer."""
-        if hasattr(self, "_status_timer"):
+        if self._status_timer is not None:
             self.root.after_cancel(self._status_timer)
+            self._status_timer = None
 
     def _update_status_loop(self) -> None:
         """Periodic status update loop."""
@@ -879,7 +877,7 @@ class AutoclickerApp(
         reason = str(getattr(self.click_engine, "pause_reason", "") or PAUSE_FOCUS)
         # What the status line shows: the pause reason, or a falsy value while running.
         shown = reason if paused else None
-        if shown == (getattr(self, "_shown_paused", None) or None):
+        if shown == (self._shown_paused or None):
             return
         self._shown_paused = shown
         if paused:
@@ -889,11 +887,10 @@ class AutoclickerApp(
 
     def _set_tray_title(self, text: str) -> None:
         """Mirror the current state in the tray icon's tooltip."""
-        tray = getattr(self, "tray_icon", None)
-        if tray is None:
+        if self.tray_icon is None:
             return
         with contextlib.suppress(Exception):
-            tray.title = f"Windows Autoclicker: {text}"[:127]  # Win32 tooltip limit
+            self.tray_icon.title = f"Windows Autoclicker: {text}"[:127]  # Win32 tooltip limit
 
     def _on_unmap(self, event) -> None:
         """Minimizing hides the window to the tray when that option is on."""
@@ -965,7 +962,7 @@ class AutoclickerApp(
             settings_manager=self.settings,
         )
 
-        if hasattr(self, "tray_icon") and self.tray_icon:
+        if self.tray_icon:
             self.tray_icon.stop()
 
         self.root.quit()
@@ -974,7 +971,7 @@ class AutoclickerApp(
     def run(self) -> None:
         """Run the application."""
         try:
-            if hasattr(self, "tray_icon") and self.tray_icon:
+            if self.tray_icon:
                 tray_thread = threading.Thread(target=self.tray_icon.run, daemon=True)
                 tray_thread.start()
 

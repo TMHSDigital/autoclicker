@@ -31,7 +31,8 @@ class AppBase:
     click_engine: ClickEngine
     preset_manager: PresetManager
     coordinate_picker: CoordinatePicker
-    tray_icon: Any
+    # None until created after the window, and when the tray is unavailable.
+    tray_icon: Any = None
     _hotkeys: HotkeyManager
     _recorded: list[RecordedClick]
 
@@ -82,7 +83,8 @@ class AppBase:
     minimize_to_tray_var: tk.BooleanVar
     check_updates_var: tk.BooleanVar
     update_button: ttk.Button
-    run_button: Any
+    # The hero's Start/Stop button; None until the hero is built.
+    run_button: Any = None
     brand_dot: ttk.Label
     click_summary_var: tk.StringVar
     timing_panel: Any
@@ -131,6 +133,14 @@ class AppBase:
     _hotkeys_dialog_open: bool = False
     # Pause reason the status line currently shows; None while running normally.
     _shown_paused: str | None = None
+    # Mode last painted on the hero button, so the tray menu refreshes only on change.
+    _painted_mode: str | None = None
+    # Pending root.after id of the 1 s status refresh while a run is on.
+    _status_timer: str | None = None
+    # Wheel delta not yet turned into whole scroll steps (precision touchpads).
+    _wheel_delta: int = 0
+    # Header, hero and footer: outside the scrolled area, measured when fitting the window.
+    _pinned_frames: tuple[Any, ...] = ()
 
     if TYPE_CHECKING:
         # Implemented by AutoclickerApp or another mixin.
