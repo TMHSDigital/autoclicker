@@ -22,7 +22,7 @@ goto usage
 
 :install
 if not exist "%VENV%\Scripts\python.exe" python -m venv "%VENV%"
-"%PY%" -m pip install --require-hashes -r requirements-lock.txt -r requirements-dev-lock.txt
+"%PY%" -m pip install --require-hashes -r requirements\runtime-lock.txt -r requirements\dev-lock.txt
 if errorlevel 1 exit /b 1
 "%PY%" -m pip install -e . --no-deps
 exit /b %ERRORLEVEL%
@@ -79,7 +79,7 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :audit
-"%PY%" -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off
+"%PY%" -m pip_audit -r requirements\runtime-lock.txt -r requirements\dev-lock.txt --progress-spinner off
 exit /b %ERRORLEVEL%
 
 :usage

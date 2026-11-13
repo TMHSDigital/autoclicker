@@ -1,4 +1,4 @@
-"""The runtime lock is resolved from requirements.txt, never frozen from the dev venv (#108)."""
+"""The runtime lock comes from requirements/runtime.txt, never the dev venv (#108)."""
 
 import importlib.util
 import unittest

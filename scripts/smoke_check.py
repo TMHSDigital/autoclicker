@@ -84,7 +84,7 @@ def check_file_structure() -> bool:
     os.chdir(_REPO_ROOT)
     required_files = [
         "autoclicker.py",
-        "requirements.txt",
+        "requirements/runtime.txt",
         "README.md",
         "autoclicker/assets/autoclicker.ico",
         "run_autoclicker.bat",

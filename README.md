@@ -131,12 +131,12 @@ cd autoclicker
 run_autoclicker.bat
 ```
 
-`run_autoclicker.bat` creates a `.venv`, installs the pinned dependencies from `requirements-lock.txt` and starts the app. To do it by hand:
+`run_autoclicker.bat` creates a `.venv`, installs the pinned dependencies from `requirements/runtime-lock.txt` and starts the app. To do it by hand:
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements-lock.txt
+pip install -r requirements/runtime-lock.txt
 python autoclicker.py
 ```
 

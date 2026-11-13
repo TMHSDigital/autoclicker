@@ -1,4 +1,4 @@
-# Runtime dependencies. Source for requirements-lock.txt (tools/refresh_lock.py);
+# Runtime dependencies. Source for requirements/runtime-lock.txt (tools/refresh_lock.py);
 # keep in step with [project].dependencies in pyproject.toml.
 pyautogui>=0.9.54
 pywin32>=306

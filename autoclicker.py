@@ -24,10 +24,10 @@ def run() -> int:
         from autoclicker.main import main
     except ImportError as e:
         print(f"Failed to import autoclicker package: {e}")
-        print("Please ensure all dependencies are installed: pip install -r requirements.txt")
+        print("Install the dependencies: pip install -r requirements/runtime.txt")
         _show_error(
             "Import Error",
-            f"Could not load autoclicker: {e}\n\nRun: pip install -r requirements.txt",
+            f"Could not load autoclicker: {e}\n\nRun: pip install -r requirements/runtime.txt",
         )
         return 1
     try:

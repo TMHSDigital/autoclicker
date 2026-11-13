@@ -24,9 +24,9 @@ make install
 tasks.bat install
 ```
 
-`install` creates `.venv`, installs the pinned runtime dependencies (`requirements-lock.txt`) and the pinned dev and build tools (`requirements-dev-lock.txt`), then installs the package in editable mode.
+`install` creates `.venv`, installs the pinned runtime dependencies (`requirements/runtime-lock.txt`) and the pinned dev and build tools (`requirements/dev-lock.txt`), then installs the package in editable mode.
 
-End users who run from source install `requirements-lock.txt` as described in the README. `requirements.txt` only lists the unpinned runtime dependencies that `tools/refresh_lock.py` locks.
+End users who run from source install `requirements/runtime-lock.txt` as described in the README. `requirements/runtime.txt` only lists the unpinned runtime dependencies that `tools/refresh_lock.py` locks.
 
 ## Running checks
 
@@ -55,8 +55,8 @@ Tests never start a real Tk window: GUI tests build the app with `AutoclickerApp
 
 | File | Contents | Regenerate |
 | :-- | :-- | :-- |
-| `requirements-lock.txt` | Runtime dependencies from `requirements.txt`, compiled with [uv](https://docs.astral.sh/uv/) for Windows and Python 3.11 (works from any venv or Python) | `make lock` (keeps pins), `python tools/refresh_lock.py --upgrade` (newest allowed) |
-| `requirements-dev-lock.txt` | Dev and build tools from `requirements-dev.in`, one lock for Python 3.11+ (needs [uv](https://docs.astral.sh/uv/)) | `make lock`, or `python tools/refresh_lock.py --dev` |
+| `requirements/runtime-lock.txt` | Runtime dependencies from `requirements/runtime.txt`, compiled with [uv](https://docs.astral.sh/uv/) for Windows and Python 3.11 (works from any venv or Python) | `make lock` (keeps pins), `python tools/refresh_lock.py --upgrade` (newest allowed) |
+| `requirements/dev-lock.txt` | Dev and build tools from `requirements/dev.in`, one lock for Python 3.11+ (needs [uv](https://docs.astral.sh/uv/)) | `make lock`, or `python tools/refresh_lock.py --dev` |
 
 Commit the updated lock files. When the ruff or mypy version in the dev lock changes, update the matching `rev` in `.pre-commit-config.yaml` so pre-commit and CI run the same versions.
 

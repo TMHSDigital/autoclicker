@@ -1,4 +1,4 @@
-"""pyproject, requirements.txt and requirements-dev.in stay in step (#155)."""
+"""pyproject, requirements/runtime.txt and requirements/dev.in stay in step (#155)."""
 
 import re
 import tomllib
@@ -24,11 +24,11 @@ class TestDependencySpecs(unittest.TestCase):
         self.project = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]
 
     def test_runtime_dependencies_match_requirements_txt(self):
-        txt = _specs((ROOT / "requirements.txt").read_text("utf-8").splitlines())
+        txt = _specs((ROOT / "requirements/runtime.txt").read_text("utf-8").splitlines())
         self.assertEqual(_specs(self.project["dependencies"]), txt)
 
     def test_dev_and_build_extras_match_requirements_dev_in(self):
-        dev_in = _specs((ROOT / "requirements-dev.in").read_text("utf-8").splitlines())
+        dev_in = _specs((ROOT / "requirements/dev.in").read_text("utf-8").splitlines())
         extras = self.project["optional-dependencies"]
         self.assertEqual(_specs(extras["dev"] + extras["build"]), dev_in)
 

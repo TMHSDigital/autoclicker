@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 ROOT = Path(__file__).resolve().parent.parent
 notices = runpy.run_path(str(ROOT / "tools" / "third_party_notices.py"))
 SPEC_TEXT = (ROOT / "packaging" / "WindowsAutoclicker.spec").read_text("utf-8")
-LOCK_TEXT = (ROOT / "requirements-lock.txt").read_text("utf-8")
+LOCK_TEXT = (ROOT / "requirements/runtime-lock.txt").read_text("utf-8")
 
 
 class TestNotBundled(unittest.TestCase):

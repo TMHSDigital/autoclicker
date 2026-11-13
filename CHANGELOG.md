@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - When a run can't start, the error dialog is titled "Couldn't start" and gives the actual reason (for example "Windows denied access (...)") instead of generic advice such as "Please check your system configuration."
+- Repository layout: the requirements files moved to `requirements/` (install from source with `pip install -r requirements/runtime-lock.txt`; `run_autoclicker.bat` does this for you), the PyInstaller spec to `packaging/`, and CONTRIBUTING, SECURITY and the Code of Conduct to `.github/`.
 
 ### Fixed
 

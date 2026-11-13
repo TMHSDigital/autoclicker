@@ -15,7 +15,7 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=500"]
 
-  # Keep the ruff and mypy revs in step with requirements-dev-lock.txt so
+  # Keep the ruff and mypy revs in step with requirements/dev-lock.txt so
   # pre-commit and CI run the same versions.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: c0f278f1254ccc8fb09676bcdb8d847e7db493e5 # v0.17.4

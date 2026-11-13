@@ -51,12 +51,12 @@ call "%VENV%\Scripts\activate.bat"
 echo Upgrading pip...
 python -m pip install --upgrade pip >nul 2>&1
 
-if exist requirements-lock.txt (
-    echo Installing/updating dependencies from requirements-lock.txt...
-    python -m pip install -r requirements-lock.txt
-) else if exist requirements.txt (
-    echo Installing/updating dependencies from requirements.txt...
-    python -m pip install -r requirements.txt
+if exist requirements\runtime-lock.txt (
+    echo Installing/updating dependencies from requirements\runtime-lock.txt...
+    python -m pip install -r requirements\runtime-lock.txt
+) else if exist requirements\runtime.txt (
+    echo Installing/updating dependencies from requirements\runtime.txt...
+    python -m pip install -r requirements\runtime.txt
 )
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install dependencies

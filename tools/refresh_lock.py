@@ -2,11 +2,11 @@
 """
 Regenerate the lock files.
 
-- requirements-lock.txt: runtime dependencies from requirements.txt, compiled
+- requirements/runtime-lock.txt: runtime dependencies from requirements/runtime.txt, compiled
   with uv for Windows and Python 3.11 (CI and release default). It is resolved
-  from requirements.txt alone, never frozen from the dev venv, so dev tools and
+  from requirements/runtime.txt alone, never frozen from the dev venv, so dev tools and
   the editable install can't leak in (#108).
-- requirements-dev-lock.txt: dev and build tooling from requirements-dev.in,
+- requirements/dev-lock.txt: dev and build tooling from requirements/dev.in,
   compiled with uv as one lock valid for every supported Python (3.11+), so
   CI and pre-commit always run the same tool versions.
 
@@ -29,10 +29,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-REQUIREMENTS = ROOT / "requirements.txt"
-LOCK_FILE = ROOT / "requirements-lock.txt"
-DEV_REQUIREMENTS = ROOT / "requirements-dev.in"
-DEV_LOCK_FILE = ROOT / "requirements-dev-lock.txt"
+REQUIREMENTS = ROOT / "requirements/runtime.txt"
+LOCK_FILE = ROOT / "requirements/runtime-lock.txt"
+DEV_REQUIREMENTS = ROOT / "requirements/dev.in"
+DEV_LOCK_FILE = ROOT / "requirements/dev-lock.txt"
 MIN_PYTHON = "3.11"
 # The exe and CI run the runtime dependencies on Windows with this Python.
 RUNTIME_PYTHON = "3.11"

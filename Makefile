@@ -11,7 +11,7 @@ endif
 
 install:
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
-	$(VENV_PYTHON) -m pip install --require-hashes -r requirements-lock.txt -r requirements-dev-lock.txt
+	$(VENV_PYTHON) -m pip install --require-hashes -r requirements/runtime-lock.txt -r requirements/dev-lock.txt
 	$(VENV_PYTHON) -m pip install -e . --no-deps
 
 test:
@@ -48,4 +48,4 @@ snapshots:
 	$(VENV_PYTHON) tools/ui_snapshots.py
 
 audit:
-	$(VENV_PYTHON) -m pip_audit -r requirements-lock.txt -r requirements-dev-lock.txt --progress-spinner off
+	$(VENV_PYTHON) -m pip_audit -r requirements/runtime-lock.txt -r requirements/dev-lock.txt --progress-spinner off

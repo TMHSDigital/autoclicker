@@ -35,13 +35,13 @@ class TestDependencies(unittest.TestCase):
         block = re.search(r"^dependencies = \[(.*?)^\]", PYPROJECT, re.MULTILINE | re.DOTALL)
         assert block is not None
         from_pyproject = _requirement_names(block.group(1).splitlines())
-        requirements = (ROOT / "requirements.txt").read_text("utf-8").splitlines()
+        requirements = (ROOT / "requirements/runtime.txt").read_text("utf-8").splitlines()
         self.assertEqual(_requirement_names(requirements), from_pyproject)
 
     def test_runtime_lock_pins_every_dependency(self):
-        lock = (ROOT / "requirements-lock.txt").read_text("utf-8").splitlines()
+        lock = (ROOT / "requirements/runtime-lock.txt").read_text("utf-8").splitlines()
         pinned = {line.split("==")[0].strip().lower() for line in lock if "==" in line}
-        requirements = (ROOT / "requirements.txt").read_text("utf-8").splitlines()
+        requirements = (ROOT / "requirements/runtime.txt").read_text("utf-8").splitlines()
         for name in _requirement_names(requirements):
             self.assertIn(name.replace("_", "-"), pinned)
 
