@@ -25,7 +25,8 @@ _log = logging.getLogger(__name__)
 PROFILE_KEYS = fields.PROFILE_KEYS
 
 EXPORT_FORMAT = "windows-autoclicker-profiles"
-EXPORT_VERSION = 1
+# 2: wait_image sequence steps carry their image as image_png too (#119).
+EXPORT_VERSION = 2
 
 
 @dataclass
@@ -76,6 +77,37 @@ def describe_profile(profile: dict[str, Any]) -> str:
     if isinstance(minutes, int) and minutes > 0:
         parts.append(f"stop after {minutes} min")
     return " · ".join(parts)
+
+
+def _export_step(profile: str, step: Any) -> Any:
+    """A sequence step as written to an export: its image embedded, never its path (#119)."""
+    if not isinstance(step, dict) or "image_path" not in step:
+        return step
+    step = dict(step)
+    path = step.pop("image_path")
+    if is_app_image(path):
+        try:
+            step["image_png"] = encode_image(path)
+        except OSError as e:
+            _log.warning("Profile %r: step image not exported: %s", profile, e)
+    else:
+        _log.warning("Profile %r: step image outside the images folder not exported", profile)
+    return step
+
+
+def _import_step(step: Any) -> Any:
+    """An imported step with its embedded image stored locally (#119).
+
+    A path named in the file is dropped, as for image profiles (#98); a step
+    that needs an image and has none then fails validation. Raises OSError or
+    ValueError for an image that can't be stored.
+    """
+    if not isinstance(step, dict):
+        return step
+    step = {k: v for k, v in step.items() if k != "image_path"}
+    if "image_png" in step:
+        step["image_path"] = store_embedded_image(step.pop("image_png"))
+    return step
 
 
 class PresetManager:
@@ -136,7 +168,8 @@ class PresetManager:
         """Write every profile to a JSON file. Returns how many were written.
 
         A profile's captured image travels inside the file as base64 PNG
-        (``image_png``); the local ``image_path`` is never written.
+        (``image_png``), and so does each wait_image step's; the local
+        ``image_path`` is never written.
         """
         profiles = {}
         for name, stored in self._profiles().items():
@@ -150,6 +183,8 @@ class PresetManager:
                 else:
                     _log.warning("Profile %r: image outside the images folder not exported", name)
                 del profile["image_path"]
+            if isinstance(profile, dict) and isinstance(profile.get("sequence"), list):
+                profile["sequence"] = [_export_step(name, step) for step in profile["sequence"]]
             profiles[name] = profile
         payload = {"format": EXPORT_FORMAT, "version": EXPORT_VERSION, "profiles": profiles}
         Path(path).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -191,6 +226,12 @@ class PresetManager:
         """Parse an imported profile with the settings parser; None if anything is invalid."""
         if not isinstance(raw, dict):
             return None
+        if isinstance(raw.get("sequence"), list):
+            try:
+                raw = {**raw, "sequence": [_import_step(step) for step in raw["sequence"]]}
+            except (OSError, ValueError) as e:
+                _log.warning("Imported sequence step image rejected: %s", e)
+                return None
         clean: dict[str, Any] = {}
         for key in ("x", "y", *PROFILE_KEYS):
             # A file never names a local image path: only the embedded image is used (#98).

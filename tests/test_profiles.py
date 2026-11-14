@@ -132,8 +132,8 @@ class TestImportExport(ProfileTestCase):
             self.manager.read_profiles_file(self.path("missing.json"))
 
 
-class TestImageProfiles(ProfileTestCase):
-    """#98: image profiles carry their own image, safely, through export/import."""
+class ImageFolderTestCase(ProfileTestCase):
+    """A throwaway APPDATA with one capture in the images folder."""
 
     def setUp(self):
         super().setUp()
@@ -159,6 +159,10 @@ class TestImageProfiles(ProfileTestCase):
             "image_region": [100, 100, 330, 312],
             "image_margin": 150,
         }
+
+
+class TestImageProfiles(ImageFolderTestCase):
+    """#98: image profiles carry their own image, safely, through export/import."""
 
     def test_saved_with_its_image_and_described(self):
         self.manager.save_profile("Ok button", self.profile)
@@ -229,3 +233,57 @@ class TestImageProfiles(ProfileTestCase):
                 raw = {"x": 1, "y": 1, "target_mode": "image", "image_png": bad}
                 result = self.manager.import_profiles({"Bad": raw}, replace_existing=True)
                 self.assertEqual(result.invalid, ["Bad"])
+
+
+class TestSequenceStepImages(ImageFolderTestCase):
+    """#119: a wait_image step's capture travels inside the export like an image profile's."""
+
+    def step_profile(self, **step):
+        wait = {"type": "wait_image", "image_path": self.image_file, "image_region": [0, 0, 30, 12]}
+        return {"x": 1, "y": 2, "target_mode": "sequence", "sequence": [{**wait, **step}]}
+
+    def export(self, profile):
+        self.manager.save_profile("Routine", profile)
+        out = self.path("export.json")
+        self.manager.export_profiles(out)
+        with open(out, encoding="utf-8") as fh:
+            return out, json.load(fh)
+
+    def test_export_embeds_the_step_image_and_import_stores_it(self):
+        out, data = self.export(self.step_profile())
+        self.assertEqual(data["version"], 2)
+        (step,) = data["profiles"]["Routine"]["sequence"]
+        self.assertNotIn("image_path", step)
+        self.assertIn("image_png", step)
+
+        fresh = PresetManager(SettingsManager(self.path("other.json")))
+        result = fresh.import_profiles(fresh.read_profiles_file(out), replace_existing=False)
+        self.assertEqual(result.added, ["Routine"])
+        (stored,) = fresh.load_profile("Routine")["sequence"]
+        self.assertTrue(
+            stored["image_path"].startswith(
+                os.path.join(self.appdata, "WindowsAutoclicker", "images")
+            )
+        )
+        self.assertEqual(stored["image_region"], [0, 0, 30, 12])
+
+    def test_a_step_path_from_the_file_is_never_used(self):
+        raw = self.step_profile(image_path="//attacker/share/x.png")
+        result = self.manager.import_profiles({"Evil": raw}, replace_existing=False)
+        # Without its embedded image the step can't run, so the profile is invalid.
+        self.assertEqual(result.invalid, ["Evil"])
+
+    def test_a_bad_step_image_makes_the_profile_invalid(self):
+        raw = self.step_profile()
+        del raw["sequence"][0]["image_path"]
+        raw["sequence"][0]["image_png"] = "not base64!"
+        result = self.manager.import_profiles({"Bad": raw}, replace_existing=False)
+        self.assertEqual(result.invalid, ["Bad"])
+
+    def test_other_steps_are_untouched(self):
+        profile = self.step_profile()
+        profile["sequence"].insert(0, {"type": "key", "key": "f5", "delay_ms": 0})
+        _out, data = self.export(profile)
+        self.assertEqual(
+            data["profiles"]["Routine"]["sequence"][0], {"type": "key", "key": "f5", "delay_ms": 0}
+        )

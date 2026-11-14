@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Sequence steps beyond clicks (#119): **Add...** in the Sequence panel now adds a click, a hold, a key press, a wait for an image (which can then click it) or a wait for a pixel color. A wait can give up after a timeout and then stop the run or go on to the next step. Every stop path, limit and the failsafe also work while a step waits. Existing sequences and profiles load unchanged.
+- Sequence steps beyond clicks (#119): **Add...** in the Sequence panel now adds a click, a hold, a key press, a wait for an image (which can then click it) or a wait for a pixel color. A wait can give up after a timeout and then stop the run or go on to the next step. Every stop path, limit and the failsafe also work while a step waits. Existing sequences and profiles load unchanged. Exported profiles carry each wait step's image inside the file (export format version 2), as image profiles already do.
 
 ### Changed
 
