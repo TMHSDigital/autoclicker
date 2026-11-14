@@ -10,7 +10,7 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .exceptions import (
@@ -71,9 +71,17 @@ class RunOutcome:
 class ClickStep:
     """One step of a sequence, then a wait of ``delay_ms`` before the next step (#119).
 
-    ``type`` is "click" (the default, as in every sequence saved before #119),
-    "hold" (press ``button`` at the point for ``hold_ms``) or "key" (press
-    ``key`` into the window in front; a key step has no point).
+    ``type`` is one of:
+
+    - "click" (the default, as in every sequence saved before #119);
+    - "hold": press ``button`` at the point for ``hold_ms``;
+    - "key": press ``key`` into the window in front (no point);
+    - "wait_image": wait until ``image`` is on screen, then click its center
+      with ``button`` and ``click_type`` if ``click`` is set;
+    - "wait_pixel": wait until the pixel at (x, y) is within ``tolerance`` of ``rgb``.
+
+    A wait gives up after ``timeout_ms`` (0 = never) and then either ends the
+    run (``on_timeout`` "stop") or goes on to the next step ("skip").
     """
 
     x: int | None = None
@@ -84,11 +92,21 @@ class ClickStep:
     type: str = "click"
     hold_ms: float = 0.0
     key: str = ""
+    timeout_ms: float = 0.0
+    on_timeout: str = "stop"
+    click: bool = False
+    rgb: tuple[int, int, int] | None = None
+    tolerance: int = 16
+    image: ImageTarget | None = field(default=None, repr=False, compare=False)
 
     @property
     def point(self) -> tuple[int, int] | None:
-        """Where the step acts, or None for a key step."""
-        if self.type == "key" or self.x is None or self.y is None:
+        """The point the step clicks or holds, or None when it has none.
+
+        A wait_pixel step watches a point but never clicks it, so it adds no
+        window for Pause when unfocused either.
+        """
+        if self.type not in ("click", "hold") or self.x is None or self.y is None:
             return None
         return self.x, self.y
 
@@ -127,6 +145,8 @@ _IMAGE_POLL_SECONDS = 0.1
 _IMAGE_SETTLE_SECONDS = 0.05
 # Consecutive failed screen grabs (not "not found") that end an image run (#100).
 _IMAGE_MAX_FAILURES = 20
+# How often a wait step in a sequence looks for its image or pixel (#119).
+_STEP_WAIT_POLL_SECONDS = 0.1
 
 
 @dataclass
@@ -829,21 +849,96 @@ class ClickEngine:
                 return False
 
             self.current_step = index
-            self._perform_click(
-                step.x,
-                step.y,
-                step.button,
-                step.click_type,
-                action=step.type,
-                key=step.key,
-                hold_ms=step.hold_ms,
-            )
+            if step.type in ("wait_image", "wait_pixel"):
+                go_on, found = self._wait_for_step(index, step)
+                if not go_on:
+                    return False
+                if found is not None and step.click:
+                    self._perform_click(*found, step.button, step.click_type, action="click")
+            else:
+                self._perform_click(
+                    step.x,
+                    step.y,
+                    step.button,
+                    step.click_type,
+                    action=step.type,
+                    key=step.key,
+                    hold_ms=step.hold_ms,
+                )
 
             if self._runaway_tripped():
                 return False
             if index < last and step.delay_ms > 0:
                 self._stop_event.wait(timeout=step.delay_ms / 1000)
         return True
+
+    def _wait_for_step(self, index: int, step: ClickStep) -> tuple[bool, tuple[int, int] | None]:
+        """Wait until a wait step's image or pixel is on screen (#119).
+
+        Returns ``(go_on, where)``: where it was found, or None when it timed
+        out and the step is skipped. ``go_on`` is False if the run must end (a
+        stop, a limit, the timeout with on_timeout "stop", or a screen that
+        can't be read). Every poll
+        re-checks stop requests, limits, pause when unfocused and the failsafe
+        corner, so each stop path holds mid-wait. The timeout keeps counting
+        while the run is paused for focus.
+        """
+        what = "image" if step.type == "wait_image" else "pixel"
+        deadline = time.monotonic() + step.timeout_ms / 1000 if step.timeout_ms > 0 else None
+        failures = 0
+        try:
+            while True:
+                if not self.is_running or self._stop_event.is_set() or self._check_limits():
+                    return False, None
+                if self._cursor_in_failsafe_corner(None, None):
+                    raise SafetyError("fail_safe", "detected", "Mouse moved to a screen corner")
+                polled_at = time.monotonic()
+                if self._should_pause_for_foreground():
+                    found = None
+                else:
+                    try:
+                        found = self._poll_wait_step(step)
+                        failures = 0
+                    except Exception as e:
+                        failures += 1
+                        if failures == 1:
+                            _log.warning("Step %d screen read failed: %s", index, e, exc_info=True)
+                        if failures >= _IMAGE_MAX_FAILURES:
+                            self._set_stop_reason(STOP_ERROR, f"Could not read the screen: {e}")
+                            return False, None
+                        found = None
+                    if found is not None:
+                        return True, found
+                    self.is_paused = True
+                    self.pause_reason = (
+                        f"the image in step {index}"
+                        if what == "image"
+                        else f"the pixel in step {index} to match"
+                    )
+                if deadline is not None and time.monotonic() >= deadline:
+                    if step.on_timeout == "skip":
+                        return True, None
+                    seconds = f"{step.timeout_ms / 1000:g}"
+                    verb = "didn't appear" if what == "image" else "didn't match"
+                    self._set_stop_reason(
+                        STOP_COMPLETED, f"Step {index}: the {what} {verb} within {seconds} s"
+                    )
+                    return False, None
+                # A slow image search waits as long as it took (#161, #195).
+                took = time.monotonic() - polled_at
+                self._stop_event.wait(timeout=max(_STEP_WAIT_POLL_SECONDS, took))
+        finally:
+            self.is_paused = False
+
+    def _poll_wait_step(self, step: ClickStep) -> tuple[int, int] | None:
+        """One look at a wait step's target: where it is, or None if not there yet."""
+        if step.type == "wait_image":
+            assert step.image is not None
+            return step.image.locate()
+        assert step.x is not None and step.y is not None and step.rgb is not None
+        rgb = tuple(pyautogui.pixel(step.x, step.y))[:3]
+        matched = all(abs(int(a) - b) <= step.tolerance for a, b in zip(rgb, step.rgb, strict=True))
+        return (step.x, step.y) if matched else None
 
     def _perform_burst(
         self,

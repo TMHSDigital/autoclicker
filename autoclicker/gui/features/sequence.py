@@ -19,12 +19,19 @@ def describe_step(step: dict) -> str:
     kind = step.get("type", "click")
     if kind == "key":
         return f"key {step.get('key', '')}"
+    if kind in ("wait_image", "wait_pixel"):
+        # The timeout is left to the step's Edit dialog: the list is narrow.
+        if kind == "wait_pixel":
+            return f"wait for pixel ({step.get('x')}, {step.get('y')})"
+        return "wait for image, click it" if step.get("click") else "wait for image"
     where = f"({step['x']}, {step['y']})"
     if kind == "hold":
-        ms = float(step.get("hold_ms", 0))
-        held = f"{ms:g} ms" if ms < 1000 else f"{ms / 1000:g} s"
-        return f"{where}  {step['button']} hold {held}"
+        return f"{where}  {step['button']} hold {_duration(float(step.get('hold_ms', 0)))}"
     return f"{where}  {step['button']} {step['click_type']}"
+
+
+def _duration(ms: float) -> str:
+    return f"{ms:g} ms" if ms < 1000 else f"{ms / 1000:g} s"
 
 
 class SequenceMixin(AppBase):
@@ -38,8 +45,12 @@ class SequenceMixin(AppBase):
         last = len(self.sequence_steps)
         for number, step in enumerate(self.sequence_steps, start=1):
             delay = step.get("delay_ms", 0)
-            after = "then the Interval" if number == last else f"wait {delay:g} ms"
-            listbox.insert(tk.END, f"{number}. {describe_step(step)}, {after}")
+            text = f"{number}. {describe_step(step)}"
+            if number == last:
+                text += ", then the Interval"
+            elif delay:
+                text += f", wait {_duration(float(delay))}"
+            listbox.insert(tk.END, text)
         if select is not None and 0 <= select < last:
             listbox.selection_clear(0, tk.END)
             listbox.selection_set(select)
@@ -162,7 +173,7 @@ class SequenceMixin(AppBase):
         step = self.sequence_steps[index]
         kind = step.get("type", "click")
         menu = tk.Menu(self.sequence_list, tearoff=0)
-        if kind != "key":  # a key step has no point or button
+        if kind in ("click", "hold"):  # key and wait steps have no point to click
             menu.add_command(
                 label="Re-pick point…", command=lambda: self.repick_sequence_point(index)
             )

@@ -100,11 +100,13 @@ def _sequence(app: Any) -> None:
 
 
 def _sequence_steps(app: Any) -> None:
-    """Click, key and hold steps in one sequence (#119)."""
+    """Every step type in one sequence (#119)."""
     steps = [
         _STEPS[0],
         {"type": "key", "key": "ctrl+s", "delay_ms": 800},
+        {"type": "wait_image", "timeout_ms": 10000, "click": True, "delay_ms": 0},
         {"type": "hold", "x": 860, "y": 410, "button": "left", "hold_ms": 1200, "delay_ms": 300},
+        {"type": "wait_pixel", "x": 1240, "y": 715, "timeout_ms": 5000, "delay_ms": 0},
         _STEPS[2],
     ]
     app.apply_form_values({"target_mode": "sequence", "sequence": steps, "sequence_repeat": 0})
@@ -141,7 +143,7 @@ SCENARIOS: dict[str, tuple[str, Callable[[Any], None]]] = {
     "panels": ("Timing and Safety open, Start at and Stop at set", _panels),
     "image": ("Image mode with Stop if not seen for", _image),
     "sequence": ("Sequence mode, three steps, one selected", _sequence),
-    "sequence-steps": ("Sequence with click, key and hold steps", _sequence_steps),
+    "sequence-steps": ("Sequence with every step type", _sequence_steps),
     "running": ("A run with a click limit and time left", _running),
     "high-contrast": ("Panels open under a High Contrast palette", _high_contrast),
     "website": ("Fixed point, first-run hint dismissed (website screenshot)", _website),

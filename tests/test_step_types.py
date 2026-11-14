@@ -2,10 +2,20 @@
 
 import os
 import tempfile
+import threading
+import time
 import unittest
-from unittest.mock import call, patch
+from unittest.mock import MagicMock, call, patch
 
-from autoclicker.core.click_engine import STOP_COMPLETED, ClickStep
+from autoclicker.app.controller import _sequence_steps
+from autoclicker.core.click_engine import (
+    STOP_COMPLETED,
+    STOP_ERROR,
+    STOP_SAFETY,
+    STOP_USER,
+    ClickStep,
+)
+from autoclicker.core.screen import ScreenBounds
 from autoclicker.core.settings_manager import SettingsManager
 from autoclicker.gui.features.sequence import describe_step
 from tests.test_sequence import EngineRun, _mock
@@ -67,6 +77,133 @@ class TestEngineStepTypes(unittest.TestCase):
         self.assertIsNone(ClickStep(type="key", key="a").point)
 
 
+class TestEngineWaitSteps(unittest.TestCase):
+    """wait_image and wait_pixel steps hold the sequence until their target shows."""
+
+    @staticmethod
+    def image(*results):
+        image = MagicMock()
+        image.locate.side_effect = list(results)
+        return image
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_wait_image_then_click_where_it_was_found(self, m):
+        _mock(m)
+        image = self.image(None, None, (300, 400))
+        steps = [ClickStep(type="wait_image", image=image, click=True, button="right")]
+        outcome = EngineRun(steps=steps, repeat=1).start().wait()
+        self.assertEqual(outcome.reason, STOP_COMPLETED)
+        self.assertEqual(image.locate.call_count, 3)
+        m.click.assert_called_once_with(x=300, y=400, button="right", clicks=1)
+        self.assertEqual(outcome.clicks, 1)
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_a_wait_alone_is_not_a_click(self, m):
+        _mock(m)
+        steps = [ClickStep(type="wait_image", image=self.image((1, 1))), ClickStep(5, 5)]
+        outcome = EngineRun(steps=steps, repeat=1).start().wait()
+        m.click.assert_called_once_with(x=5, y=5, button="left", clicks=1)
+        self.assertEqual(outcome.clicks, 1)
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_wait_pixel_until_it_matches(self, m):
+        _mock(m)
+        m.pixel.side_effect = [(0, 0, 0), (250, 10, 10), (255, 0, 0)]
+        steps = [
+            ClickStep(7, 8, type="wait_pixel", rgb=(255, 0, 0), tolerance=4),
+            ClickStep(1, 1),
+        ]
+        EngineRun(steps=steps, repeat=1).start().wait()
+        self.assertEqual(m.pixel.call_count, 3)  # (250, 10, 10) is outside the tolerance
+        m.pixel.assert_called_with(7, 8)
+        m.click.assert_called_once()
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_timeout_stops_the_run_with_the_step_named(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.return_value = None
+        steps = [ClickStep(1, 1), ClickStep(type="wait_image", image=image, timeout_ms=30)]
+        outcome = EngineRun(steps=steps).start().wait()
+        self.assertEqual(outcome.reason, STOP_COMPLETED)
+        self.assertEqual(outcome.message, "Step 2: the image didn't appear within 0.03 s")
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_timeout_with_skip_goes_on_to_the_next_step(self, m):
+        _mock(m)
+        m.pixel.return_value = (0, 0, 0)
+        steps = [
+            ClickStep(1, 1, type="wait_pixel", rgb=(9, 9, 9), tolerance=0, timeout_ms=20,
+                      on_timeout="skip"),
+            ClickStep(2, 2),
+        ]  # fmt: skip
+        outcome = EngineRun(steps=steps, repeat=2).start().wait()
+        self.assertEqual(outcome.message, "Done: ran the sequence 2 times")
+        self.assertEqual(m.click.call_count, 2)
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_stop_ends_a_wait_without_a_timeout(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.return_value = None
+        run = EngineRun(steps=[ClickStep(type="wait_image", image=image)]).start()
+        threading.Timer(0.2, run.engine.stop_clicking).start()
+        outcome = run.wait()
+        self.assertEqual(outcome.reason, STOP_USER)
+        self.assertFalse(run.engine.is_paused)
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_failsafe_corner_ends_a_wait(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.return_value = None
+        run = EngineRun(steps=[ClickStep(type="wait_image", image=image)])
+        with patch.object(run.engine, "_cursor_in_failsafe_corner", side_effect=[False, True]):
+            outcome = run.start().wait()
+        self.assertEqual(outcome.reason, STOP_SAFETY)
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_time_limit_ends_a_wait(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.return_value = None
+        run = EngineRun(steps=[ClickStep(type="wait_image", image=image)])
+        with patch.object(run.engine, "_limit_reached", side_effect=[None, None, "Done: time"]):
+            outcome = run.start().wait()
+        self.assertEqual(outcome.message, "Done: time")
+
+    @patch("autoclicker.core.click_engine._STEP_WAIT_POLL_SECONDS", 0.001)
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_unreadable_screen_ends_the_run(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.side_effect = OSError("no screen")
+        outcome = EngineRun(steps=[ClickStep(type="wait_image", image=image)]).start().wait()
+        self.assertEqual(outcome.reason, STOP_ERROR)
+        self.assertIn("Could not read the screen", outcome.message)
+
+    @patch("autoclicker.core.click_engine.pyautogui")
+    def test_the_status_says_which_step_is_waiting(self, m):
+        _mock(m)
+        image = MagicMock()
+        image.locate.return_value = None
+        run = EngineRun(steps=[ClickStep(1, 1), ClickStep(type="wait_image", image=image)])
+        run.start()
+        deadline = time.monotonic() + 2
+        while not run.engine.is_paused and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(run.engine.pause_reason, "the image in step 2")
+        run.engine.stop_clicking()
+        run.wait()
+
+
 class TestStepValidation(unittest.TestCase):
     def setUp(self):
         self._dir = tempfile.TemporaryDirectory()
@@ -124,9 +261,117 @@ class TestStepValidation(unittest.TestCase):
         self.assertIn("Step 1 hold", self.error([{"type": "hold", "x": 1, "y": 1, "hold_ms": 0}]))
         self.assertIn("Step 1 has no X", self.error([{"type": "hold", "y": 1, "hold_ms": 5}]))
 
+    def test_wait_image_defaults_and_click_fields(self):
+        region = [10, 20, 30, 40]
+        (plain,) = self.steps(
+            [{"type": "wait_image", "image_path": "a.png", "image_region": region}]
+        )
+        self.assertEqual(
+            plain,
+            {
+                "type": "wait_image",
+                "image_path": "a.png",
+                "image_region": region,
+                "image_tolerance": 0,
+                "timeout_ms": 0,
+                "on_timeout": "stop",
+                "click": False,
+                "delay_ms": 0,
+            },
+        )
+        (clicking,) = self.steps(
+            [
+                {"type": "wait_image", "image_path": "a.png", "image_region": region,
+                 "click": True, "button": "right", "timeout_ms": "5000", "on_timeout": "skip"}
+            ]
+        )  # fmt: skip
+        self.assertEqual(
+            (clicking["button"], clicking["click_type"], clicking["timeout_ms"]),
+            ("right", "single", 5000),
+        )
+        self.assertEqual(clicking["on_timeout"], "skip")
+
+    def test_wait_pixel(self):
+        (step,) = self.steps([{"type": "wait_pixel", "x": 3, "y": 4, "color": "#3A7BD5"}])
+        self.assertEqual(
+            step,
+            {
+                "type": "wait_pixel",
+                "x": 3,
+                "y": 4,
+                "color": "#3A7BD5",
+                "tolerance": 16,
+                "timeout_ms": 0,
+                "on_timeout": "stop",
+                "delay_ms": 0,
+            },
+        )
+
+    def test_wait_errors_name_the_step(self):
+        image = {"type": "wait_image", "image_path": "a.png", "image_region": [0, 0, 5, 5]}
+        pixel = {"type": "wait_pixel", "x": 1, "y": 1, "color": "#000000"}
+        self.assertIn("Step 1 image: Capture an image first", self.error([{"type": "wait_image"}]))
+        self.assertIn("Step 1 color", self.error([{**pixel, "color": "blue"}]))
+        self.assertIn("Step 1 color", self.error([{"type": "wait_pixel", "x": 1, "y": 1}]))
+        self.assertIn("Step 1 tolerance", self.error([{**pixel, "tolerance": 300}]))
+        self.assertIn("Step 1 tolerance", self.error([{**image, "image_tolerance": 99}]))
+        self.assertIn("Step 1 timeout", self.error([{**pixel, "timeout_ms": -1}]))
+        self.assertIn("Step 1 on timeout", self.error([{**pixel, "on_timeout": "retry"}]))
+        self.assertIn("Step 1 click", self.error([{**image, "click": "yes"}]))
+        self.assertIn("Step 2", self.error([pixel, {**pixel, "x": 5000}]))  # off screen
+
     def test_key_step_has_no_point_to_check(self):
         steps = [{"type": "key", "key": "a"}, {"x": 5000, "y": 1}]
         self.assertIn("Step 2", self.error(steps))
+
+
+class TestControllerSteps(unittest.TestCase):
+    DESKTOP = ScreenBounds(0, 0, 1920, 1080)
+
+    def test_old_and_new_steps_become_engine_steps(self):
+        steps, error = _sequence_steps(
+            [
+                {"x": 1, "y": 2, "button": "left", "click_type": "single", "delay_ms": 0},
+                {"type": "key", "key": "f5", "delay_ms": 0},
+                {"type": "wait_pixel", "x": 3, "y": 4, "color": "#3a7bd5", "tolerance": 9,
+                 "timeout_ms": 0, "on_timeout": "stop", "delay_ms": 0},
+            ],
+            self.DESKTOP,
+        )  # fmt: skip
+        self.assertIsNone(error)
+        assert steps is not None
+        self.assertEqual(steps[0], ClickStep(1, 2))
+        self.assertEqual(steps[1], ClickStep(type="key", key="f5"))
+        self.assertEqual(steps[2].rgb, (0x3A, 0x7B, 0xD5))
+
+    def test_wait_image_loads_its_capture(self):
+        target = MagicMock()
+        with patch(
+            "autoclicker.app.controller._load_image_target", return_value=(target, None)
+        ) as load:
+            steps, error = _sequence_steps(
+                [{"type": "wait_image", "image_path": "p.png", "image_region": [1, 2, 3, 4],
+                  "image_tolerance": 5, "timeout_ms": 0, "on_timeout": "stop", "click": False,
+                  "delay_ms": 0}],
+                self.DESKTOP,
+            )  # fmt: skip
+        self.assertIsNone(error)
+        assert steps is not None
+        self.assertIs(steps[0].image, target)
+        self.assertEqual(
+            load.call_args.args[0],
+            {"image_path": "p.png", "image_region": [1, 2, 3, 4], "image_tolerance": 5},
+        )
+
+    def test_a_missing_capture_names_the_step(self):
+        steps, error = _sequence_steps(
+            [{"type": "key", "key": "a"},
+             {"type": "wait_image", "image_path": "C:/elsewhere.png", "image_region": [0, 0, 5, 5]}],
+            self.DESKTOP,
+        )  # fmt: skip
+        self.assertIsNone(steps)
+        assert error is not None
+        self.assertTrue(error.startswith("Step 2: "), error)
 
 
 class TestDescribeStep(unittest.TestCase):
@@ -144,6 +389,15 @@ class TestDescribeStep(unittest.TestCase):
             "(1, 2)  left hold 1.2 s",
         )
         self.assertEqual(describe_step({"type": "key", "key": "ctrl+s"}), "key ctrl+s")
+        self.assertEqual(describe_step({"type": "wait_image"}), "wait for image")
+        self.assertEqual(
+            describe_step({"type": "wait_image", "timeout_ms": 10000, "click": True}),
+            "wait for image, click it",
+        )
+        self.assertEqual(
+            describe_step({"type": "wait_pixel", "x": 3, "y": 4, "timeout_ms": 500}),
+            "wait for pixel (3, 4)",
+        )
 
 
 if __name__ == "__main__":

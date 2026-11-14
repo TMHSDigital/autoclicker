@@ -130,13 +130,46 @@ def _stop_deadline(stop_at: str) -> tuple[float, str] | None:
     return time.monotonic() + seconds, f"{parsed[0]:02d}:{parsed[1]:02d}"
 
 
+def _hex_rgb(color: str) -> tuple[int, int, int]:
+    return int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+
+
+def _sequence_steps(
+    steps: list[dict[str, Any]], desktop: ScreenBounds
+) -> tuple[list[ClickStep] | None, str | None]:
+    """The engine's steps from validated ones, or an error naming the step (#119).
+
+    A wait_image step loads its capture here, the same way an image target
+    does (only the app's own captures, searched with the default margin).
+    """
+    result = []
+    for number, step in enumerate(steps, start=1):
+        fields = dict(step)
+        kind = fields.get("type", "click")
+        if kind == "wait_image":
+            image, error = _load_image_target(
+                {
+                    "image_path": fields.pop("image_path"),
+                    "image_region": fields.pop("image_region"),
+                    "image_tolerance": fields.pop("image_tolerance", 0),
+                },
+                desktop,
+            )
+            if error:
+                return None, f"Step {number}: {error}"
+            fields["image"] = image
+        elif kind == "wait_pixel":
+            fields["rgb"] = _hex_rgb(str(fields.pop("color")))
+        result.append(ClickStep(**fields))
+    return result, None
+
+
 def _pixel_condition(sanitized: dict[str, Any]) -> PixelCondition | None:
     """The engine's pixel condition from validated settings, or None when off."""
     on_mismatch = sanitized.get("condition", "none")
     if on_mismatch not in ("wait", "stop"):
         return None
-    color = str(sanitized["condition_color"])
-    rgb = (int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16))
+    rgb = _hex_rgb(str(sanitized["condition_color"]))
     return PixelCondition(
         x=int(sanitized["condition_x"]),
         y=int(sanitized["condition_y"]),
@@ -266,9 +299,12 @@ class AutoclickerController:
         has_point = uses_point(mode, action)
         x = sanitized["x_coord"] if has_point else None
         y = sanitized["y_coord"] if has_point else None
-        steps = (
-            [ClickStep(**step) for step in sanitized["sequence"]] if mode == "sequence" else None
-        )
+        steps = None
+        if mode == "sequence":
+            desktop = screen_bounds or virtual_screen_bounds(pyautogui.size)
+            steps, error = _sequence_steps(sanitized["sequence"], desktop)
+            if error:
+                return StartClickResult(success=False, validation_errors={"sequence": error})
         image = None
         if mode == "image":
             desktop = screen_bounds or virtual_screen_bounds(pyautogui.size)

@@ -82,33 +82,87 @@ MAX_START_DELAY_SECONDS = 60
 MAX_SEQUENCE_STEPS = 50
 MAX_SEQUENCE_REPEAT = 1_000_000
 MAX_STEP_DELAY_MS = 60_000
+# Longest a wait step may wait before its on_timeout applies (0 = no timeout).
+MAX_STEP_TIMEOUT_MS = 3_600_000
 
-# Fields of one sequence step and the setting whose parser reads each.
-_STEP_FIELDS = (
-    ("x", "x_coord"),
-    ("y", "y_coord"),
-    ("button", "mouse_button"),
-    ("click_type", "click_type"),
-    ("delay_ms", "burst_pause"),
-    ("hold_ms", "hold_ms"),
-    ("key", "key"),
-)
-_STEP_LABELS = {
-    "x": "X",
-    "y": "Y",
-    "button": "button",
-    "click_type": "click type",
-    "hold_ms": "hold",
-    "key": "key",
+# Fields of one sequence step: the setting whose parser reads it (None: parsed
+# here) and its name in error messages.
+_STEP_FIELDS: dict[str, tuple[str | None, str]] = {
+    "x": ("x_coord", "X"),
+    "y": ("y_coord", "Y"),
+    "button": ("mouse_button", "button"),
+    "click_type": ("click_type", "click type"),
+    "delay_ms": ("burst_pause", "wait"),
+    "hold_ms": ("hold_ms", "hold"),
+    "key": ("key", "key"),
+    "color": ("condition_color", "color"),
+    "tolerance": ("condition_tolerance", "tolerance"),
+    "image_path": ("image_path", "image"),
+    "image_region": ("image_region", "image"),
+    "image_tolerance": ("image_tolerance", "tolerance"),
+    "timeout_ms": ("burst_pause", "timeout"),
+    "on_timeout": (None, "on timeout"),
+    "click": (None, "click"),
 }
 # What each step type does (#119) and the fields it keeps; a step without a
 # type is a click, so sequences saved before step types load unchanged.
-STEP_TYPES = ("click", "hold", "key")
+STEP_TYPES = ("click", "hold", "key", "wait_image", "wait_pixel")
 _STEP_TYPE_FIELDS = {
     "click": ("x", "y", "button", "click_type", "delay_ms"),
     "hold": ("x", "y", "button", "hold_ms", "delay_ms"),
     "key": ("key", "delay_ms"),
+    "wait_image": (
+        "image_path",
+        "image_region",
+        "image_tolerance",
+        "timeout_ms",
+        "on_timeout",
+        "click",
+        "button",
+        "click_type",
+        "delay_ms",
+    ),
+    "wait_pixel": ("x", "y", "color", "tolerance", "timeout_ms", "on_timeout", "delay_ms"),
 }
+_STEP_DEFAULTS: dict[str, Any] = {
+    "button": "left",
+    "click_type": "single",
+    "delay_ms": 0,
+    "tolerance": 16,
+    "image_tolerance": 0,
+    "timeout_ms": 0,
+    "on_timeout": "stop",
+    "click": False,
+}
+# What a step is missing when a field without a default is left out.
+_STEP_MISSING = {
+    "key": "Enter a key such as F5, space or ctrl+r",
+    "hold_ms": f"Must be between 1 and {MAX_HOLD_MS:,} ms",
+    "color": "Pick the pixel to wait for",
+    "image_path": "Capture an image first",
+    "image_region": "Capture an image first",
+}
+
+
+def _step_field_error(field: str, value: Any) -> str | None:
+    """Why a parsed step field is out of range, or None."""
+    if field == "key":
+        return _key_error(value)
+    if field == "hold_ms" and not 0 < value <= MAX_HOLD_MS:
+        return f"Must be between 1 and {MAX_HOLD_MS:,} ms"
+    if field == "delay_ms" and not 0 <= value <= MAX_STEP_DELAY_MS:
+        return f"Must be 0 to {MAX_STEP_DELAY_MS:,} ms"
+    if field == "timeout_ms" and not 0 <= value <= MAX_STEP_TIMEOUT_MS:
+        return f"Must be 0 to {MAX_STEP_TIMEOUT_MS:,} ms (0 = wait until stopped)"
+    if field == "color" and not _COLOR.match(str(value)):
+        return "Must look like #3a7bd5"
+    if field == "tolerance" and not 0 <= value <= 255:
+        return "Must be between 0 and 255"
+    if field == "image_tolerance" and not 0 <= value <= MAX_IMAGE_TOLERANCE:
+        return f"Must be between 0 and {MAX_IMAGE_TOLERANCE} (0 = exact)"
+    if field == "image_path" and not str(value).strip():
+        return "Capture an image first"
+    return None
 
 
 # Settings whose stored value must be of a given JSON type; anything else falls
@@ -554,31 +608,33 @@ class SettingsManager:
             kind = raw.get("type", "click")
             if kind not in STEP_TYPES:
                 return None, f"Step {number} type: Must be one of: {', '.join(STEP_TYPES)}"
-            wanted = _STEP_TYPE_FIELDS[kind]
-            defaults = {"button": "left", "click_type": "single", "delay_ms": 0}
-            step: dict[str, Any] = {f: v for f, v in defaults.items() if f in wanted}
-            for field, setting in _STEP_FIELDS:
-                if field not in wanted:
-                    continue
+            step: dict[str, Any] = {}
+            for field in _STEP_TYPE_FIELDS[kind]:
+                setting, label = _STEP_FIELDS[field]
                 if field not in raw:
+                    if field in _STEP_DEFAULTS:
+                        step[field] = _STEP_DEFAULTS[field]
+                        continue
                     if field in ("x", "y"):
-                        return None, f"Step {number} has no {field.upper()}"
-                    if field == "key":
-                        return None, f"Step {number} key: Enter a key such as F5, space or ctrl+r"
-                    if field == "hold_ms":
-                        return None, f"Step {number} hold: Must be between 1 and {MAX_HOLD_MS:,} ms"
-                    continue
-                parsed, error = self.parse_input(setting, raw[field])
-                if error is None and field == "key":
-                    error = _key_error(parsed)
-                if error is None and field == "hold_ms" and not 0 < parsed <= MAX_HOLD_MS:
-                    error = f"Must be between 1 and {MAX_HOLD_MS:,} ms"
+                        return None, f"Step {number} has no {label}"
+                    return None, f"Step {number} {label}: {_STEP_MISSING[field]}"
+                value = raw[field]
+                if field == "on_timeout":
+                    ok = value in ("stop", "skip")
+                    parsed, error = value, None if ok else "Must be one of: stop, skip"
+                elif field == "click":
+                    ok = isinstance(value, bool)
+                    parsed, error = value, None if ok else "Must be true or false"
+                else:
+                    assert setting is not None
+                    parsed, error = self.parse_input(setting, value)
+                if error is None:
+                    error = _step_field_error(field, parsed)
                 if error is not None:
-                    label = _STEP_LABELS.get(field, "wait")
                     return None, f"Step {number} {label}: {error}"
                 step[field] = parsed
-            if not 0 <= step["delay_ms"] <= MAX_STEP_DELAY_MS:
-                return None, f"Step {number} wait must be 0 to {MAX_STEP_DELAY_MS:,} ms"
+            if kind == "wait_image" and not step["click"]:
+                del step["button"], step["click_type"]  # used only to click the match
             if kind != "click":
                 step = {"type": kind, **step}
             steps.append(step)
