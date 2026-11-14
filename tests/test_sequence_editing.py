@@ -103,6 +103,28 @@ class TestSequenceEditing(GuiHarness):
         self.assertEqual(len(radios), 5)  # three buttons, single and double
         menu.tk_popup.assert_called_once()
 
+    def test_menu_offers_only_what_a_step_type_uses(self):
+        app = self.app
+        app.sequence_steps[0] = {"type": "key", "key": "f5", "delay_ms": 0}
+        app.sequence_steps[1] = {
+            "type": "hold", "x": 1, "y": 1, "button": "left", "hold_ms": 500, "delay_ms": 0
+        }  # fmt: skip
+        for index, commands, radios in (
+            (0, ["Wait after this step…", "Duplicate"], 0),  # key: no point, no button
+            (1, ["Re-pick point…", "Wait after this step…", "Duplicate"], 3),  # hold: buttons
+        ):
+            self.select(index)
+            with (
+                self.subTest(step=index),
+                patch("autoclicker.gui.features.sequence.tk.Menu") as menu_cls,
+                patch("autoclicker.gui.features.sequence.tk.StringVar"),
+            ):
+                app.show_sequence_step_menu()
+                menu = menu_cls.return_value
+                labels = [c.kwargs["label"] for c in menu.add_command.call_args_list]
+                self.assertEqual(labels, commands)
+                self.assertEqual(menu.add_radiobutton.call_count, radios)
+
     def test_menu_needs_a_selected_step(self):
         self.app.sequence_list.curselection.return_value = ()
         with patch("autoclicker.gui.features.sequence.tk.Menu") as menu_cls:

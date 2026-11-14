@@ -69,13 +69,28 @@ class RunOutcome:
 
 @dataclass(frozen=True)
 class ClickStep:
-    """One step of a click sequence: click here, then wait before the next step."""
+    """One step of a sequence, then a wait of ``delay_ms`` before the next step (#119).
 
-    x: int
-    y: int
+    ``type`` is "click" (the default, as in every sequence saved before #119),
+    "hold" (press ``button`` at the point for ``hold_ms``) or "key" (press
+    ``key`` into the window in front; a key step has no point).
+    """
+
+    x: int | None = None
+    y: int | None = None
     button: str = "left"
     click_type: str = "single"
     delay_ms: float = 0.0
+    type: str = "click"
+    hold_ms: float = 0.0
+    key: str = ""
+
+    @property
+    def point(self) -> tuple[int, int] | None:
+        """Where the step acts, or None for a key step."""
+        if self.type == "key" or self.x is None or self.y is None:
+            return None
+        return self.x, self.y
 
 
 @dataclass(frozen=True)
@@ -372,7 +387,8 @@ class ClickEngine:
             if hwnd is None:
                 return False
             if self._steps:
-                x, y = self._steps[0].x, self._steps[0].y
+                points = [step.point for step in self._steps if step.point is not None]
+                x, y = points[0] if points else (None, None)
             self._foreground_hwnd = self._pick_focus_window(hwnd, x, y)
             # A sequence may click into several windows; any of them counts as in front.
             self._step_hwnds = self._windows_under_steps()
@@ -613,7 +629,9 @@ class ClickEngine:
         """Top-level windows (not ours) under the sequence's step points."""
         windows = set()
         for step in self._steps:
-            hwnd = root_window_at(step.x, step.y)
+            if step.point is None:
+                continue  # a key step goes to whatever window is in front
+            hwnd = root_window_at(*step.point)
             if hwnd is not None and not self._is_ours(hwnd):
                 windows.add(hwnd)
         return frozenset(windows)
@@ -811,7 +829,15 @@ class ClickEngine:
                 return False
 
             self.current_step = index
-            self._perform_click(step.x, step.y, step.button, step.click_type)
+            self._perform_click(
+                step.x,
+                step.y,
+                step.button,
+                step.click_type,
+                action=step.type,
+                key=step.key,
+                hold_ms=step.hold_ms,
+            )
 
             if self._runaway_tripped():
                 return False
@@ -848,9 +874,20 @@ class ClickEngine:
         y: int | None,
         mouse_button: str,
         click_type: str,
+        *,
+        action: str | None = None,
+        key: str | None = None,
+        hold_ms: float | None = None,
     ) -> None:
-        """Perform a single click at coordinates with performance monitoring"""
+        """Perform one click, hold or key press, with performance monitoring.
+
+        ``action``, ``key`` and ``hold_ms`` default to the run's; a sequence
+        step passes its own (#119).
+        """
         click_start_time = time.perf_counter()
+        action = self._action if action is None else action
+        key = self._key if key is None else key
+        hold_ms = self._hold_ms if hold_ms is None else hold_ms
 
         try:
             if self._cursor_in_failsafe_corner(x, y):
@@ -858,7 +895,7 @@ class ClickEngine:
 
             # Cursor mode (x and y are None): click wherever the cursor is.
             position: dict[str, int] = {}
-            if x is not None and y is not None and self._action != "key":
+            if x is not None and y is not None and action != "key":
                 # Validate against the cached desktop bounds; query live only if
                 # the cache is empty (e.g. direct unit-test calls).
                 if self._screen_bounds is None:
@@ -882,16 +919,16 @@ class ClickEngine:
 
             # One call for every button. A double click counts as one click toward
             # max_clicks, but as two presses for the runaway guard.
-            presses = 2 if click_type == "double" and self._action == "click" else 1
+            presses = 2 if click_type == "double" and action == "click" else 1
             try:
-                if self._action == "key":
-                    keys = self._key.split("+")
+                if action == "key":
+                    keys = key.split("+")
                     if len(keys) == 1:
                         pyautogui.press(keys[0])
                     else:
                         pyautogui.hotkey(*keys)
-                elif self._action == "hold":
-                    self._hold(position, mouse_button)
+                elif action == "hold":
+                    self._hold(position, mouse_button, hold_ms)
                 else:
                     pyautogui.click(**position, button=mouse_button, clicks=presses)
                 if self.enable_performance_monitoring:
@@ -917,13 +954,13 @@ class ClickEngine:
             self.stats.errors += 1
             raise ClickEngineError("perform_click", f"Unexpected error: {e}") from e
 
-    def _hold(self, position: dict[str, int], button: str) -> None:
-        """Press ``button`` for the hold time; always release it, even when stopping."""
+    def _hold(self, position: dict[str, int], button: str, hold_ms: float) -> None:
+        """Press ``button`` for ``hold_ms``; always release it, even when stopping."""
         pyautogui.mouseDown(**position, button=button)
         try:
             # Wait in short slices so a stop request or the corner failsafe ends
             # the hold early; the button is released either way.
-            deadline = time.monotonic() + self._hold_ms / 1000
+            deadline = time.monotonic() + hold_ms / 1000
             x, y = position.get("x"), position.get("y")
             while (remaining := deadline - time.monotonic()) > 0:
                 if self._stop_event.wait(timeout=min(remaining, _HOLD_CHECK_SECONDS)):

@@ -90,8 +90,25 @@ _STEP_FIELDS = (
     ("button", "mouse_button"),
     ("click_type", "click_type"),
     ("delay_ms", "burst_pause"),
+    ("hold_ms", "hold_ms"),
+    ("key", "key"),
 )
-_STEP_LABELS = {"x": "X", "y": "Y", "button": "button", "click_type": "click type"}
+_STEP_LABELS = {
+    "x": "X",
+    "y": "Y",
+    "button": "button",
+    "click_type": "click type",
+    "hold_ms": "hold",
+    "key": "key",
+}
+# What each step type does (#119) and the fields it keeps; a step without a
+# type is a click, so sequences saved before step types load unchanged.
+STEP_TYPES = ("click", "hold", "key")
+_STEP_TYPE_FIELDS = {
+    "click": ("x", "y", "button", "click_type", "delay_ms"),
+    "hold": ("x", "y", "button", "hold_ms", "delay_ms"),
+    "key": ("key", "delay_ms"),
+}
 
 
 # Settings whose stored value must be of a given JSON type; anything else falls
@@ -523,26 +540,47 @@ class SettingsManager:
         return value, None
 
     def _parse_sequence(self, value: Any) -> tuple[Any, str | None]:
-        """Parse a list of sequence steps; missing button/type/delay get defaults."""
+        """Parse a list of sequence steps; missing button/type/delay get defaults.
+
+        Each step keeps only the fields its type uses. Click steps are stored
+        without a ``type``, exactly as before step types existed (#119).
+        """
         if not isinstance(value, list):
             return None, "Must be a list of steps"
         steps = []
         for number, raw in enumerate(value, start=1):
             if not isinstance(raw, dict):
                 return None, f"Step {number} is not a step"
-            step: dict[str, Any] = {"button": "left", "click_type": "single", "delay_ms": 0}
+            kind = raw.get("type", "click")
+            if kind not in STEP_TYPES:
+                return None, f"Step {number} type: Must be one of: {', '.join(STEP_TYPES)}"
+            wanted = _STEP_TYPE_FIELDS[kind]
+            defaults = {"button": "left", "click_type": "single", "delay_ms": 0}
+            step: dict[str, Any] = {f: v for f, v in defaults.items() if f in wanted}
             for field, setting in _STEP_FIELDS:
+                if field not in wanted:
+                    continue
                 if field not in raw:
                     if field in ("x", "y"):
                         return None, f"Step {number} has no {field.upper()}"
+                    if field == "key":
+                        return None, f"Step {number} key: Enter a key such as F5, space or ctrl+r"
+                    if field == "hold_ms":
+                        return None, f"Step {number} hold: Must be between 1 and {MAX_HOLD_MS:,} ms"
                     continue
                 parsed, error = self.parse_input(setting, raw[field])
+                if error is None and field == "key":
+                    error = _key_error(parsed)
+                if error is None and field == "hold_ms" and not 0 < parsed <= MAX_HOLD_MS:
+                    error = f"Must be between 1 and {MAX_HOLD_MS:,} ms"
                 if error is not None:
                     label = _STEP_LABELS.get(field, "wait")
                     return None, f"Step {number} {label}: {error}"
                 step[field] = parsed
             if not 0 <= step["delay_ms"] <= MAX_STEP_DELAY_MS:
                 return None, f"Step {number} wait must be 0 to {MAX_STEP_DELAY_MS:,} ms"
+            if kind != "click":
+                step = {"type": kind, **step}
             steps.append(step)
         return steps, None
 
@@ -731,6 +769,8 @@ class SettingsManager:
         if len(steps) > MAX_SEQUENCE_STEPS:
             return f"At most {MAX_SEQUENCE_STEPS} steps"
         for number, step in enumerate(steps, start=1):
+            if "x" not in step:
+                continue  # a key step has no point
             if not bounds.contains(step["x"], step["y"]):
                 return (
                     f"Step {number} ({step['x']}, {step['y']}) is off screen. "

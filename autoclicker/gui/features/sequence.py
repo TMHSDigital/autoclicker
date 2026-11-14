@@ -14,6 +14,19 @@ _BUTTONS = (("Left", "left"), ("Right", "right"), ("Middle", "middle"))
 _CLICK_TYPES = (("Single", "single"), ("Double", "double"))
 
 
+def describe_step(step: dict) -> str:
+    """What one step does, for the step list (#119)."""
+    kind = step.get("type", "click")
+    if kind == "key":
+        return f"key {step.get('key', '')}"
+    where = f"({step['x']}, {step['y']})"
+    if kind == "hold":
+        ms = float(step.get("hold_ms", 0))
+        held = f"{ms:g} ms" if ms < 1000 else f"{ms / 1000:g} s"
+        return f"{where}  {step['button']} hold {held}"
+    return f"{where}  {step['button']} {step['click_type']}"
+
+
 class SequenceMixin(AppBase):
     _DEFAULT_STEP_DELAY_MS = 500
     # One level of undo for Remove and Record (#175): (steps before, what changed).
@@ -26,10 +39,7 @@ class SequenceMixin(AppBase):
         for number, step in enumerate(self.sequence_steps, start=1):
             delay = step.get("delay_ms", 0)
             after = "then the Interval" if number == last else f"wait {delay:g} ms"
-            listbox.insert(
-                tk.END,
-                f"{number}. ({step['x']}, {step['y']})  {step['button']} {step['click_type']}, {after}",
-            )
+            listbox.insert(tk.END, f"{number}. {describe_step(step)}, {after}")
         if select is not None and 0 <= select < last:
             listbox.selection_clear(0, tk.END)
             listbox.selection_set(select)
@@ -150,25 +160,30 @@ class SequenceMixin(AppBase):
 
     def _sequence_step_menu(self, index: int) -> tk.Menu:
         step = self.sequence_steps[index]
+        kind = step.get("type", "click")
         menu = tk.Menu(self.sequence_list, tearoff=0)
-        menu.add_command(label="Re-pick point…", command=lambda: self.repick_sequence_point(index))
-        menu.add_separator()
-        for label, value in _BUTTONS:
-            menu.add_radiobutton(
-                label=f"{label} button",
-                value=value,
-                variable=tk.StringVar(menu, value=step["button"]),
-                command=functools.partial(self.set_sequence_step, index, button=value),
+        if kind != "key":  # a key step has no point or button
+            menu.add_command(
+                label="Re-pick point…", command=lambda: self.repick_sequence_point(index)
             )
-        menu.add_separator()
-        for label, value in _CLICK_TYPES:
-            menu.add_radiobutton(
-                label=f"{label} click",
-                value=value,
-                variable=tk.StringVar(menu, value=step["click_type"]),
-                command=functools.partial(self.set_sequence_step, index, click_type=value),
-            )
-        menu.add_separator()
+            menu.add_separator()
+            for label, value in _BUTTONS:
+                menu.add_radiobutton(
+                    label=f"{label} button",
+                    value=value,
+                    variable=tk.StringVar(menu, value=step["button"]),
+                    command=functools.partial(self.set_sequence_step, index, button=value),
+                )
+            menu.add_separator()
+        if kind == "click":
+            for label, value in _CLICK_TYPES:
+                menu.add_radiobutton(
+                    label=f"{label} click",
+                    value=value,
+                    variable=tk.StringVar(menu, value=step["click_type"]),
+                    command=functools.partial(self.set_sequence_step, index, click_type=value),
+                )
+            menu.add_separator()
         menu.add_command(label="Wait after this step…", command=self.edit_sequence_delay)
         menu.add_command(label="Duplicate", command=lambda: self.duplicate_sequence_step(index))
         return menu

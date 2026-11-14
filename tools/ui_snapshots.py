@@ -99,6 +99,17 @@ def _sequence(app: Any) -> None:
     app.sequence_list.event_generate("<<ListboxSelect>>")
 
 
+def _sequence_steps(app: Any) -> None:
+    """Click, key and hold steps in one sequence (#119)."""
+    steps = [
+        _STEPS[0],
+        {"type": "key", "key": "ctrl+s", "delay_ms": 800},
+        {"type": "hold", "x": 860, "y": 410, "button": "left", "hold_ms": 1200, "delay_ms": 300},
+        _STEPS[2],
+    ]
+    app.apply_form_values({"target_mode": "sequence", "sequence": steps, "sequence_repeat": 0})
+
+
 def _running(app: Any) -> None:
     app.apply_form_values({"target_mode": "fixed", "x": 640, "y": 360, "max_clicks": 200})
     status = {
@@ -130,6 +141,7 @@ SCENARIOS: dict[str, tuple[str, Callable[[Any], None]]] = {
     "panels": ("Timing and Safety open, Start at and Stop at set", _panels),
     "image": ("Image mode with Stop if not seen for", _image),
     "sequence": ("Sequence mode, three steps, one selected", _sequence),
+    "sequence-steps": ("Sequence with click, key and hold steps", _sequence_steps),
     "running": ("A run with a click limit and time left", _running),
     "high-contrast": ("Panels open under a High Contrast palette", _high_contrast),
     "website": ("Fixed point, first-run hint dismissed (website screenshot)", _website),
