@@ -43,7 +43,7 @@ def describe_profile(profile: dict[str, Any]) -> str:
         parts.append("at the cursor")
     elif profile.get("target_mode") == "sequence":
         count = len(profile.get("sequence") or [])
-        parts.append(f"sequence of {count} point{'s' if count != 1 else ''}")
+        parts.append(f"sequence of {count} step{'s' if count != 1 else ''}")
     elif profile.get("target_mode") == "image":
         parts.append("wherever its image appears")
     else:

@@ -75,9 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
     target = parser.add_mutually_exclusive_group()
     target.add_argument("--at", metavar="X,Y", help="click this point (fixed location)")
     target.add_argument("--cursor", action="store_true", help="click wherever the cursor is")
-    target.add_argument(
-        "--sequence", action="store_true", help="click the saved sequence of points"
-    )
+    target.add_argument("--sequence", action="store_true", help="run the saved sequence")
     target.add_argument(
         "--image",
         action="store_true",

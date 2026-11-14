@@ -882,7 +882,7 @@ class TestSequenceUi(GuiHarness):
         app.load_preset()
         self.assertEqual(app.target_mode_var.get(), "sequence")
         self.assertEqual([(s["x"], s["y"]) for s in app.sequence_steps], [(40, 50)])
-        self.assertIn("sequence of 1 point", app.preset_summary_var.get())
+        self.assertIn("sequence of 1 step", app.preset_summary_var.get())
 
 
 class TestTargetSummary(GuiHarness):
@@ -896,7 +896,7 @@ class TestTargetSummary(GuiHarness):
         self.assertEqual(app.coord_var.get(), "Target: current cursor position")
         app.target_mode_var.set("sequence")
         app._on_target_mode_change()
-        self.assertEqual(app.coord_var.get(), "Target: sequence of 0 points")
+        self.assertEqual(app.coord_var.get(), "Target: sequence of 0 steps")
 
 
 class TestActionUi(GuiHarness):

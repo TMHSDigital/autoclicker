@@ -276,7 +276,14 @@ def _run_one(name: str, out: Path) -> None:
         print(f"{name}: warning: the snapshot window took the focus", file=sys.stderr)
     if name == "sequence":
         lines = ["Sequence step menu (step 2):", *_menu_entries(app._sequence_step_menu(1))]
+        lines += ["", "Add menu:", *_menu_entries(app._add_step_menu())]
         (out / "menus.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if name == "sequence-steps":
+        lines = []
+        for index in range(len(app.sequence_steps)):
+            entries = _menu_entries(app._sequence_step_menu(index))
+            lines += [f"Step {index + 1} menu:", *entries, ""]
+        (out / "menus-steps.txt").write_text("\n".join(lines), encoding="utf-8")
     app.click_engine.stop_clicking()
     root.destroy()
 

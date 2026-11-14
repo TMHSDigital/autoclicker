@@ -110,8 +110,8 @@ class TestSequenceEditing(GuiHarness):
             "type": "hold", "x": 1, "y": 1, "button": "left", "hold_ms": 500, "delay_ms": 0
         }  # fmt: skip
         for index, commands, radios in (
-            (0, ["Wait after this step…", "Duplicate"], 0),  # key: no point, no button
-            (1, ["Re-pick point…", "Wait after this step…", "Duplicate"], 3),  # hold: buttons
+            (0, ["Key…", "Wait after this step…", "Duplicate"], 0),  # key: no point, no button
+            (1, ["Re-pick point…", "Hold time…", "Wait after this step…", "Duplicate"], 3),
         ):
             self.select(index)
             with (

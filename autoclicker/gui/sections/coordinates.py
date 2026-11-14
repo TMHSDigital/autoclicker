@@ -156,7 +156,7 @@ def _build_sequence_panel(app: AutoclickerApp, body: ttk.Frame, settings) -> Non
 
     buttons = (
         ("Record", app.toggle_sequence_recording),
-        ("Add point", app.add_sequence_point),
+        ("Add…", app.show_add_step_menu),
         ("Edit…", app.show_sequence_step_menu),
         ("Up", lambda: app.move_sequence_step(-1)),
         ("Down", lambda: app.move_sequence_step(1)),
@@ -164,9 +164,10 @@ def _build_sequence_panel(app: AutoclickerApp, body: ttk.Frame, settings) -> Non
         ("Undo", app.undo_sequence_change),
     )
     for row, (text, command) in enumerate(buttons):
-        ttk.Button(app.sequence_frame, text=text, width=9, command=command).grid(
-            row=row, column=1, padx=(8, 0), pady=(0, 3), sticky=tk.W
-        )
+        button = ttk.Button(app.sequence_frame, text=text, width=9, command=command)
+        button.grid(row=row, column=1, padx=(8, 0), pady=(0, 3), sticky=tk.W)
+        if text == "Add…":
+            app.add_step_button = button  # the Add menu opens under it
 
     repeat_frame = ttk.Frame(app.sequence_frame)
     repeat_frame.grid(row=7, column=0, columnspan=2, sticky=tk.W, pady=(6, 0))

@@ -8,6 +8,7 @@ from .info import InfoMixin
 from .profiles import ProfilesMixin
 from .recording import RecordingMixin
 from .sequence import SequenceMixin
+from .steps import StepsMixin
 from .updates import UpdatesMixin
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "ProfilesMixin",
     "RecordingMixin",
     "SequenceMixin",
+    "StepsMixin",
     "UpdatesMixin",
 ]

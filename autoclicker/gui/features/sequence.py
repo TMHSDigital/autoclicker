@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import functools
 import tkinter as tk
+from typing import Any
 
 from ...core.settings_manager import MAX_SEQUENCE_STEPS, MAX_STEP_DELAY_MS
 from .. import dialogs
@@ -195,12 +196,13 @@ class SequenceMixin(AppBase):
                     command=functools.partial(self.set_sequence_step, index, click_type=value),
                 )
             menu.add_separator()
+        self._add_step_type_edits(menu, index)
         menu.add_command(label="Wait after this step…", command=self.edit_sequence_delay)
         menu.add_command(label="Duplicate", command=lambda: self.duplicate_sequence_step(index))
         return menu
 
-    def set_sequence_step(self, index: int, **changes: str) -> None:
-        """Change the button or click type of one step."""
+    def set_sequence_step(self, index: int, **changes: Any) -> None:
+        """Change one step's settings that need no check (button, click type, on timeout)."""
         if not 0 <= index < len(self.sequence_steps):
             return
         self.sequence_steps[index].update(changes)

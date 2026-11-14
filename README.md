@@ -58,7 +58,7 @@ built around safety stops that are on by default.
   <tr>
     <td width="33%" valign="top">
       <h3>Pick and click</h3>
-      Click a fixed spot (type X/Y, or <b>Pick</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of points clicked in order, or wherever a captured <b>image</b> appears. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
+      Click a fixed spot (type X/Y, or <b>Pick</b> with a live coordinate readout on any monitor), or wherever the <b>cursor</b> is, or a <b>sequence</b> of clicks, holds, key presses and waits, or wherever a captured <b>image</b> appears. Save the spot and its click settings as named <b>profiles</b>, and import or export them as a file.
     </td>
     <td width="33%" valign="top">
       <h3>Precise timing</h3>
@@ -172,13 +172,20 @@ Three settings control the rhythm. With **Burst clicks** left at 1 (the default)
 
 ## Sequences
 
-Choose **Sequence** under Target to click several points in order, for example *claim, close, next*.
+Choose **Sequence** under Target to run several steps in order, for example *click Refresh, wait until Save appears, click it, press ctrl+s*.
 
-1. Press **Record** and click through the routine once, then press **Record** again (or the Stop key). Each click becomes a step with the button you used, and the time between clicks becomes the wait; two quick clicks on the same spot become a double click. Or press **Add point** and pick each spot by hand; those steps use the button and click type selected in the Click panel.
-2. Select a step and press **Edit...** (or double-click or right-click it) to re-pick its point, change its button or single/double click, set how long to wait before the next step (500 ms by default) or duplicate it. **Up**, **Down** and **Remove** rearrange the list, as do Alt+Up, Alt+Down and Delete on the list. **Undo** (or Ctrl+Z) brings back the steps from before the last Remove or Record.
+1. Press **Record** and click through the routine once, then press **Record** again (or the Stop key). Each click becomes a step with the button you used, and the time between clicks becomes the wait; two quick clicks on the same spot become a double click. Or press **Add...** and choose a step:
+   - **Click point**: pick a spot; it uses the button and click type selected in the Click panel.
+   - **Hold**: pick a spot and how long to hold the button down.
+   - **Key**: a key or combination to press in the window in front, such as `F5`, `enter` or `ctrl+s`.
+   - **Wait for image**: drag a rectangle around something, such as a Save button. The sequence waits there until it is on screen, and can then click it.
+   - **Wait for pixel**: pick a spot; the sequence waits until that pixel has the color it has now (within a tolerance you can change).
+2. Select a step and press **Edit...** (or double-click or right-click it) for what that step has: re-pick its point, its button or single/double click, the hold time or key, or recapture the image. Every step can also set how long to wait before the next step (500 ms by default) or be duplicated. **Up**, **Down** and **Remove** rearrange the list, as do Alt+Up, Alt+Down and Delete on the list. **Undo** (or Ctrl+Z) brings back the steps from before the last Remove or Record.
 3. Set **Repeat** to run the whole sequence that many times (0 keeps going until you stop it). The main **Every** time is the wait between rounds; burst settings don't apply.
 
-Every stop path works mid-sequence: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step. Up to 50 steps; a sequence is saved with your settings and inside profiles. Recording only notes where you click and when, never keystrokes, and uses a mouse hook that exists only while recording.
+A wait step waits until it sees its image or pixel, or until you stop the run. Give it a **Timeout** in its Edit menu to give up after that many seconds; then the run either stops with a message naming the step (*Step 3: the image didn't appear within 10 s*), which is the default, or goes on to the next step. While a step waits, the status line says which one.
+
+Every stop path works mid-sequence, including during a wait: hotkeys, the corner failsafe, click and time limits, the runaway guard and pause when unfocused are all checked before each step and while waiting. Holds and key presses count toward a click limit; waits don't. Up to 50 steps; a sequence is saved with your settings and inside profiles. Recording only notes where you click and when, never keystrokes, and uses a mouse hook that exists only while recording.
 
 ## Image targets
 

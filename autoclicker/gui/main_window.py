@@ -37,6 +37,7 @@ from .features import (
     ProfilesMixin,
     RecordingMixin,
     SequenceMixin,
+    StepsMixin,
     UpdatesMixin,
 )
 from .hotkeys_dialog import HotkeysDialog
@@ -113,6 +114,7 @@ def _unlock_widget(widget) -> None:
 class AutoclickerApp(
     ImageMixin,
     SequenceMixin,
+    StepsMixin,
     RecordingMixin,
     ConditionMixin,
     ProfilesMixin,
@@ -608,7 +610,7 @@ class AutoclickerApp(
             return "Target: wherever the captured image appears"
         if mode == "sequence":
             count = len(self.sequence_steps)
-            return f"Target: sequence of {count} point{'s' * (count != 1)}"
+            return f"Target: sequence of {count} step{'s' * (count != 1)}"
         return f"Target: ({self.x_entry.get().strip()}, {self.y_entry.get().strip()})"
 
     def _refresh_target_summary(self) -> None:

@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Sequence steps beyond clicks (#119): **Add...** in the Sequence panel now adds a click, a hold, a key press, a wait for an image (which can then click it) or a wait for a pixel color. A wait can give up after a timeout and then stop the run or go on to the next step. Every stop path, limit and the failsafe also work while a step waits. Existing sequences and profiles load unchanged.
+
 ### Changed
 
 - When a run can't start, the error dialog is titled "Couldn't start" and gives the actual reason (for example "Windows denied access (...)") instead of generic advice such as "Please check your system configuration."
+- The step list shows waits of a second or more in seconds and leaves out "wait 0 ms".
 - Repository layout: the requirements files moved to `requirements/` (install from source with `pip install -r requirements/runtime-lock.txt`; `run_autoclicker.bat` does this for you), the PyInstaller spec to `packaging/`, and CONTRIBUTING, SECURITY and the Code of Conduct to `.github/`.
 
 ### Fixed
